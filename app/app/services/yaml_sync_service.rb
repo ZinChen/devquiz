@@ -2,7 +2,7 @@ require "digest"
 require "yaml"
 
 class YamlSyncService
-  TESTS_DIR = Rails.root.join("../../tests").expand_path
+  TESTS_DIR = Rails.root.join("../tests").expand_path
 
   def self.sync_all
     Dir.glob(TESTS_DIR.join("*.yml")).each do |path|
