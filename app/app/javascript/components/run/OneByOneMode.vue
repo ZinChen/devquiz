@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="one-by-one-wrap">
     <div class="question-nav mb-4">
       <button
         v-for="(q, idx) in questions" :key="q.id"
@@ -21,7 +21,7 @@
           ref="cardEl"
         >
           <div class="question-card__progress-track">
-            <div class="question-card__progress-fill" :style="{ width: progressPercent + '%' }"></div>
+            <div class="question-card__progress-fill" :style="{ width: progressPercent + '%', transition: progressAnimated ? 'width 0.3s ease' : 'none' }"></div>
           </div>
 
           <p class="question-card__counter">Вопрос {{ currentIndex + 1 }} из {{ questions.length }}</p>
@@ -85,10 +85,11 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'index-change'])
 
-const currentIndex    = ref(props.savedIndex)
-const cardEl          = ref(null)
-const containerHeight = ref(300)
-const focusedOptIdx   = ref(0)
+const currentIndex      = ref(props.savedIndex)
+const cardEl            = ref(null)
+const containerHeight   = ref(300)
+const focusedOptIdx     = ref(0)
+const progressAnimated  = ref(false)
 
 const currentQuestion = computed(() => props.questions[currentIndex.value])
 
@@ -128,10 +129,10 @@ function handleKeydown(e) {
 
   if (e.key === 'ArrowRight') {
     e.preventDefault()
-    if (currentIndex.value < props.questions.length - 1) goTo(currentIndex.value + 1)
+    goTo((currentIndex.value + 1) % props.questions.length)
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault()
-    if (currentIndex.value > 0) goTo(currentIndex.value - 1)
+    goTo((currentIndex.value - 1 + props.questions.length) % props.questions.length)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault()
     const opts = q.options
@@ -153,16 +154,20 @@ function handleKeydown(e) {
       }
       onRadioPick(q, opts[nextPos].id, false)
     }
-  } else if (e.key === ' ' && q.type === 'multiple') {
+  } else if (e.key === ' ') {
     e.preventDefault()
     const opts = q.options
     if (!opts?.length) return
-    const optId = opts[focusedOptIdx.value]?.id
-    if (!optId) return
-    if (!Array.isArray(props.answers[q.id])) props.answers[q.id] = []
-    const idx = props.answers[q.id].indexOf(optId)
-    if (idx === -1) props.answers[q.id].push(optId)
-    else props.answers[q.id].splice(idx, 1)
+    if (q.type === 'multiple') {
+      const optId = opts[focusedOptIdx.value]?.id
+      if (!optId) return
+      if (!Array.isArray(props.answers[q.id])) props.answers[q.id] = []
+      const idx = props.answers[q.id].indexOf(optId)
+      if (idx === -1) props.answers[q.id].push(optId)
+      else props.answers[q.id].splice(idx, 1)
+    } else {
+      props.answers[q.id] = null
+    }
   } else if (e.key === 'Enter') {
     e.preventDefault()
     if (q.type === 'multiple') {
@@ -182,11 +187,42 @@ function handleKeydown(e) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+let resizeObserver = null
+
+function observeCard() {
+  resizeObserver?.disconnect()
+  nextTick(() => {
+    const el = cardEl.value
+    const node = el ? (Array.isArray(el) ? el[0] : el) : null
+    if (!node) return
+    containerHeight.value = node.offsetHeight
+    resizeObserver = new ResizeObserver(() => {
+      containerHeight.value = node.offsetHeight
+    })
+    resizeObserver.observe(node)
+  })
+}
+
+watch(currentQuestion, observeCard)
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+  observeCard()
+  nextTick(() => { progressAnimated.value = true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+  resizeObserver?.disconnect()
+})
 </script>
 
 <style scoped>
+.one-by-one-wrap {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
 .question-nav {
   display: grid;
   grid-template-columns: repeat(20, 1fr);
@@ -234,6 +270,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
 .question-card {
+  position: relative;
   border: 1px solid #F3F4F6;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   padding: 1.5rem;
@@ -252,7 +289,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 .question-card__progress-fill {
   height: 100%;
   background: #4F63F5;
-  transition: width 0.3s ease;
 }
 
 .question-card__counter {
