@@ -1,0 +1,387 @@
+slug: ror-basics
+title: "Ruby on Rails: Основы"
+description: "Базовые концепции фреймворка Rails — MVC, роутинг, генераторы, конвенции."
+tags: [ruby, rails, backend]
+difficulty: beginner
+estimated_time: 20
+
+questions:
+  - id: q1
+    text: "Какой паттерн архитектуры лежит в основе Rails?"
+    type: single
+    options:
+      - id: a
+        text: "MVP (Model-View-Presenter)"
+        correct: false
+      - id: b
+        text: "MVC (Model-View-Controller)"
+        correct: true
+      - id: c
+        text: "MVVM (Model-View-ViewModel)"
+        correct: false
+      - id: d
+        text: "CQRS"
+        correct: false
+    explanation: "Rails построен на паттерне MVC: Model управляет данными и логикой, View — представление, Controller — обработка запросов."
+    difficulty: easy
+
+  - id: q2
+    text: "Что делает команда `rails generate scaffold Post title:string body:text`?"
+    type: single
+    options:
+      - id: a
+        text: "Только создаёт модель Post"
+        correct: false
+      - id: b
+        text: "Создаёт модель, миграцию, контроллер, вьюхи и маршруты для Post"
+        correct: true
+      - id: c
+        text: "Только создаёт миграцию"
+        correct: false
+      - id: d
+        text: "Создаёт только контроллер и вьюхи"
+        correct: false
+    explanation: "scaffold генерирует полный CRUD: модель, миграцию, контроллер с 7 actions, все вьюхи и маршрут resources в routes.rb."
+    difficulty: easy
+
+  - id: q3
+    text: "Что такое `Convention over Configuration` в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Запрет на конфигурирование приложения"
+        correct: false
+      - id: b
+        text: "Rails автоматически применяет разумные настройки по умолчанию, если следовать соглашениям"
+        correct: true
+      - id: c
+        text: "Каждое приложение обязано иметь конфиг-файл"
+        correct: false
+      - id: d
+        text: "Конфигурация всегда приоритетнее соглашений"
+        correct: false
+    explanation: "CoC означает, что если файл называется user.rb и лежит в app/models, Rails сам знает, что это модель User, без явного указания."
+    difficulty: easy
+
+  - id: q4
+    text: "Какой файл отвечает за зависимости (gems) Rails-приложения?"
+    type: single
+    options:
+      - id: a
+        text: "package.json"
+        correct: false
+      - id: b
+        text: "Gemfile"
+        correct: true
+      - id: c
+        text: "config/application.rb"
+        correct: false
+      - id: d
+        text: "config/gems.yml"
+        correct: false
+    explanation: "Gemfile управляется Bundler и содержит список всех gem-зависимостей проекта."
+    difficulty: easy
+
+  - id: q5
+    text: "Что возвращает `render json: @user` в контроллере?"
+    type: single
+    options:
+      - id: a
+        text: "HTML-страницу с данными пользователя"
+        correct: false
+      - id: b
+        text: "JSON-ответ с атрибутами объекта @user и статусом 200"
+        correct: true
+      - id: c
+        text: "Перенаправление на JSON-файл"
+        correct: false
+      - id: d
+        text: "Ошибку, если нет JSON-вьюхи"
+        correct: false
+    explanation: "render json: сериализует объект в JSON и отправляет ответ с Content-Type: application/json."
+    difficulty: easy
+
+  - id: q6
+    text: "Что делает `before_action :authenticate_user!` в контроллере?"
+    type: single
+    options:
+      - id: a
+        text: "Вызывает метод authenticate_user! перед каждым action в контроллере"
+        correct: true
+      - id: b
+        text: "Вызывает метод только перед первым action"
+        correct: false
+      - id: c
+        text: "Проверяет аутентификацию после выполнения action"
+        correct: false
+      - id: d
+        text: "Устанавливает пользователя по умолчанию"
+        correct: false
+    explanation: "before_action — это фильтр, который запускается до action. Удобно для проверки авторизации, установки переменных."
+    difficulty: easy
+
+  - id: q7
+    text: "Как Rails определяет, какой контроллер и action вызвать при запросе?"
+    type: single
+    options:
+      - id: a
+        text: "По имени файла в папке public/"
+        correct: false
+      - id: b
+        text: "Через config/routes.rb"
+        correct: true
+      - id: c
+        text: "По имени метода в ApplicationController"
+        correct: false
+      - id: d
+        text: "Автоматически по URL без конфигурации"
+        correct: false
+    explanation: "routes.rb — центральное место маршрутизации. Команда `rails routes` показывает все маршруты."
+    difficulty: easy
+
+  - id: q8
+    text: "Что такое `strong parameters` в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Метод шифрования параметров запроса"
+        correct: false
+      - id: b
+        text: "Механизм явного разрешения атрибутов, допустимых при mass assignment"
+        correct: true
+      - id: c
+        text: "Валидация типов параметров"
+        correct: false
+      - id: d
+        text: "Обязательные параметры для всех форм"
+        correct: false
+    explanation: "Strong parameters (params.require(:user).permit(:name, :email)) защищает от mass assignment уязвимостей, разрешая только перечисленные поля."
+    difficulty: medium
+
+  - id: q9
+    text: "Какой HTTP-метод используется для `resources :posts` при обновлении записи?"
+    type: single
+    options:
+      - id: a
+        text: "PUT или PATCH"
+        correct: true
+      - id: b
+        text: "POST"
+        correct: false
+      - id: c
+        text: "GET"
+        correct: false
+      - id: d
+        text: "DELETE"
+        correct: false
+    explanation: "Rails использует PATCH для частичного обновления (update action) и PUT для полного. По умолчанию форма генерирует PATCH."
+    difficulty: easy
+
+  - id: q10
+    text: "Что находится в директории `app/helpers/`?"
+    type: single
+    options:
+      - id: a
+        text: "Файлы конфигурации"
+        correct: false
+      - id: b
+        text: "Вспомогательные методы, доступные во вьюхах"
+        correct: true
+      - id: c
+        text: "Фоновые задачи"
+        correct: false
+      - id: d
+        text: "Сервисные объекты"
+        correct: false
+    explanation: "Helpers содержат методы для шаблонизации — форматирование дат, текста и т.д. Автоматически доступны в соответствующих вьюхах."
+    difficulty: easy
+
+  - id: q11
+    text: "Что делает `redirect_to @post` в контроллере?"
+    type: single
+    options:
+      - id: a
+        text: "Рендерит вьюху show для @post"
+        correct: false
+      - id: b
+        text: "Перенаправляет браузер на URL, сгенерированный из @post (обычно /posts/:id)"
+        correct: true
+      - id: c
+        text: "Создаёт новый объект Post"
+        correct: false
+      - id: d
+        text: "Вызывает метод post_path с HTTP 301"
+        correct: false
+    explanation: "Rails вызывает url_for(@post) для генерации URL. Для модели Post и записи с id: 5 это будет /posts/5."
+    difficulty: medium
+
+  - id: q12
+    text: "Какой файл содержит все маршруты Rails-приложения?"
+    type: single
+    options:
+      - id: a
+        text: "config/application.rb"
+        correct: false
+      - id: b
+        text: "config/routes.rb"
+        correct: true
+      - id: c
+        text: "app/controllers/routes.rb"
+        correct: false
+      - id: d
+        text: "lib/routes.rb"
+        correct: false
+    explanation: "config/routes.rb — единственный файл маршрутизации. Команда `bin/rails routes` выводит список всех маршрутов."
+    difficulty: easy
+
+  - id: q13
+    text: "Что такое `flash` в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Механизм хранения временных сообщений между запросами (через session)"
+        correct: true
+      - id: b
+        text: "JavaScript-фреймворк для анимаций"
+        correct: false
+      - id: c
+        text: "Кэш для хранения данных"
+        correct: false
+      - id: d
+        text: "Метод для вывода уведомлений через ActionCable"
+        correct: false
+    explanation: "flash[:notice] и flash[:alert] хранятся в сессии и автоматически удаляются после следующего запроса. Используются для сообщений пользователю."
+    difficulty: medium
+
+  - id: q14
+    text: "Какая команда создаёт новое Rails-приложение с PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "rails new myapp --db=postgresql"
+        correct: false
+      - id: b
+        text: "rails new myapp -d postgresql"
+        correct: true
+      - id: c
+        text: "rails create myapp --database=postgres"
+        correct: false
+      - id: d
+        text: "rails init myapp --pg"
+        correct: false
+    explanation: "Флаг `-d postgresql` (или `--database=postgresql`) указывает Rails использовать PostgreSQL и добавляет gem 'pg' в Gemfile."
+    difficulty: easy
+
+  - id: q15
+    text: "Что такое `concerns` в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Модули для повторного использования кода в моделях и контроллерах"
+        correct: true
+      - id: b
+        text: "Инструмент для обработки ошибок"
+        correct: false
+      - id: c
+        text: "Файлы конфигурации окружения"
+        correct: false
+      - id: d
+        text: "Тесты для контроллеров"
+        correct: false
+    explanation: "Concerns — это Ruby-модули (обычно в app/models/concerns/ и app/controllers/concerns/), которые позволяют выносить повторяющийся код в переиспользуемые модули."
+    difficulty: medium
+
+  - id: q16
+    text: "Что произойдёт при вызове `User.find(999)`, если записи с id=999 нет?"
+    type: single
+    options:
+      - id: a
+        text: "Вернёт nil"
+        correct: false
+      - id: b
+        text: "Бросит исключение ActiveRecord::RecordNotFound"
+        correct: true
+      - id: c
+        text: "Вернёт пустой объект User"
+        correct: false
+      - id: d
+        text: "Вернёт первую запись из таблицы"
+        correct: false
+    explanation: "find всегда бросает RecordNotFound при отсутствии записи. Для получения nil используйте find_by(id: 999)."
+    difficulty: medium
+
+  - id: q17
+    text: "Что такое `DRY` принцип в контексте Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Don't Repeat Yourself — не дублировать логику, выносить в методы, хелперы, concerns"
+        correct: true
+      - id: b
+        text: "Database Relationship Yielding — автоматические связи между моделями"
+        correct: false
+      - id: c
+        text: "Dynamic Ruby Yielding — блоки для каждого контроллера"
+        correct: false
+      - id: d
+        text: "Direct Routing Yield — специальный тип маршрутов"
+        correct: false
+    explanation: "DRY — основной принцип Rails. Избегайте дублирования кода: используйте before_action, concerns, partials и helpers."
+    difficulty: easy
+
+  - id: q18
+    text: "В какой директории Rails ищет модели по умолчанию?"
+    type: single
+    options:
+      - id: a
+        text: "lib/models/"
+        correct: false
+      - id: b
+        text: "app/models/"
+        correct: true
+      - id: c
+        text: "config/models/"
+        correct: false
+      - id: d
+        text: "db/models/"
+        correct: false
+    explanation: "Rails автоматически загружает классы из app/ через Zeitwerk. Модели находятся в app/models/, контроллеры — в app/controllers/."
+    difficulty: easy
+
+  - id: q19
+    text: "Что делает `params` в контроллере Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Возвращает только URL-параметры из query string"
+        correct: false
+      - id: b
+        text: "Объединяет параметры из query string, form data и path (route params)"
+        correct: true
+      - id: c
+        text: "Возвращает только POST-данные"
+        correct: false
+      - id: d
+        text: "Доступен только в action show"
+        correct: false
+    explanation: "params содержит все параметры запроса: из URL (?key=val), из тела формы (POST) и из пути маршрута (:id). Это ActionController::Parameters."
+    difficulty: medium
+
+  - id: q20
+    text: "Что такое `asset pipeline` в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Конвейер для обработки запросов к БД"
+        correct: false
+      - id: b
+        text: "Механизм компиляции, конкатенации и минификации JS/CSS/изображений"
+        correct: true
+      - id: c
+        text: "Система кэширования страниц"
+        correct: false
+      - id: d
+        text: "Инструмент деплоя"
+        correct: false
+    explanation: "Asset pipeline (Sprockets или Propshaft) компилирует SCSS в CSS, CoffeeScript в JS, добавляет fingerprint к файлам и минифицирует их для продакшена."
+    difficulty: medium

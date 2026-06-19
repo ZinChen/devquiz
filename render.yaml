@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: devquiz
+    runtime: ruby
+    region: frankfurt
+    plan: free
+    rootDir: app
+    buildCommand: |
+      bundle install
+      npm install
+      npm run build
+      bundle exec rails db:migrate
+    startCommand: bundle exec rails server -p $PORT -e production
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_SERVE_STATIC_FILES
+        value: "true"
+      - key: RAILS_LOG_TO_STDOUT
+        value: "true"
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: devquiz-db
+          property: connectionString
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+databases:
+  - name: devquiz-db
+    region: frankfurt
+    plan: free

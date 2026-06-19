@@ -1,0 +1,387 @@
+slug: ror-migrations
+title: "Rails Migrations: Управление схемой БД"
+description: "Создание и изменение таблиц, типы колонок, индексы, откаты и лучшие практики."
+tags: [ruby, rails, migrations, backend]
+difficulty: intermediate
+estimated_time: 20
+
+questions:
+  - id: q1
+    text: "Какая команда применяет все непримененные миграции?"
+    type: single
+    options:
+      - id: a
+        text: "`rails db:migrate:up`"
+        correct: false
+      - id: b
+        text: "`rails db:migrate`"
+        correct: true
+      - id: c
+        text: "`rails db:apply`"
+        correct: false
+      - id: d
+        text: "`rails migrate`"
+        correct: false
+    explanation: "`bin/rails db:migrate` применяет все миграции из db/migrate/ у которых версия выше последней записи в schema_migrations."
+    difficulty: easy
+
+  - id: q2
+    text: "Как откатить последнюю миграцию?"
+    type: single
+    options:
+      - id: a
+        text: "`rails db:migrate:down`"
+        correct: false
+      - id: b
+        text: "`rails db:rollback`"
+        correct: true
+      - id: c
+        text: "`rails db:undo`"
+        correct: false
+      - id: d
+        text: "`rails db:migrate:revert`"
+        correct: false
+    explanation: "`rails db:rollback` откатывает последнюю миграцию. `STEP=3` откатывает 3 последних."
+    difficulty: easy
+
+  - id: q3
+    text: "Что хранится в таблице `schema_migrations`?"
+    type: single
+    options:
+      - id: a
+        text: "Содержимое всех миграций"
+        correct: false
+      - id: b
+        text: "Версии (timestamp) применённых миграций"
+        correct: true
+      - id: c
+        text: "Список таблиц БД"
+        correct: false
+      - id: d
+        text: "Текущая схема в JSON"
+        correct: false
+    explanation: "schema_migrations содержит одну колонку version со timestamp каждой применённой миграции. По ней Rails определяет, что уже выполнено."
+    difficulty: easy
+
+  - id: q4
+    text: "Какой тип колонки использовать для хранения денежных значений?"
+    type: single
+    options:
+      - id: a
+        text: "float"
+        correct: false
+      - id: b
+        text: "decimal с precision и scale"
+        correct: true
+      - id: c
+        text: "integer (в копейках)"
+        correct: false
+      - id: d
+        text: "string"
+        correct: false
+    explanation: "decimal с precision/scale избегает ошибок округления float. `t.decimal :price, precision: 10, scale: 2`. Вариант с integer (в копейках) тоже корректен, но decimal семантически точнее."
+    difficulty: medium
+
+  - id: q5
+    text: "Как безопасно добавить NOT NULL колонку к существующей таблице с данными?"
+    type: single
+    options:
+      - id: a
+        text: "Просто `add_column :users, :age, :integer, null: false`"
+        correct: false
+      - id: b
+        text: "Добавить колонку с default → заполнить данные → убрать default → добавить NOT NULL"
+        correct: true
+      - id: c
+        text: "Удалить таблицу и создать заново"
+        correct: false
+      - id: d
+        text: "Нельзя добавить NOT NULL к существующей таблице"
+        correct: false
+    explanation: "Добавление NOT NULL без default к таблице с данными упадёт. Безопасно: add_column (nullable) → backfill данных → change_column_null (false, default_value)."
+    difficulty: hard
+
+  - id: q6
+    text: "Что делает `add_index :users, :email, unique: true`?"
+    type: single
+    options:
+      - id: a
+        text: "Добавляет валидацию уникальности на уровне модели"
+        correct: false
+      - id: b
+        text: "Создаёт уникальный индекс на уровне БД по колонке email"
+        correct: true
+      - id: c
+        text: "Делает email первичным ключом"
+        correct: false
+      - id: d
+        text: "Запрещает NULL в email"
+        correct: false
+    explanation: "Уникальный индекс на уровне БД — надёжная гарантия уникальности в отличие от validates :uniqueness (которая подвержена race conditions)."
+    difficulty: medium
+
+  - id: q7
+    text: "Как переименовать колонку в миграции?"
+    type: single
+    options:
+      - id: a
+        text: "`rename :users, :old_name, :new_name`"
+        correct: false
+      - id: b
+        text: "`rename_column :users, :old_name, :new_name`"
+        correct: true
+      - id: c
+        text: "`alter_column :users, :old_name, name: :new_name`"
+        correct: false
+      - id: d
+        text: "`change_column :users, :old_name, :new_name`"
+        correct: false
+    explanation: "rename_column(table, old, new) — метод миграции для переименования колонки."
+    difficulty: easy
+
+  - id: q8
+    text: "Что такое `change_column` и когда оно необратимо?"
+    type: single
+    options:
+      - id: a
+        text: "change_column всегда обратимо"
+        correct: false
+      - id: b
+        text: "Изменяет тип/свойства колонки; необратимо без явного метода down или reversible"
+        correct: true
+      - id: c
+        text: "change_column никогда не используется в Rails 6+"
+        correct: false
+      - id: d
+        text: "Обратимо только для string→text"
+        correct: false
+    explanation: "change_column не знает как автоматически откатиться (каким был тип раньше). Используйте reversible { |dir| dir.up { ... }; dir.down { ... } } или def change/def up/def down."
+    difficulty: medium
+
+  - id: q9
+    text: "Для чего используется `db/schema.rb`?"
+    type: single
+    options:
+      - id: a
+        text: "Хранит SQL-запросы всех миграций"
+        correct: false
+      - id: b
+        text: "Снимок текущей схемы БД; используется при db:schema:load и в разработке"
+        correct: true
+      - id: c
+        text: "Файл конфигурации подключения к БД"
+        correct: false
+      - id: d
+        text: "Автоматически генерирует модели"
+        correct: false
+    explanation: "schema.rb обновляется после каждой миграции и отражает актуальное состояние схемы. `rails db:schema:load` применяет schema.rb напрямую (быстрее, чем все миграции)."
+    difficulty: medium
+
+  - id: q10
+    text: "Когда лучше использовать `structure.sql` вместо `schema.rb`?"
+    type: single
+    options:
+      - id: a
+        text: "Всегда, structure.sql точнее"
+        correct: false
+      - id: b
+        text: "Когда используются специфические возможности PostgreSQL: представления, триггеры, пользовательские типы"
+        correct: true
+      - id: c
+        text: "Только для MySQL"
+        correct: false
+      - id: d
+        text: "Когда schema.rb превышает 1000 строк"
+        correct: false
+    explanation: "schema.rb использует Ruby DSL и теряет PostgreSQL-специфику. structure.sql хранит дамп SQL и сохраняет всё. Включается через `config.active_record.schema_format = :sql`."
+    difficulty: hard
+
+  - id: q11
+    text: "Как добавить внешний ключ с ограничением в миграции?"
+    type: single
+    options:
+      - id: a
+        text: "`add_column :posts, :user_id, :integer`"
+        correct: false
+      - id: b
+        text: "`add_reference :posts, :user, foreign_key: true`"
+        correct: true
+      - id: c
+        text: "`add_foreign_key :posts, :users, column: :user_id`"
+        correct: false
+      - id: d
+        text: "B и C — оба правильны"
+        correct: false
+    explanation: "add_reference с foreign_key: true добавляет и индекс и FK-constraint. add_foreign_key — только FK. B + add_index — полный аналог D. Ответ B — типичная Rails-конвенция."
+    difficulty: medium
+
+  - id: q12
+    text: "Что такое `null: false` и `default:` в миграции?"
+    type: single
+    options:
+      - id: a
+        text: "null: false запрещает NULL на уровне БД; default — значение по умолчанию в БД"
+        correct: true
+      - id: b
+        text: "Только для валидации на уровне Rails"
+        correct: false
+      - id: c
+        text: "null: false работает только с integer"
+        correct: false
+      - id: d
+        text: "default устанавливается только при create"
+        correct: false
+    explanation: "Ограничения на уровне БД надёжнее моделей — работают даже при прямом SQL. Всегда добавляйте NOT NULL + DEFAULT вместе при добавлении к существующим таблицам."
+    difficulty: medium
+
+  - id: q13
+    text: "Как откатить конкретную миграцию по версии?"
+    type: single
+    options:
+      - id: a
+        text: "`rails db:rollback VERSION=20230101120000`"
+        correct: false
+      - id: b
+        text: "`rails db:migrate:down VERSION=20230101120000`"
+        correct: true
+      - id: c
+        text: "`rails db:migrate VERSION=20230101120000` (всегда откатывает)"
+        correct: false
+      - id: d
+        text: "`rails db:revert VERSION=20230101120000`"
+        correct: false
+    explanation: "`migrate:down VERSION=X` откатывает конкретную миграцию. `migrate VERSION=X` откатывает все миграции новее X."
+    difficulty: medium
+
+  - id: q14
+    text: "Что произойдёт при `rails db:migrate` в production если миграция уже применена?"
+    type: single
+    options:
+      - id: a
+        text: "Применит повторно"
+        correct: false
+      - id: b
+        text: "Пропустит — Rails проверяет schema_migrations"
+        correct: true
+      - id: c
+        text: "Бросит ошибку"
+        correct: false
+      - id: d
+        text: "Спросит подтверждение"
+        correct: false
+    explanation: "Rails сверяет файлы в db/migrate/ с записями в schema_migrations. Только новые версии применяются. Это идемпотентная операция."
+    difficulty: easy
+
+  - id: q15
+    text: "Как добавить составной уникальный индекс?"
+    type: single
+    options:
+      - id: a
+        text: "`add_index :table, :col1, :col2, unique: true`"
+        correct: false
+      - id: b
+        text: "`add_index :table, [:col1, :col2], unique: true`"
+        correct: true
+      - id: c
+        text: "`add_unique_index :table, :col1, :col2`"
+        correct: false
+      - id: d
+        text: "`create_index :table, columns: [:col1, :col2]`"
+        correct: false
+    explanation: "Массив колонок создаёт составной индекс. unique: true гарантирует уникальность комбинации значений обоих полей."
+    difficulty: medium
+
+  - id: q16
+    text: "Что такое `reversible` блок в миграции?"
+    type: single
+    options:
+      - id: a
+        text: "Блок, который выполняется при каждом migrate"
+        correct: false
+      - id: b
+        text: "Позволяет явно задать up и down логику для нестандартных изменений в методе change"
+        correct: true
+      - id: c
+        text: "Маркер, что миграция автоматически обратима"
+        correct: false
+      - id: d
+        text: "Используется только в Rails 7+"
+        correct: false
+    explanation: "reversible { |dir| dir.up { execute 'CREATE VIEW...' }; dir.down { execute 'DROP VIEW...' } } — для операций, которые Rails не может автоматически откатить."
+    difficulty: medium
+
+  - id: q17
+    text: "Как создать индекс только для части строк (partial index) в PostgreSQL через Rails?"
+    type: single
+    options:
+      - id: a
+        text: "`add_index :users, :email, where: 'active = true'`"
+        correct: true
+      - id: b
+        text: "`add_index :users, :email, condition: { active: true }`"
+        correct: false
+      - id: c
+        text: "`add_partial_index :users, :email, filter: 'active'`"
+        correct: false
+      - id: d
+        text: "Partial index не поддерживается в Rails"
+        correct: false
+    explanation: "where: принимает SQL-строку для PostgreSQL partial indexes. Индексирует только строки, где active = true — меньше размер, быстрее для таких запросов."
+    difficulty: hard
+
+  - id: q18
+    text: "Нужно ли коммитить `db/schema.rb` в git?"
+    type: single
+    options:
+      - id: a
+        text: "Нет, это автогенерируемый файл"
+        correct: false
+      - id: b
+        text: "Да, schema.rb обязательно коммитить — это единственный источник истины о схеме"
+        correct: true
+      - id: c
+        text: "Только в production-ветке"
+        correct: false
+      - id: d
+        text: "По желанию команды"
+        correct: false
+    explanation: "schema.rb всегда коммитят вместе с миграцией. Новые разработчики используют db:schema:load. Без него невозможно воспроизвести схему без истории всех миграций."
+    difficulty: easy
+
+  - id: q19
+    text: "Как переименовать таблицу в миграции?"
+    type: single
+    options:
+      - id: a
+        text: "`change_table :old_name, :new_name`"
+        correct: false
+      - id: b
+        text: "`rename_table :old_name, :new_name`"
+        correct: true
+      - id: c
+        text: "`alter_table :old_name, rename: :new_name`"
+        correct: false
+      - id: d
+        text: "`drop_table :old_name; create_table :new_name`"
+        correct: false
+    explanation: "rename_table — обратимая операция. Rails автоматически генерирует rollback (переименование обратно)."
+    difficulty: easy
+
+  - id: q20
+    text: "Что такое `db:seed` и как безопасно писать seed-файл?"
+    type: single
+    options:
+      - id: a
+        text: "Применяет миграции. Нужно всегда перезаписывать данные"
+        correct: false
+      - id: b
+        text: "Выполняет db/seeds.rb. Безопасно использовать find_or_create_by для идемпотентности"
+        correct: true
+      - id: c
+        text: "Создаёт тестовые данные. Нельзя запускать в production"
+        correct: false
+      - id: d
+        text: "Синоним db:fixtures:load"
+        correct: false
+    explanation: "db/seeds.rb выполняется через `rails db:seed`. find_or_create_by делает его идемпотентным — безопасно запускать повторно. Полезно для первоначальных данных (роли, категории)."
+    difficulty: medium

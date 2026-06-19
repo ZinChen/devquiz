@@ -1,0 +1,387 @@
+slug: postgresql-basics
+title: "PostgreSQL: Основы"
+description: "Базовые концепции PostgreSQL: типы данных, запросы, индексы, транзакции и ограничения."
+tags: [postgresql, sql, backend]
+difficulty: beginner
+estimated_time: 20
+
+questions:
+  - id: q1
+    text: "Чем PRIMARY KEY отличается от UNIQUE?"
+    type: single
+    options:
+      - id: a
+        text: "PRIMARY KEY = UNIQUE + NOT NULL; таблица может иметь только один PRIMARY KEY"
+        correct: true
+      - id: b
+        text: "Они идентичны"
+        correct: false
+      - id: c
+        text: "PRIMARY KEY может содержать NULL, UNIQUE — нет"
+        correct: false
+      - id: d
+        text: "UNIQUE быстрее PRIMARY KEY"
+        correct: false
+    explanation: "PRIMARY KEY автоматически NOT NULL + UNIQUE + создаёт индекс. UNIQUE допускает один NULL (в PostgreSQL). Таблица может иметь много UNIQUE ограничений, но только один PRIMARY KEY."
+    difficulty: easy
+
+  - id: q2
+    text: "Что такое транзакция в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Последовательность запросов, выполняемых атомарно — все или ни один"
+        correct: true
+      - id: b
+        text: "Подключение к базе данных"
+        correct: false
+      - id: c
+        text: "Временная таблица"
+        correct: false
+      - id: d
+        text: "Тип запроса для обновления"
+        correct: false
+    explanation: "BEGIN; ... COMMIT; или ROLLBACK; — транзакция гарантирует ACID. Если внутри ошибка — ROLLBACK отменяет все изменения. Критично для банковских операций и других атомарных действий."
+    difficulty: easy
+
+  - id: q3
+    text: "Что означает ACID в контексте баз данных?"
+    type: single
+    options:
+      - id: a
+        text: "Atomicity, Consistency, Isolation, Durability"
+        correct: true
+      - id: b
+        text: "Aggregation, Concurrency, Indexing, Distribution"
+        correct: false
+      - id: c
+        text: "Authentication, Consistency, Isolation, Durability"
+        correct: false
+      - id: d
+        text: "Atomicity, Caching, Isolation, Distribution"
+        correct: false
+    explanation: "ACID: Atomicity (всё или ничего), Consistency (данные валидны), Isolation (транзакции не видят друг друга), Durability (данные сохранены после COMMIT). PostgreSQL полностью ACID-совместим."
+    difficulty: easy
+
+  - id: q4
+    text: "Чем LEFT JOIN отличается от INNER JOIN?"
+    type: single
+    options:
+      - id: a
+        text: "LEFT JOIN возвращает все строки левой таблицы + совпадения справа (NULL если нет); INNER JOIN — только совпадения"
+        correct: true
+      - id: b
+        text: "Они идентичны"
+        correct: false
+      - id: c
+        text: "INNER JOIN быстрее"
+        correct: false
+      - id: d
+        text: "LEFT JOIN возвращает только NULL строки"
+        correct: false
+    explanation: "LEFT JOIN: пользователи без постов тоже попадают в результат (posts.* = NULL). INNER JOIN: только пользователи у которых есть посты. RIGHT JOIN — зеркало LEFT JOIN."
+    difficulty: easy
+
+  - id: q5
+    text: "Что такое индекс в PostgreSQL и когда он помогает?"
+    type: single
+    options:
+      - id: a
+        text: "Дополнительная структура данных ускоряющая поиск по колонке за счёт дополнительного места на диске"
+        correct: true
+      - id: b
+        text: "Порядковый номер строки"
+        correct: false
+      - id: c
+        text: "Ограничение уникальности"
+        correct: false
+      - id: d
+        text: "Кэш запросов"
+        correct: false
+    explanation: "Индекс (B-tree по умолчанию) ускоряет WHERE, ORDER BY, JOIN по индексированным колонкам. Замедляет INSERT/UPDATE/DELETE. Создавайте на FK, часто используемых колонках фильтрации."
+    difficulty: easy
+
+  - id: q6
+    text: "Что такое NULL в SQL и почему `NULL = NULL` даёт FALSE?"
+    type: single
+    options:
+      - id: a
+        text: "NULL — это пустая строка; NULL = NULL = TRUE"
+        correct: false
+      - id: b
+        text: "NULL — отсутствие значения; любое сравнение с NULL даёт NULL (unknown); используйте IS NULL"
+        correct: true
+      - id: c
+        text: "NULL = NULL = FALSE всегда"
+        correct: false
+      - id: d
+        text: "NULL — это 0"
+        correct: false
+    explanation: "NULL — отсутствие значения, не 0 и не пустая строка. NULL = NULL → NULL (не TRUE). Для проверки на NULL используйте IS NULL или IS NOT NULL."
+    difficulty: medium
+
+  - id: q7
+    text: "Что делает `EXPLAIN` в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Выполняет запрос и возвращает количество строк"
+        correct: false
+      - id: b
+        text: "Показывает план выполнения запроса без его выполнения"
+        correct: true
+      - id: c
+        text: "Оптимизирует запрос автоматически"
+        correct: false
+      - id: d
+        text: "Создаёт индексы по плану запроса"
+        correct: false
+    explanation: "EXPLAIN SELECT ... показывает план (Seq Scan, Index Scan и т.д.) и оценочную стоимость. EXPLAIN ANALYZE — выполняет запрос и показывает реальное время. Ключевой инструмент оптимизации."
+    difficulty: medium
+
+  - id: q8
+    text: "Чем `TEXT` отличается от `VARCHAR(n)` в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "TEXT медленнее VARCHAR"
+        correct: false
+      - id: b
+        text: "В PostgreSQL TEXT и VARCHAR без ограничения идентичны по производительности; VARCHAR(n) добавляет проверку длины"
+        correct: true
+      - id: c
+        text: "TEXT ограничен 65535 байт"
+        correct: false
+      - id: d
+        text: "VARCHAR предпочтительнее в продакшене"
+        correct: false
+    explanation: "PostgreSQL хранит TEXT и VARCHAR одинаково. VARCHAR(n) добавляет constraint длины. Многие DBA предпочитают TEXT — проще изменить лимит позже через CHECK constraint."
+    difficulty: medium
+
+  - id: q9
+    text: "Что такое `SERIAL` (или `GENERATED AS IDENTITY`) в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Тип для хранения серийных номеров"
+        correct: false
+      - id: b
+        text: "Автоинкрементный целочисленный PK через последовательность (sequence)"
+        correct: true
+      - id: c
+        text: "UUID-генератор"
+        correct: false
+      - id: d
+        text: "Уникальный индекс"
+        correct: false
+    explanation: "SERIAL = INTEGER + DEFAULT nextval('seq'). Современная альтернатива: id INTEGER GENERATED BY DEFAULT AS IDENTITY. Rails использует SERIAL для id по умолчанию."
+    difficulty: easy
+
+  - id: q10
+    text: "Как работает `GROUP BY` и что такое `HAVING`?"
+    type: single
+    options:
+      - id: a
+        text: "GROUP BY группирует строки; HAVING фильтрует группы (как WHERE, но после агрегации)"
+        correct: true
+      - id: b
+        text: "GROUP BY и ORDER BY идентичны"
+        correct: false
+      - id: c
+        text: "HAVING используется вместо WHERE для одиночных строк"
+        correct: false
+      - id: d
+        text: "GROUP BY работает только с COUNT"
+        correct: false
+    explanation: "GROUP BY собирает строки в группы. HAVING фильтрует группы: SELECT status, COUNT(*) FROM orders GROUP BY status HAVING COUNT(*) > 10. WHERE фильтрует строки до группировки."
+    difficulty: medium
+
+  - id: q11
+    text: "Что такое Foreign Key и зачем он нужен?"
+    type: single
+    options:
+      - id: a
+        text: "Ограничение ссылочной целостности — нельзя создать запись со ссылкой на несуществующую строку"
+        correct: true
+      - id: b
+        text: "Просто индекс для быстрых JOIN"
+        correct: false
+      - id: c
+        text: "Тип данных для внешних идентификаторов"
+        correct: false
+      - id: d
+        text: "Шифрование поля id"
+        correct: false
+    explanation: "FK гарантирует: post.user_id всегда ссылается на существующего пользователя. Без FK можно создать 'осиротевшие' записи. FK + ON DELETE CASCADE — автоудаление связанных записей."
+    difficulty: easy
+
+  - id: q12
+    text: "Что такое подзапрос (subquery)??"
+    type: single
+    options:
+      - id: a
+        text: "Запрос внутри другого запроса"
+        correct: true
+      - id: b
+        text: "Запрос к вложенной таблице"
+        correct: false
+      - id: c
+        text: "Синоним CTE"
+        correct: false
+      - id: d
+        text: "Тип JOIN"
+        correct: false
+    explanation: "SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE total > 1000). Подзапрос в WHERE, FROM (derived table), SELECT (scalar subquery). CTE (WITH ...) — именованный подзапрос."
+    difficulty: medium
+
+  - id: q13
+    text: "Какие уровни изоляции транзакций есть в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Read Uncommitted, Read Committed, Repeatable Read, Serializable"
+        correct: true
+      - id: b
+        text: "Только Serializable"
+        correct: false
+      - id: c
+        text: "Low, Medium, High, Strict"
+        correct: false
+      - id: d
+        text: "Shared, Exclusive, Row-level"
+        correct: false
+    explanation: "PostgreSQL по умолчанию: Read Committed. Проблемы: dirty read, non-repeatable read, phantom read. Serializable — самый строгий, использует MVCC. Read Uncommitted в PG = Read Committed."
+    difficulty: hard
+
+  - id: q14
+    text: "Что такое `COALESCE` в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Функция объединения строк"
+        correct: false
+      - id: b
+        text: "Возвращает первое не-NULL значение из списка"
+        correct: true
+      - id: c
+        text: "Синоним ISNULL"
+        correct: false
+      - id: d
+        text: "Функция для работы с JSONB"
+        correct: false
+    explanation: "COALESCE(a, b, c) → первое не-NULL. SELECT COALESCE(phone, email, 'нет контакта') FROM users. Полезно для значений по умолчанию при NULL."
+    difficulty: medium
+
+  - id: q15
+    text: "Что такое `MVCC` в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "Multi-Version Concurrency Control — каждая транзакция видит снимок данных без блокировки"
+        correct: true
+      - id: b
+        text: "Multiple Value Column Cache"
+        correct: false
+      - id: c
+        text: "Механизм репликации"
+        correct: false
+      - id: d
+        text: "Тип индекса"
+        correct: false
+    explanation: "MVCC: PostgreSQL хранит несколько версий строки. Читающие транзакции не блокируют пишущих и наоборот. Это обеспечивает высокую конкурентность без explicit locks."
+    difficulty: hard
+
+  - id: q16
+    text: "Как выполнить UPDATE с JOIN в PostgreSQL?"
+    type: single
+    options:
+      - id: a
+        text: "`UPDATE posts JOIN users ON posts.user_id = users.id SET ...`"
+        correct: false
+      - id: b
+        text: "`UPDATE posts SET ... FROM users WHERE posts.user_id = users.id AND ...`"
+        correct: true
+      - id: c
+        text: "`UPDATE posts, users SET ...`"
+        correct: false
+      - id: d
+        text: "Нельзя обновлять с JOIN"
+        correct: false
+    explanation: "PostgreSQL использует FROM вместо JOIN в UPDATE: UPDATE posts SET title = 'prefix ' || title FROM users WHERE posts.user_id = users.id AND users.active = true."
+    difficulty: medium
+
+  - id: q17
+    text: "Что такое `CHECK` constraint?"
+    type: single
+    options:
+      - id: a
+        text: "Ограничение, проверяющее что значение удовлетворяет условию перед вставкой"
+        correct: true
+      - id: b
+        text: "Проверка существования внешнего ключа"
+        correct: false
+      - id: c
+        text: "Синоним UNIQUE"
+        correct: false
+      - id: d
+        text: "Используется только для триггеров"
+        correct: false
+    explanation: "CHECK (age >= 0), CHECK (status IN ('draft', 'published')) — ограничения на уровне БД. Нарушение вызывает ошибку. Надёжнее model validations для критических бизнес-правил."
+    difficulty: medium
+
+  - id: q18
+    text: "Что такое оконные функции (window functions)?"
+    type: single
+    options:
+      - id: a
+        text: "Функции для работы с временными окнами"
+        correct: false
+      - id: b
+        text: "Агрегатные вычисления над набором строк без GROUP BY — каждая строка остаётся в результате"
+        correct: true
+      - id: c
+        text: "Синоним GROUP BY + HAVING"
+        correct: false
+      - id: d
+        text: "Функции только для JSONB"
+        correct: false
+    explanation: "ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at) — нумерация строк внутри группы. SUM() OVER (...) — нарастающий итог. LAG/LEAD — доступ к предыдущей/следующей строке."
+    difficulty: hard
+
+  - id: q19
+    text: "Зачем использовать `LIMIT ... OFFSET ...` и какая с ним проблема?"
+    type: single
+    options:
+      - id: a
+        text: "Для пагинации; проблема — с большим OFFSET PostgreSQL читает все пропущенные строки"
+        correct: true
+      - id: b
+        text: "Нет проблем, стандартный метод пагинации"
+        correct: false
+      - id: c
+        text: "Работает только с ORDER BY id"
+        correct: false
+      - id: d
+        text: "OFFSET устарел в PostgreSQL 15+"
+        correct: false
+    explanation: "LIMIT 20 OFFSET 10000 — PostgreSQL читает 10020 строк и выбрасывает 10000. Медленно! Cursor-based pagination (WHERE id > last_id LIMIT 20) — O(1) независимо от страницы."
+    difficulty: hard
+
+  - id: q20
+    text: "Что такое `TRUNCATE` и чем отличается от `DELETE`?"
+    type: single
+    options:
+      - id: a
+        text: "TRUNCATE удаляет все строки без условий, очень быстро, не логирует каждую строку; DELETE — медленнее, логирует, поддерживает WHERE"
+        correct: true
+      - id: b
+        text: "Они идентичны"
+        correct: false
+      - id: c
+        text: "TRUNCATE нельзя откатить"
+        correct: false
+      - id: d
+        text: "DELETE быстрее TRUNCATE"
+        correct: false
+    explanation: "TRUNCATE TABLE users — очищает таблицу целиком, сбрасывает SERIAL. Не логирует построчно (быстро). DELETE можно откатить, применить WHERE, использует MVCC. TRUNCATE тоже транзакционен в PostgreSQL."
+    difficulty: medium

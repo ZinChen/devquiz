@@ -1,0 +1,19 @@
+# Rails
+app/.env
+app/tmp/
+app/log/
+app/storage/
+app/public/vite-dev/
+app/public/vite-test/
+app/public/vite/
+app/node_modules/
+app/*.local
+app/config/master.key
+app/config/credentials.yml.enc
+app/.byebug_history
+
+# macOS
+.DS_Store
+
+# Mise (keep mise.toml, ignore local overrides)
+.mise.local.toml

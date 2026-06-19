@@ -1,0 +1,387 @@
+slug: ror-active-record
+title: "ActiveRecord: Запросы и ORM"
+description: "Конструирование запросов, scopes, коллбэки и продвинутые возможности ActiveRecord."
+tags: [ruby, rails, activerecord, backend]
+difficulty: intermediate
+estimated_time: 25
+
+questions:
+  - id: q1
+    text: "Чем отличается `User.find(1)` от `User.find_by(id: 1)`?"
+    type: single
+    options:
+      - id: a
+        text: "find возвращает nil при отсутствии, find_by бросает исключение"
+        correct: false
+      - id: b
+        text: "find бросает RecordNotFound при отсутствии, find_by возвращает nil"
+        correct: true
+      - id: c
+        text: "Они идентичны"
+        correct: false
+      - id: d
+        text: "find_by работает только с уникальными полями"
+        correct: false
+    explanation: "find бросает ActiveRecord::RecordNotFound если запись не найдена. find_by возвращает nil. Используйте find_by когда nil — допустимый результат."
+    difficulty: easy
+
+  - id: q2
+    text: "Что делает `User.where(active: true).limit(10).order(:created_at)`?"
+    type: single
+    options:
+      - id: a
+        text: "Немедленно выполняет 3 SQL-запроса"
+        correct: false
+      - id: b
+        text: "Строит объект ActiveRecord::Relation, SQL выполняется при итерации или вызове .to_a"
+        correct: true
+      - id: c
+        text: "Возвращает массив из 10 элементов"
+        correct: false
+      - id: d
+        text: "Вызывает ошибку без блока"
+        correct: false
+    explanation: "ActiveRecord использует lazy loading — запросы откладываются и строятся в цепочку. SQL выполняется только когда нужны данные (each, to_a, first и т.д.)."
+    difficulty: medium
+
+  - id: q3
+    text: "Как выбрать всех пользователей, у которых нет ни одного поста?"
+    type: single
+    options:
+      - id: a
+        text: "`User.where(posts: nil)`"
+        correct: false
+      - id: b
+        text: "`User.left_joins(:posts).where(posts: { id: nil })`"
+        correct: true
+      - id: c
+        text: "`User.joins(:posts).where.not(posts: {})`"
+        correct: false
+      - id: d
+        text: "`User.includes(:posts).select { |u| u.posts.empty? }`"
+        correct: false
+    explanation: "LEFT JOIN + WHERE posts.id IS NULL — стандартный способ. Вариант с includes и select работает, но загружает все данные в Ruby — неэффективно."
+    difficulty: medium
+
+  - id: q4
+    text: "Что делает `scope :published, -> { where(published: true) }` в модели?"
+    type: single
+    options:
+      - id: a
+        text: "Создаёт instance-метод published на объекте"
+        correct: false
+      - id: b
+        text: "Определяет именованный запрос, который можно цепочить: `Post.published.recent`"
+        correct: true
+      - id: c
+        text: "Автоматически фильтрует все запросы к модели"
+        correct: false
+      - id: d
+        text: "Добавляет валидацию published"
+        correct: false
+    explanation: "Scope определяет class-метод, возвращающий ActiveRecord::Relation. Удобно для повторно используемых условий, которые можно комбинировать."
+    difficulty: medium
+
+  - id: q5
+    text: "Что такое N+1 проблема и как её решить в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "N+1 SQL-запросов при итерации по ассоциациям; решение — includes или eager_load"
+        correct: true
+      - id: b
+        text: "Ошибка при N одновременных запросах; решение — connection pool"
+        correct: false
+      - id: c
+        text: "N коллбэков при сохранении; решение — skip_callbacks"
+        correct: false
+      - id: d
+        text: "Проблема с индексами при N записях; решение — add_index"
+        correct: false
+    explanation: "N+1: один запрос на коллекцию + N запросов для каждого объекта (например, posts.each { |p| p.author.name }). `includes(:author)` загружает всё за 2 запроса."
+    difficulty: medium
+
+  - id: q6
+    text: "Чем `includes` отличается от `joins` в ActiveRecord?"
+    type: single
+    options:
+      - id: a
+        text: "Они идентичны"
+        correct: false
+      - id: b
+        text: "includes загружает ассоциации в память (предзагрузка), joins делает SQL JOIN только для фильтрации без загрузки"
+        correct: true
+      - id: c
+        text: "joins загружает ассоциации, includes только фильтрует"
+        correct: false
+      - id: d
+        text: "includes использует LEFT JOIN, joins — INNER JOIN всегда"
+        correct: false
+    explanation: "includes генерирует SELECT * FROM associations и хранит в памяти (eager loading). joins добавляет JOIN в основной запрос для условий WHERE, но не загружает ассоциации."
+    difficulty: hard
+
+  - id: q7
+    text: "Что делает `User.select(:id, :email)`?"
+    type: single
+    options:
+      - id: a
+        text: "Фильтрует пользователей по id и email"
+        correct: false
+      - id: b
+        text: "Выполняет SELECT id, email FROM users вместо SELECT *"
+        correct: true
+      - id: c
+        text: "Создаёт индекс по id и email"
+        correct: false
+      - id: d
+        text: "Возвращает хэш {id: ..., email: ...}"
+        correct: false
+    explanation: "select ограничивает колонки в SQL-запросе. Полезно при больших таблицах — не загружать ненужные данные."
+    difficulty: medium
+
+  - id: q8
+    text: "Как выполнить произвольный SQL-запрос в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "`User.query('SELECT ...')`"
+        correct: false
+      - id: b
+        text: "`ActiveRecord::Base.connection.execute('SELECT ...')` или `User.find_by_sql('SELECT ...')`"
+        correct: true
+      - id: c
+        text: "`Rails.db.execute('SELECT ...')`"
+        correct: false
+      - id: d
+        text: "Нельзя, только через ORM-методы"
+        correct: false
+    explanation: "connection.execute возвращает PG::Result. find_by_sql возвращает объекты модели. Оба метода — крайний случай, когда ORM не справляется."
+    difficulty: medium
+
+  - id: q9
+    text: "Что возвращает `User.count`?"
+    type: single
+    options:
+      - id: a
+        text: "Массив всех пользователей"
+        correct: false
+      - id: b
+        text: "Количество записей в таблице users (число)"
+        correct: true
+      - id: c
+        text: "ActiveRecord::Relation"
+        correct: false
+      - id: d
+        text: "Хэш с метаданными"
+        correct: false
+    explanation: "count выполняет SELECT COUNT(*) и возвращает Integer. Аналоги: sum, average, minimum, maximum — для агрегатных функций."
+    difficulty: easy
+
+  - id: q10
+    text: "Что делает `update_all` vs `each { update }`?"
+    type: single
+    options:
+      - id: a
+        text: "Идентичны"
+        correct: false
+      - id: b
+        text: "update_all выполняет один UPDATE SQL без загрузки объектов и без коллбэков; each выполняет N запросов с коллбэками"
+        correct: true
+      - id: c
+        text: "update_all вызывает коллбэки, each — нет"
+        correct: false
+      - id: d
+        text: "update_all работает только для одной записи"
+        correct: false
+    explanation: "User.where(active: false).update_all(active: true) — один SQL. Быстрее, но пропускает callbacks и validations. Используйте осторожно."
+    difficulty: hard
+
+  - id: q11
+    text: "Что такое `pluck` в ActiveRecord?"
+    type: single
+    options:
+      - id: a
+        text: "Метод для удаления записей"
+        correct: false
+      - id: b
+        text: "Выборка значений одной или нескольких колонок как массива без создания объектов AR"
+        correct: true
+      - id: c
+        text: "Метод для агрегации данных"
+        correct: false
+      - id: d
+        text: "Синоним для select"
+        correct: false
+    explanation: "User.pluck(:email) → ['a@b.com', ...]. В отличие от map { email }, не создаёт объекты User — быстрее и меньше памяти потребляет."
+    difficulty: medium
+
+  - id: q12
+    text: "Как добавить default_scope к модели и какие риски это несёт?"
+    type: single
+    options:
+      - id: a
+        text: "default_scope { where(active: true) }; риск — незаметно фильтрует все запросы, включая joins"
+        correct: true
+      - id: b
+        text: "scope :default, ...; нет рисков"
+        correct: false
+      - id: c
+        text: "self.default = ...; риск только для delete"
+        correct: false
+      - id: d
+        text: "default_scope нельзя переопределить"
+        correct: false
+    explanation: "default_scope применяется к КАЖДОМУ запросу модели. Легко вызывает неожиданные результаты. Многие избегают его в пользу явных scope."
+    difficulty: hard
+
+  - id: q13
+    text: "Что делает `Post.where(\"created_at > ?\", 1.week.ago)`?"
+    type: single
+    options:
+      - id: a
+        text: "Синтаксическая ошибка"
+        correct: false
+      - id: b
+        text: "Безопасный запрос с placeholder ? для защиты от SQL-инъекций"
+        correct: true
+      - id: c
+        text: "То же самое, что where(\"created_at > #{1.week.ago}\")"
+        correct: false
+      - id: d
+        text: "Работает только с датами"
+        correct: false
+    explanation: "Плейсхолдер ? экранирует значение. НИКОГДА не интерполируйте переменные в строку WHERE — это SQL-инъекция. Используйте ? или хэш-форму."
+    difficulty: medium
+
+  - id: q14
+    text: "Какой коллбэк вызывается ПОСЛЕ успешного сохранения новой записи?"
+    type: single
+    options:
+      - id: a
+        text: "before_save"
+        correct: false
+      - id: b
+        text: "after_commit"
+        correct: false
+      - id: c
+        text: "after_create"
+        correct: true
+      - id: d
+        text: "after_initialize"
+        correct: false
+    explanation: "Порядок коллбэков при create: before_validation → after_validation → before_save → before_create → INSERT → after_create → after_save → after_commit."
+    difficulty: medium
+
+  - id: q15
+    text: "Что такое `optimistic locking` в ActiveRecord?"
+    type: single
+    options:
+      - id: a
+        text: "Блокировка таблицы на время транзакции"
+        correct: false
+      - id: b
+        text: "Механизм обнаружения конкурентных изменений через колонку lock_version"
+        correct: true
+      - id: c
+        text: "Оптимизация запросов через кэш"
+        correct: false
+      - id: d
+        text: "Запрет одновременных записей в одну строку"
+        correct: false
+    explanation: "При добавлении колонки lock_version Rails инкрементирует её при каждом UPDATE. Если версии не совпадают — бросается StaleObjectError. Подходит для конкурентного редактирования."
+    difficulty: hard
+
+  - id: q16
+    text: "Как работает `transaction` в ActiveRecord?"
+    type: single
+    options:
+      - id: a
+        text: "Оборачивает набор операций в SQL-транзакцию, откатывает при исключении"
+        correct: true
+      - id: b
+        text: "Просто группирует запросы для скорости"
+        correct: false
+      - id: c
+        text: "Используется только для DELETE операций"
+        correct: false
+      - id: d
+        text: "Автоматически повторяет запрос при ошибке"
+        correct: false
+    explanation: "ActiveRecord::Base.transaction { ... } — атомарное выполнение. Если внутри блока возникает исключение — ROLLBACK. Иначе COMMIT."
+    difficulty: medium
+
+  - id: q17
+    text: "Что делает `distinct` в запросе `User.joins(:posts).distinct`?"
+    type: single
+    options:
+      - id: a
+        text: "Удаляет дублирующиеся строки из результата (добавляет DISTINCT в SQL)"
+        correct: true
+      - id: b
+        text: "Выбирает только уникальные email"
+        correct: false
+      - id: c
+        text: "То же, что uniq в Ruby"
+        correct: false
+      - id: d
+        text: "Убирает NULL значения"
+        correct: false
+    explanation: "При joins один пользователь может появиться несколько раз (по числу постов). distinct добавляет SELECT DISTINCT — каждый пользователь только один раз."
+    difficulty: medium
+
+  - id: q18
+    text: "Что произойдёт при вызове `user.save` если валидация не пройдена?"
+    type: single
+    options:
+      - id: a
+        text: "Бросит исключение ActiveRecord::RecordInvalid"
+        correct: false
+      - id: b
+        text: "Вернёт false, запись не сохранится, user.errors будет заполнен"
+        correct: true
+      - id: c
+        text: "Сохранит запись с ошибками"
+        correct: false
+      - id: d
+        text: "Вернёт nil"
+        correct: false
+    explanation: "save возвращает false при ошибках валидации. save! бросает RecordInvalid. Ошибки доступны через user.errors.full_messages."
+    difficulty: easy
+
+  - id: q19
+    text: "Для чего используется `group` в ActiveRecord?"
+    type: single
+    options:
+      - id: a
+        text: "Для группировки результатов по колонке (GROUP BY) с агрегатными функциями"
+        correct: true
+      - id: b
+        text: "Для объединения двух запросов"
+        correct: false
+      - id: c
+        text: "Для сортировки по группам"
+        correct: false
+      - id: d
+        text: "Для группировки ассоциаций"
+        correct: false
+    explanation: "Post.group(:status).count → { 'draft' => 5, 'published' => 20 }. Комбинируется с count, sum, average для агрегатных отчётов."
+    difficulty: medium
+
+  - id: q20
+    text: "Что такое `merge` в контексте ActiveRecord relations?"
+    type: single
+    options:
+      - id: a
+        text: "Метод для слияния двух записей в одну"
+        correct: false
+      - id: b
+        text: "Объединение условий двух Relation-объектов в один запрос"
+        correct: true
+      - id: c
+        text: "SQL MERGE операция"
+        correct: false
+      - id: d
+        text: "Метод хэша, не связанный с AR"
+        correct: false
+    explanation: "User.joins(:posts).merge(Post.published) эквивалентно User.joins(:posts).where(posts: { published: true }). Позволяет переиспользовать scope другой модели."
+    difficulty: hard

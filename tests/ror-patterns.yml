@@ -1,0 +1,387 @@
+slug: ror-patterns
+title: "Rails Patterns: Архитектурные паттерны"
+description: "Service Objects, Form Objects, Decorators, Presenters, Query Objects, Interactors и другие паттерны Rails."
+tags: [ruby, rails, patterns, architecture, backend]
+difficulty: advanced
+estimated_time: 25
+
+questions:
+  - id: q1
+    text: "Для чего используется паттерн Service Object в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Для хранения конфигурации приложения"
+        correct: false
+      - id: b
+        text: "Для выноса бизнес-логики из моделей и контроллеров в отдельные классы"
+        correct: true
+      - id: c
+        text: "Для работы с внешними API"
+        correct: false
+      - id: d
+        text: "Для кэширования данных"
+        correct: false
+    explanation: "Service Object — PORO (Plain Old Ruby Object) с одной публичной точкой входа (call). Держит контроллеры тонкими, модели — без бизнес-логики."
+    difficulty: medium
+
+  - id: q2
+    text: "Как обычно реализуется вызов Service Object?"
+    type: single
+    options:
+      - id: a
+        text: "Через наследование от ApplicationService"
+        correct: false
+      - id: b
+        text: "Через класс-метод .call или instance-метод #call"
+        correct: true
+      - id: c
+        text: "Через include в модель"
+        correct: false
+      - id: d
+        text: "Через before_action в контроллере"
+        correct: false
+    explanation: "Конвенция: `UserRegistrationService.call(params)` или `UserRegistrationService.new(params).call`. Единственная точка входа делает объект предсказуемым."
+    difficulty: easy
+
+  - id: q3
+    text: "Что такое Form Object в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Класс формы для frontend-разработки"
+        correct: false
+      - id: b
+        text: "Объект, инкапсулирующий валидацию и обработку данных формы, не привязанный к одной AR-модели"
+        correct: true
+      - id: c
+        text: "Вьюха для рендеринга форм"
+        correct: false
+      - id: d
+        text: "Метод form_for в ActionView"
+        correct: false
+    explanation: "Form Object использует ActiveModel::Model для валидаций без сохранения в БД. Полезен для форм, которые изменяют несколько моделей или имеют специфическую бизнес-логику."
+    difficulty: medium
+
+  - id: q4
+    text: "Что такое Decorator / Presenter паттерн?"
+    type: single
+    options:
+      - id: a
+        text: "Обёртка вокруг модели для добавления методов отображения без изменения модели"
+        correct: true
+      - id: b
+        text: "Класс для форматирования SQL-запросов"
+        correct: false
+      - id: c
+        text: "Декоратор для before_action"
+        correct: false
+      - id: d
+        text: "Синоним concerns"
+        correct: false
+    explanation: "Decorator оборачивает модель методами представления (full_name, formatted_date). Gem Draper — популярная реализация. Держит модели чистыми от view-логики."
+    difficulty: medium
+
+  - id: q5
+    text: "Что такое Query Object?"
+    type: single
+    options:
+      - id: a
+        text: "Инструмент для построения GraphQL запросов"
+        correct: false
+      - id: b
+        text: "Объект, инкапсулирующий сложный запрос к БД в отдельный класс"
+        correct: true
+      - id: c
+        text: "Синоним scope в модели"
+        correct: false
+      - id: d
+        text: "ORM-обёртка для raw SQL"
+        correct: false
+    explanation: "Query Object — PORO принимающий AR::Relation и возвращающий AR::Relation. Полезен для сложных запросов: фильтрация с JOIN, подзапросами. `ReportQuery.new(User.all).call(filters)`."
+    difficulty: medium
+
+  - id: q6
+    text: "В чём смысл паттерна Thin Controllers, Fat Models, и почему он устарел?"
+    type: single
+    options:
+      - id: a
+        text: "Контроллеры без логики, вся логика в моделях — приводит к God Object"
+        correct: true
+      - id: b
+        text: "Паттерн всё ещё актуален для любых приложений"
+        correct: false
+      - id: c
+        text: "Контроллеры содержат бизнес-логику, модели — только данные"
+        correct: false
+      - id: d
+        text: "Паттерн означает уменьшение файлов контроллеров"
+        correct: false
+    explanation: "Fat Models → God Object (модель знает всё, тысячи строк). Современный подход: Thin Controllers + Thin Models + Service Objects/Interactors для логики."
+    difficulty: medium
+
+  - id: q7
+    text: "Что такое Interactor (gem interactor)?"
+    type: single
+    options:
+      - id: a
+        text: "Инструмент для тестирования взаимодействий"
+        correct: false
+      - id: b
+        text: "Service Object с контекстом (context), статусом выполнения и поддержкой цепочек (Organizer)"
+        correct: true
+      - id: c
+        text: "Альтернатива ActiveRecord callbacks"
+        correct: false
+      - id: d
+        text: "Библиотека для event-driven архитектуры"
+        correct: false
+    explanation: "Interactor.call(context) → context.success? / context.failure?. Organizer цепочит несколько Interactor'ов с rollback при ошибке. Структурирует сложную бизнес-логику."
+    difficulty: hard
+
+  - id: q8
+    text: "Что такое Policy Object (например, Pundit)?"
+    type: single
+    options:
+      - id: a
+        text: "Объект для управления API-ключами"
+        correct: false
+      - id: b
+        text: "Класс, инкапсулирующий правила авторизации — кто что может делать"
+        correct: true
+      - id: c
+        text: "Middleware для проверки запросов"
+        correct: false
+      - id: d
+        text: "Синоним before_action :authenticate_user!"
+        correct: false
+    explanation: "Policy Object (Pundit, Action Policy) — PostPolicy#update? проверяет может ли user редактировать post. Выносит авторизацию из контроллеров и моделей в отдельные тестируемые классы."
+    difficulty: medium
+
+  - id: q9
+    text: "Что такое Value Object?"
+    type: single
+    options:
+      - id: a
+        text: "Объект, определяемый своими значениями, не идентичностью; иммутабельный"
+        correct: true
+      - id: b
+        text: "Объект хранящий значения конфигурации"
+        correct: false
+      - id: c
+        text: "Запись в БД с одним полем"
+        correct: false
+      - id: d
+        text: "Синоним Struct"
+        correct: false
+    explanation: "Value Object: два Money.new(100, :usd) равны если суммы и валюты равны. Не меняется (immutable). Примеры: Money, Coordinates, EmailAddress. Удобно с Comparable."
+    difficulty: hard
+
+  - id: q10
+    text: "Как правильно организовать файлы Service Objects в Rails-проекте?"
+    type: single
+    options:
+      - id: a
+        text: "В app/models/services/"
+        correct: false
+      - id: b
+        text: "В app/services/, один класс на файл, имена в CamelCase"
+        correct: true
+      - id: c
+        text: "В lib/services/"
+        correct: false
+      - id: d
+        text: "В app/controllers/concerns/"
+        correct: false
+    explanation: "app/services/ — стандартная директория. Rails (Zeitwerk) автоматически загружает её. Структура внутри может отражать домен: app/services/users/, app/services/payments/."
+    difficulty: easy
+
+  - id: q11
+    text: "Что такое Null Object паттерн?"
+    type: single
+    options:
+      - id: a
+        text: "Обработка nil в базе данных"
+        correct: false
+      - id: b
+        text: "Объект-заглушка, реализующий тот же интерфейс что и основной, но ничего не делающий"
+        correct: true
+      - id: c
+        text: "Проверка на nil перед каждым методом"
+        correct: false
+      - id: d
+        text: "Синоним Optional в Java"
+        correct: false
+    explanation: "GuestUser вместо nil: current_user || GuestUser.new. GuestUser#name → 'Гость', #admin? → false. Убирает nil-checks. Широко используется вместо проверки на null."
+    difficulty: medium
+
+  - id: q12
+    text: "Как реализовать Observer паттерн в Rails без gem?"
+    type: single
+    options:
+      - id: a
+        text: "Через наследование от Observable"
+        correct: false
+      - id: b
+        text: "Через ActiveSupport::Notifications или callbacks + after_commit"
+        correct: true
+      - id: c
+        text: "Невозможно без gem"
+        correct: false
+      - id: d
+        text: "Только через Sidekiq"
+        correct: false
+    explanation: "ActiveSupport::Notifications — publish/subscribe система в Rails. after_commit коллбэки — простой вариант. Для сложных случаев: wisper gem."
+    difficulty: hard
+
+  - id: q13
+    text: "Что такое Repository паттерн и нужен ли он в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "GitHub-репозиторий для хранения кода"
+        correct: false
+      - id: b
+        text: "Абстракция над хранилищем данных; в Rails часто избыточен из-за AR, но полезен при смене хранилища"
+        correct: true
+      - id: c
+        text: "Обязателен для всех Rails-приложений"
+        correct: false
+      - id: d
+        text: "Синоним Query Object"
+        correct: false
+    explanation: "Repository скрывает источник данных за интерфейсом. В Rails ActiveRecord сам является Repository. Имеет смысл при: нескольких хранилищах (DB + API), необходимости тестовых двойников."
+    difficulty: hard
+
+  - id: q14
+    text: "Как использовать concerns для DRY-кода в моделях?"
+    type: single
+    options:
+      - id: a
+        text: "Concerns только для контроллеров"
+        correct: false
+      - id: b
+        text: "module Taggable; extend ActiveSupport::Concern; included { has_many :tags }; end"
+        correct: true
+      - id: c
+        text: "Через include в ApplicationRecord"
+        correct: false
+      - id: d
+        text: "Concerns нельзя включать в несколько моделей"
+        correct: false
+    explanation: "ActiveSupport::Concern: included { } выполняется при include — там можно описывать ассоциации, scope, callbacks. class_methods { } для методов класса. Чисто и переиспользуемо."
+    difficulty: medium
+
+  - id: q15
+    text: "В чём разница между Command и Service Object паттернами?"
+    type: single
+    options:
+      - id: a
+        text: "Они идентичны"
+        correct: false
+      - id: b
+        text: "Command хранит состояние для отмены (undo), Service Object — stateless операция без отмены"
+        correct: true
+      - id: c
+        text: "Command только для фоновых задач"
+        correct: false
+      - id: d
+        text: "Service Object только для запросов к внешним API"
+        correct: false
+    explanation: "Command инкапсулирует действие с возможностью отмены (execute/undo). Service Object — просто исполнение бизнес-логики без хранения истории. В Rails чаще Service Object."
+    difficulty: hard
+
+  - id: q16
+    text: "Зачем использовать `ActiveModel::Model` в Form Objects?"
+    type: single
+    options:
+      - id: a
+        text: "Для связи с таблицей в БД"
+        correct: false
+      - id: b
+        text: "Для поддержки validates, errors, form_with совместимости без наследования от AR"
+        correct: true
+      - id: c
+        text: "Для автоматического сохранения"
+        correct: false
+      - id: d
+        text: "Для наследования от ApplicationRecord"
+        correct: false
+    explanation: "ActiveModel::Model включает Validations, Conversion, Naming — достаточно для form_with(@form_object). Не нужна таблица, но есть полный Rails form API."
+    difficulty: medium
+
+  - id: q17
+    text: "Что такое паттерн `Facade` в контексте Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Графический интерфейс для Rails Admin"
+        correct: false
+      - id: b
+        text: "Объект, упрощающий интерфейс к нескольким подсистемам — часто передаётся во вьюху"
+        correct: true
+      - id: c
+        text: "Обёртка над Rails Router"
+        correct: false
+      - id: d
+        text: "Синоним ApplicationController"
+        correct: false
+    explanation: "Facade собирает данные из нескольких сервисов/моделей в один объект. DashboardFacade#user, #stats, #recent_orders — вместо @user, @stats, @orders в контроллере."
+    difficulty: medium
+
+  - id: q18
+    text: "Когда стоит использовать `after_commit` вместо `after_save`?"
+    type: single
+    options:
+      - id: a
+        text: "Когда нужна дополнительная скорость"
+        correct: false
+      - id: b
+        text: "Когда действие должно происходить только после подтверждения транзакции (например, отправка email, запуск job)"
+        correct: true
+      - id: c
+        text: "Они идентичны в поведении"
+        correct: false
+      - id: d
+        text: "after_save вызывается быстрее"
+        correct: false
+    explanation: "after_save срабатывает внутри транзакции — если она откатится, email уже отправлен. after_commit — только после успешного COMMIT. Всегда используйте after_commit для побочных эффектов."
+    difficulty: hard
+
+  - id: q19
+    text: "Что такое `delegate` в Rails и зачем он нужен?"
+    type: single
+    options:
+      - id: a
+        text: "Механизм делегирования методов к ассоциированному объекту без написания wrapper-методов вручную"
+        correct: true
+      - id: b
+        text: "Передача аргументов в блок"
+        correct: false
+      - id: c
+        text: "Синоним proxy_method"
+        correct: false
+      - id: d
+        text: "Метод для передачи управления в super"
+        correct: false
+    explanation: "delegate :name, :email, to: :user — генерирует методы post.name → post.user.name. Опция prefix: true → post.user_name. Избегает Law of Demeter violations."
+    difficulty: medium
+
+  - id: q20
+    text: "Как правильно тестировать Service Objects?"
+    type: single
+    options:
+      - id: a
+        text: "Только через интеграционные тесты контроллеров"
+        correct: false
+      - id: b
+        text: "Unit-тестами как PORO — напрямую вызывать .call и проверять результат"
+        correct: true
+      - id: c
+        text: "Нельзя тестировать без запущенного сервера"
+        correct: false
+      - id: d
+        text: "Через системные тесты"
+        correct: false
+    explanation: "Service Object — обычный Ruby объект, тестируется как unit. Мокируем внешние зависимости, проверяем возвращаемое значение и побочные эффекты. Быстрее и изолированнее интеграционных тестов."
+    difficulty: medium

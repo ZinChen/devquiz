@@ -1,0 +1,387 @@
+slug: ror-associations
+title: "ActiveRecord Associations: Ассоциации моделей"
+description: "belongs_to, has_many, has_one, polymorphic, STI, через таблицу joins и продвинутые техники."
+tags: [ruby, rails, activerecord, associations, backend]
+difficulty: intermediate
+estimated_time: 22
+
+questions:
+  - id: q1
+    text: "Какой foreign key Rails будет искать по умолчанию для `Post belongs_to :user`?"
+    type: single
+    options:
+      - id: a
+        text: "post_id в таблице users"
+        correct: false
+      - id: b
+        text: "user_id в таблице posts"
+        correct: true
+      - id: c
+        text: "id в таблице users"
+        correct: false
+      - id: d
+        text: "foreign_key в таблице posts"
+        correct: false
+    explanation: "Конвенция Rails: belongs_to :user ищет колонку user_id в текущей таблице (posts). Имя = имя ассоциации + _id."
+    difficulty: easy
+
+  - id: q2
+    text: "Что такое `has_many :through`?"
+    type: single
+    options:
+      - id: a
+        text: "Синоним has_and_belongs_to_many"
+        correct: false
+      - id: b
+        text: "Ассоциация многие-ко-многим через промежуточную модель с дополнительными атрибутами"
+        correct: true
+      - id: c
+        text: "Ассоциация через два belongs_to"
+        correct: false
+      - id: d
+        text: "Используется только для polymorphic"
+        correct: false
+    explanation: "has_many :through позволяет иметь join-таблицу с атрибутами: User → Enrollment → Course. В отличие от has_and_belongs_to_many, Enrollment — полноценная модель."
+    difficulty: medium
+
+  - id: q3
+    text: "Когда использовать `has_and_belongs_to_many` vs `has_many :through`?"
+    type: single
+    options:
+      - id: a
+        text: "habtm для простых связей без дополнительных атрибутов в join-таблице; has_many through — когда нужны атрибуты"
+        correct: true
+      - id: b
+        text: "habtm быстрее, always preferred"
+        correct: false
+      - id: c
+        text: "has_many :through всегда предпочтительнее"
+        correct: false
+      - id: d
+        text: "Они идентичны"
+        correct: false
+    explanation: "habtm — для чистой связи M:M без данных в join-таблице. Но has_many :through даёт больше гибкости (callbacks, validations на join-модели). Многие предпочитают always через :through."
+    difficulty: medium
+
+  - id: q4
+    text: "Что делает `dependent: :destroy` в `has_many`?"
+    type: single
+    options:
+      - id: a
+        text: "Запрещает удаление родительского объекта если есть дочерние"
+        correct: false
+      - id: b
+        text: "При удалении родителя вызывает destroy на каждом дочернем объекте (с callbacks)"
+        correct: true
+      - id: c
+        text: "Удаляет дочерние через один DELETE SQL без callbacks"
+        correct: false
+      - id: d
+        text: "Устанавливает foreign key в NULL"
+        correct: false
+    explanation: "dependent: :destroy — N+1 DELETE запросов + callbacks. dependent: :delete_all — один DELETE SQL без callbacks. Для большого числа записей предпочтительнее :delete_all."
+    difficulty: medium
+
+  - id: q5
+    text: "Что такое полиморфные ассоциации (polymorphic)?"
+    type: single
+    options:
+      - id: a
+        text: "Ассоциация между несколькими таблицами одновременно"
+        correct: false
+      - id: b
+        text: "Модель может belongs_to нескольким разным моделям через один набор колонок (_type, _id)"
+        correct: true
+      - id: c
+        text: "Наследование моделей в Rails"
+        correct: false
+      - id: d
+        text: "Динамические ассоциации через JSONB"
+        correct: false
+    explanation: "Comment belongs_to :commentable, polymorphic: true — одна таблица comments с колонками commentable_type (имя класса) и commentable_id. Post и Video могут иметь комментарии."
+    difficulty: hard
+
+  - id: q6
+    text: "Как Rails определяет таблицу и PK при `belongs_to :author, class_name: 'User'`?"
+    type: single
+    options:
+      - id: a
+        text: "Ищет таблицу authors с PK id"
+        correct: false
+      - id: b
+        text: "Использует таблицу users с PK id, FK ищет как author_id"
+        correct: true
+      - id: c
+        text: "Требует явного указания foreign_key"
+        correct: false
+      - id: d
+        text: "Ищет таблицу users, FK = user_id"
+        correct: false
+    explanation: "class_name: 'User' указывает Rails использовать модель User (таблица users). FK по умолчанию = имя_ассоциации_id = author_id. Полезно для псевдонимов (author, owner, etc.)."
+    difficulty: medium
+
+  - id: q7
+    text: "Что такое STI (Single Table Inheritance) в Rails?"
+    type: single
+    options:
+      - id: a
+        text: "Полиморфные ассоциации в одной таблице"
+        correct: false
+      - id: b
+        text: "Несколько классов-наследников хранятся в одной таблице с колонкой type"
+        correct: true
+      - id: c
+        text: "Хранение JSON-иерархии в одной колонке"
+        correct: false
+      - id: d
+        text: "Наследование контроллеров от ApplicationController"
+        correct: false
+    explanation: "class Employee < Person, class Manager < Person — обе в таблице people с колонкой type ('Employee', 'Manager'). Просто и быстро, но теряет гибкость при разных наборах атрибутов."
+    difficulty: hard
+
+  - id: q8
+    text: "Как включить автоматическую загрузку ассоциации для избежания N+1?"
+    type: single
+    options:
+      - id: a
+        text: "Через `preload`, `includes`, `eager_load`"
+        correct: true
+      - id: b
+        text: "Только через `joins`"
+        correct: false
+      - id: c
+        text: "Через `select` с именем ассоциации"
+        correct: false
+      - id: d
+        text: "Автоматически при first и last"
+        correct: false
+    explanation: "includes — умный выбор между preload (два запроса) и eager_load (JOIN); preload — всегда два запроса; eager_load — всегда JOIN. Используйте includes если не нужно фильтровать по ассоциации."
+    difficulty: medium
+
+  - id: q9
+    text: "Что делает `inverse_of` в ассоциации?"
+    type: single
+    options:
+      - id: a
+        text: "Переворачивает тип ассоциации (belongs_to → has_many)"
+        correct: false
+      - id: b
+        text: "Связывает две ассоциации чтобы Ruby использовал один объект в памяти вместо двух"
+        correct: true
+      - id: c
+        text: "Определяет обратный FK"
+        correct: false
+      - id: d
+        text: "Не используется в Rails 6+"
+        correct: false
+    explanation: "Без inverse_of: post.comments.first.post — загружает post заново. С inverse_of: :post — возвращает тот же объект из памяти. Важно при сложных callback-цепочках."
+    difficulty: hard
+
+  - id: q10
+    text: "Можно ли добавить условие к has_many ассоциации?"
+    type: single
+    options:
+      - id: a
+        text: "Нет"
+        correct: false
+      - id: b
+        text: "Да: `has_many :published_posts, -> { where(published: true) }, class_name: 'Post'`"
+        correct: true
+      - id: c
+        text: "Только через scope в модели Post"
+        correct: false
+      - id: d
+        text: "Только через default_scope"
+        correct: false
+    explanation: "Proc (лямбда) в ассоциации задаёт условия. Это scopeed association. user.published_posts — готовый запрос с условием WHERE published = true."
+    difficulty: medium
+
+  - id: q11
+    text: "Что делает `touch: true` в `belongs_to :user, touch: true`?"
+    type: single
+    options:
+      - id: a
+        text: "Вызывает user.save при каждом изменении"
+        correct: false
+      - id: b
+        text: "При сохранении/удалении comment обновляет updated_at у связанного user"
+        correct: true
+      - id: c
+        text: "Добавляет touched_at колонку"
+        correct: false
+      - id: d
+        text: "Включает кэширование объекта"
+        correct: false
+    explanation: "touch: true автоматически вызывает user.touch при изменении comment. Полезно для инвалидации кэша родительского объекта."
+    difficulty: medium
+
+  - id: q12
+    text: "Как выглядит self-referential ассоциация (например, сотрудник-менеджер)?"
+    type: single
+    options:
+      - id: a
+        text: "`belongs_to :self`"
+        correct: false
+      - id: b
+        text: "`belongs_to :manager, class_name: 'Employee'` + `has_many :subordinates, class_name: 'Employee', foreign_key: :manager_id`"
+        correct: true
+      - id: c
+        text: "Через STI"
+        correct: false
+      - id: d
+        text: "Невозможно в ActiveRecord"
+        correct: false
+    explanation: "Самореферентные ассоциации: модель ссылается сама на себя. Нужен class_name и явный foreign_key. Используется для иерархий: категории, комментарии с ответами, оргструктуры."
+    difficulty: hard
+
+  - id: q13
+    text: "Что вернёт `user.posts.build(title: 'Hello')`?"
+    type: single
+    options:
+      - id: a
+        text: "Сохранённый объект Post с user_id"
+        correct: false
+      - id: b
+        text: "Несохранённый объект Post с user_id = user.id"
+        correct: true
+      - id: c
+        text: "Ошибку если user не сохранён"
+        correct: false
+      - id: d
+        text: "Создаст Post и сохранит его"
+        correct: false
+    explanation: "build — аналог new, создаёт объект в памяти с автоматически установленным foreign key. Для сохранения используйте create или явный save."
+    difficulty: medium
+
+  - id: q14
+    text: "Для чего нужна опция `counter_cache: true` в belongs_to?"
+    type: single
+    options:
+      - id: a
+        text: "Кэширует объект для быстрого доступа"
+        correct: false
+      - id: b
+        text: "Автоматически поддерживает колонку posts_count в таблице users — без COUNT(*) запроса"
+        correct: true
+      - id: c
+        text: "Счётчик обращений к объекту"
+        correct: false
+      - id: d
+        text: "Ограничивает количество связанных записей"
+        correct: false
+    explanation: "counter_cache обновляет posts_count в users при создании/удалении поста. user.posts.count → не делает SQL, читает posts_count. Требует колонку posts_count с default: 0."
+    difficulty: medium
+
+  - id: q15
+    text: "Что такое `has_one :through`?"
+    type: single
+    options:
+      - id: a
+        text: "Ассоциация к одному объекту через промежуточную модель"
+        correct: true
+      - id: b
+        text: "Синоним belongs_to"
+        correct: false
+      - id: c
+        text: "Используется только с STI"
+        correct: false
+      - id: d
+        text: "Ассоциация через два has_one"
+        correct: false
+    explanation: "User has_one :profile, Profile has_one :avatar → User has_one :avatar, through: :profile. Навигация через промежуточную ассоциацию."
+    difficulty: medium
+
+  - id: q16
+    text: "Что произойдёт при `has_many :posts, dependent: :restrict_with_error` и попытке удалить пользователя с постами?"
+    type: single
+    options:
+      - id: a
+        text: "Посты будут удалены автоматически"
+        correct: false
+      - id: b
+        text: "Удаление будет предотвращено, в user.errors добавится сообщение об ошибке"
+        correct: true
+      - id: c
+        text: "Будет брошено исключение ActiveRecord::DeleteRestrictionError"
+        correct: false
+      - id: d
+        text: "Удаление произойдёт, посты останутся с NULL user_id"
+        correct: false
+    explanation: "restrict_with_error добавляет ошибку и возвращает false из destroy. restrict_with_exception бросает DeleteRestrictionError. :nullify — ставит FK в NULL."
+    difficulty: hard
+
+  - id: q17
+    text: "Как указать custom primary key для ассоциации?"
+    type: single
+    options:
+      - id: a
+        text: "`has_many :posts, pk: :uuid`"
+        correct: false
+      - id: b
+        text: "`has_many :posts, primary_key: :uuid`"
+        correct: true
+      - id: c
+        text: "`has_many :posts, key: :uuid`"
+        correct: false
+      - id: d
+        text: "Нельзя — только id используется"
+        correct: false
+    explanation: "primary_key: позволяет использовать другую колонку (например, UUID) как PK в ассоциации. Пара к foreign_key: на другой стороне."
+    difficulty: hard
+
+  - id: q18
+    text: "Что делает `autosave: true` в ассоциации?"
+    type: single
+    options:
+      - id: a
+        text: "Автоматически загружает ассоциацию при каждом обращении"
+        correct: false
+      - id: b
+        text: "При сохранении родителя автоматически сохраняет изменённые/новые связанные объекты"
+        correct: true
+      - id: c
+        text: "Отключает callback before_save для дочерних"
+        correct: false
+      - id: d
+        text: "Активирует кэширование ассоциации"
+        correct: false
+    explanation: "autosave: true — изменения в ассоциированных объектах сохраняются когда сохраняется родитель. Полезно для nested attributes и form objects."
+    difficulty: hard
+
+  - id: q19
+    text: "В чём разница между `destroy` и `delete` для ассоциаций?"
+    type: single
+    options:
+      - id: a
+        text: "Они идентичны"
+        correct: false
+      - id: b
+        text: "destroy вызывает callbacks и валидации; delete — прямой SQL DELETE без callbacks"
+        correct: true
+      - id: c
+        text: "delete безопаснее для production"
+        correct: false
+      - id: d
+        text: "destroy работает только с has_many"
+        correct: false
+    explanation: "user.posts.destroy(post) → загружает объект, вызывает callbacks. user.posts.delete(post) → SQL DELETE без Ruby overhead. Для bulk-удаления без callbacks используйте delete_all."
+    difficulty: medium
+
+  - id: q20
+    text: "Что такое `strict_loading` в Rails 6.1+?"
+    type: single
+    options:
+      - id: a
+        text: "Режим при котором обязательно указывать все ассоциации в select"
+        correct: false
+      - id: b
+        text: "Выбрасывает исключение при ленивой загрузке ассоциаций для обнаружения N+1"
+        correct: true
+      - id: c
+        text: "Принудительно загружает все ассоциации"
+        correct: false
+      - id: d
+        text: "Запрещает полиморфные ассоциации"
+        correct: false
+    explanation: "strict_loading: true на модели или запросе бросает ActiveRecord::StrictLoadingViolationError при ленивой загрузке ассоциации. Помогает найти N+1 в development."
+    difficulty: hard
