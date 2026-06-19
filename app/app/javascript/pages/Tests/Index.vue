@@ -1,75 +1,56 @@
 <template>
   <AppLayout>
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold mb-2">Тесты для разработчиков</h1>
-      <p class="text-gray-500">Backend-разработка, Ruby on Rails, PostgreSQL и не только</p>
+    <div class="page-header">
+      <h1 class="page-header__title">Тесты для разработчиков</h1>
+      <p class="page-header__subtitle">Backend-разработка, Ruby on Rails, PostgreSQL и не только</p>
     </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap gap-2 mb-6">
+    <div class="tag-filters">
       <button
         v-for="tag in allTags" :key="tag"
         @click="toggleTag(tag)"
         class="badge badge-lg cursor-pointer transition-all"
-        :style="filterTag === tag ? 'background:#4F63F5;color:#fff;border:none' : 'background:#EEF0FF;color:#4F63F5;border:none'"
+        :class="filterTag === tag ? 'tag-badge--active' : 'tag-badge'"
       >
         {{ tag }}
       </button>
     </div>
 
-    <div class="flex gap-2 mb-8">
-      <button
-        v-for="d in difficulties" :key="d.value"
-        @click="toggleDifficulty(d.value)"
-        class="btn btn-sm"
-        :style="filterDifficulty === d.value ? 'background:#4F63F5;color:#fff;border:none' : ''"
-      >
-        {{ d.label }}
-      </button>
+    <div class="toolbar">
+      <div class="toolbar__difficulties">
+        <button
+          v-for="d in difficulties" :key="d.value"
+          @click="toggleDifficulty(d.value)"
+          class="btn btn-sm"
+          :class="{ 'btn-primary': filterDifficulty === d.value }"
+        >
+          {{ d.label }}
+        </button>
+      </div>
+
+      <div class="toolbar__views">
+        <button
+          v-for="view in views" :key="view.key"
+          @click="activeView = view.key"
+          class="btn btn-sm btn-square"
+          :class="{ 'btn-primary': activeView === view.key }"
+          :title="view.label"
+        >
+          {{ view.icon }}
+        </button>
+      </div>
     </div>
 
-    <!-- Grid -->
-    <div v-if="tests.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Link
-        v-for="test in tests" :key="test.slug"
-        :href="`/tests/${test.slug}`"
-        class="card border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 block"
-      >
-        <div class="flex items-start justify-between mb-2">
-          <h2 class="font-semibold text-base">{{ test.title }}</h2>
-          <DifficultyBadge :difficulty="test.difficulty" class="ml-2 shrink-0" />
-        </div>
-        <p class="text-sm text-gray-500 mb-3 line-clamp-2">{{ test.description }}</p>
-        <div class="flex flex-wrap gap-1 mb-3">
-          <span
-            v-for="tag in test.tags" :key="tag"
-            class="badge badge-sm"
-            style="background:#EEF0FF;color:#4F63F5;border:none"
-          >{{ tag }}</span>
-        </div>
-        <div class="flex items-center gap-4 text-xs text-gray-400">
-          <span>{{ test.questions_count }} вопросов</span>
-          <span>~{{ test.estimated_time }} мин</span>
-          <span v-if="test.attempts_count > 0">{{ test.attempts_count }} попыток</span>
-          <span v-if="test.attempts_count > 0">avg {{ test.avg_score.toFixed(0) }}%</span>
-        </div>
-      </Link>
-    </div>
-
-    <div v-else class="text-center py-16 text-gray-400">
-      <p class="text-lg">Тесты не найдены</p>
-      <button @click="clearFilters" class="btn btn-sm mt-4" style="background:#4F63F5;color:#fff;border:none">
-        Сбросить фильтры
-      </button>
-    </div>
+    <component :is="activeViewComponent" :tests="tests" @clear-filters="clearFilters" />
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
-import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import GridView from '@/components/tests/GridView.vue'
+import ListView from '@/components/tests/ListView.vue'
 
 const props = defineProps({
   tests:             Array,
@@ -80,6 +61,15 @@ const props = defineProps({
 
 const filterTag        = ref(props.filterTag || null)
 const filterDifficulty = ref(props.filterDifficulty || null)
+const activeView       = ref('grid')
+
+const views = [
+  { key: 'grid', label: 'Сетка',  icon: '▦' },
+  { key: 'list', label: 'Список', icon: '☰' },
+]
+
+const viewComponents = { grid: GridView, list: ListView }
+const activeViewComponent = computed(() => viewComponents[activeView.value])
 
 const difficulties = [
   { value: 'beginner',     label: 'Начальный' },
@@ -110,3 +100,43 @@ function clearFilters() {
   applyFilters()
 }
 </script>
+
+<style scoped>
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header__title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.page-header__subtitle {
+  color: #6B7280;
+}
+
+.tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.toolbar__difficulties {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.toolbar__views {
+  display: flex;
+  gap: 0.25rem;
+}
+</style>
