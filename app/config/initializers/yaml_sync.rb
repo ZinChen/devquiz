@@ -1,5 +1,10 @@
 Rails.application.config.after_initialize do
-  YamlSyncService.sync_all if ActiveRecord::Base.connection.table_exists?("test_metadata")
-rescue ActiveRecord::NoDatabaseError, PG::ConnectionBad
-  Rails.logger.warn "YamlSyncService: database not available on boot, skipping sync"
+  begin
+    YamlSyncService.sync_all if ActiveRecord::Base.connection.table_exists?("test_metadata")
+  rescue ActiveRecord::NoDatabaseError,
+         ActiveRecord::ConnectionNotEstablished,
+         PG::ConnectionBad,
+         PG::Error => e
+    Rails.logger.warn "YamlSyncService: database not available on boot (#{e.class}), skipping sync"
+  end
 end
