@@ -5,7 +5,6 @@ import '../app.css'
 createInertiaApp({
   resolve: name => {
     const pages = import.meta.glob('../pages/**/*.vue', { eager: true })
-    console.log('resolve:', name, Object.keys(pages))
     return pages[`../pages/${name}.vue`]
   },
   setup({ el, App, props, plugin }) {

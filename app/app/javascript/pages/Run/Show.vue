@@ -38,10 +38,14 @@
 
         <div class="flex flex-col gap-1 text-sm mb-3">
           <div
-            v-for="opt in item.options" :key="opt.id"
-            class="px-3 py-1.5 rounded-lg"
+            v-for="(opt, oi) in item.options" :key="opt.id"
+            class="flex items-start gap-2 px-3 py-1.5 rounded-lg"
             :style="optionStyle(item, opt.id)"
           >
+            <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold border mt-0.5"
+              :style="optionLetterStyle(item, opt.id)">
+              {{ optionLetter(oi) }}
+            </span>
             {{ opt.text }}
           </div>
         </div>
@@ -82,11 +86,22 @@ function formatText(text) {
   return text?.replace(/`([^`]+)`/g, '<code class="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono">$1</code>') || ''
 }
 
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
+function optionLetter(idx) { return LETTERS[idx] || String(idx + 1) }
+
 function optionStyle(item, optId) {
   const isCorrect  = item.correct_ids.includes(optId)
   const isSelected = item.selected_options.includes(optId)
   if (isCorrect)  return { background: '#D1FAE5', color: '#065F46' }
   if (isSelected) return { background: '#FEE2E2', color: '#991B1B' }
   return { background: '#F7F8FA', color: '#374151' }
+}
+
+function optionLetterStyle(item, optId) {
+  const isCorrect  = item.correct_ids.includes(optId)
+  const isSelected = item.selected_options.includes(optId)
+  if (isCorrect)  return { background: '#10B981', color: '#fff', borderColor: '#10B981' }
+  if (isSelected) return { background: '#EF4444', color: '#fff', borderColor: '#EF4444' }
+  return { background: '#fff', color: '#9CA3AF', borderColor: '#E5E7EB' }
 }
 </script>
