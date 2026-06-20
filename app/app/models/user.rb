@@ -1,5 +1,7 @@
 class User < ApplicationRecord
   has_many :test_attempts, foreign_key: :user_id
+  has_many :bookmarks, dependent: :destroy
+  has_many :bookmarked_questions, through: :bookmarks, source: :question
 
   validates :provider, :uid, presence: true
   validates :uid, uniqueness: { scope: :provider }

@@ -10,6 +10,9 @@ Rails.application.routes.draw do
     resource :run, only: [:new, :create, :show], controller: "runs"
   end
 
+  post   "/bookmarks",     to: "bookmarks#create"
+  delete "/bookmarks",     to: "bookmarks#destroy"
+
   get "/dashboard", to: "dashboard#index", as: :dashboard
   get "/stats",     to: "stats#index",     as: :stats
 

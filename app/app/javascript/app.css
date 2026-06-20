@@ -42,6 +42,18 @@ body {
   border: none;
 }
 
+.tag-filter {
+  background: #F3F4F6;
+  color: #6B7280;
+  border: none;
+}
+
+.tag-filter--active {
+  background: #4F63F5;
+  color: #fff;
+  border: none;
+}
+
 .card-bordered {
   border: 1px solid #F3F4F6;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);

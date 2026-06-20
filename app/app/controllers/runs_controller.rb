@@ -2,9 +2,16 @@ class RunsController < ApplicationController
   before_action :load_test
 
   def new
+    questions = shuffled_questions_with_db_ids
+    bookmarked_ids = current_user ? current_user.bookmarks
+      .joins(:question)
+      .where(questions: { test_slug: @meta.slug })
+      .pluck(:question_id) : []
+
     render inertia: "Run/New", props: {
-      test:      test_props(@meta),
-      questions: shuffled_questions
+      test:          test_props(@meta),
+      questions:     questions,
+      bookmarked_ids: bookmarked_ids
     }
   end
 
@@ -76,6 +83,14 @@ class RunsController < ApplicationController
   def shuffled_questions
     load_questions.map do |q|
       q.merge("options" => q["options"].shuffle)
+    end.shuffle
+  end
+
+  def shuffled_questions_with_db_ids
+    db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+    load_questions.map do |q|
+      db_rec = db_map[q["id"].to_s]
+      q.merge("options" => q["options"].shuffle, "db_id" => db_rec&.id)
     end.shuffle
   end
 

@@ -9,6 +9,10 @@ class DashboardController < ApplicationController
     slugs    = attempts.pluck(:test_slug).uniq
     meta_map = TestMetadatum.where(slug: slugs).index_by(&:slug)
 
+    bookmarks = current_user.bookmarks.includes(:question).order(created_at: :desc)
+    meta_slugs = bookmarks.map { |b| b.question.test_slug }.uniq
+    bm_meta_map = TestMetadatum.where(slug: meta_slugs).index_by(&:slug)
+
     render inertia: "Dashboard", props: {
       attempts: attempts.map { |a|
         {
@@ -27,6 +31,19 @@ class DashboardController < ApplicationController
         avg_score:       attempts.average(:score).to_f.round(1),
         best_score:      attempts.maximum(:score).to_f,
         tests_completed: slugs.count
+      },
+      bookmarks: bookmarks.map { |b|
+        q = b.question
+        {
+          id:          b.id,
+          question_id: q.id,
+          question_text: q.text,
+          test_slug:   q.test_slug,
+          test_title:  bm_meta_map[q.test_slug]&.title || q.test_slug,
+          options:     q.options,
+          correct_ids: q.correct_ids,
+          explanation: q.explanation
+        }
       }
     }
   end

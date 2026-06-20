@@ -1,7 +1,7 @@
 slug: postgresql-basics
 title: "PostgreSQL: Основы"
 description: "Базовые концепции PostgreSQL: типы данных, запросы, индексы, транзакции и ограничения."
-tags: [postgresql, sql, backend]
+tags: [postgresql, sql, backend, claude-ai-generated]
 difficulty: beginner
 estimated_time: 20
 

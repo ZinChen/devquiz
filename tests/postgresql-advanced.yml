@@ -1,7 +1,7 @@
 slug: postgresql-advanced
 title: "PostgreSQL: Продвинутый уровень"
 description: "Индексы, партиционирование, EXPLAIN ANALYZE, JSONB, репликация и оптимизация производительности."
-tags: [postgresql, sql, advanced, backend]
+tags: [postgresql, sql, advanced, backend, claude-ai-generated]
 difficulty: advanced
 estimated_time: 30
 

@@ -32,6 +32,7 @@
       :questions="questions"
       :answers="answers"
       :answeredCount="answeredCount"
+      :bookmarkedIds="bookmarkedIds"
       :isAnswered="isAnswered"
       :optionStyle="optionStyle"
       :optionLetterStyle="optionLetterStyle"
@@ -53,7 +54,7 @@ import OneByOneMode from '@/components/run/OneByOneMode.vue'
 import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
 import { useQuizSession } from '@/composables/useQuizSession.js'
 
-const props = defineProps({ test: Object, questions: Array })
+const props = defineProps({ test: Object, questions: Array, bookmarkedIds: { type: Array, default: () => [] } })
 
 const settingsOpen = ref(false)
 const mode         = ref(localStorage.getItem('devquiz_mode') || 'all')

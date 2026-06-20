@@ -1,16 +1,21 @@
 class TestsController < ApplicationController
   def index
-    tag    = params[:tag]
     difficulty = params[:difficulty]
 
     tests = TestMetadatum.order(attempts_count: :desc)
-    tests = tests.where("tags LIKE ?", "%#{tag}%") if tag.present?
     tests = tests.where(difficulty: difficulty) if difficulty.present?
 
+    tests_list = tests.to_a
+    total = tests_list.size
+    tag_counts = tests_list.flat_map(&:tag_list).tally
+    visible_tags = tag_counts
+      .reject { |_, count| count == total }
+      .sort_by { |_, count| -count }
+      .map(&:first)
+
     render inertia: "Tests/Index", props: {
-      tests:      tests.map { |t| test_props(t) },
-      all_tags:   TestMetadatum.all.flat_map(&:tag_list).tally.sort_by { |_, c| -c }.map(&:first),
-      filter_tag: tag,
+      tests:             tests_list.map { |t| test_props(t) },
+      all_tags:          visible_tags,
       filter_difficulty: difficulty
     }
   end

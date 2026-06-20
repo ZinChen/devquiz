@@ -1,7 +1,7 @@
 slug: ror-patterns
 title: "Rails Patterns: Архитектурные паттерны"
 description: "Service Objects, Form Objects, Decorators, Presenters, Query Objects, Interactors и другие паттерны Rails."
-tags: [ruby, rails, patterns, architecture, backend]
+tags: [ruby, rails, patterns, architecture, backend, claude-ai-generated]
 difficulty: advanced
 estimated_time: 25
 

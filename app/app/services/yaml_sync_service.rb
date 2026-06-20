@@ -41,5 +41,27 @@ class YamlSyncService
     )
     meta.tag_list = Array(data["tags"])
     meta.save!
+
+    sync_questions(slug, Array(data["questions"]))
+  end
+
+  def self.sync_questions(slug, questions_data)
+    questions_data.each do |q|
+      qid = q["id"].to_s
+      next if qid.blank?
+
+      correct_ids = q["options"].to_a.select { |o| o["correct"] }.map { |o| o["id"].to_s }
+
+      Question.find_or_initialize_by(test_slug: slug, question_id: qid).tap do |rec|
+        rec.assign_attributes(
+          text:        q["text"].to_s,
+          type_field:  q["type"].to_s.presence || "single",
+          options:     q["options"].to_a.map { |o| { "id" => o["id"].to_s, "text" => o["text"].to_s } },
+          correct_ids: correct_ids,
+          explanation: q["explanation"].to_s.presence
+        )
+        rec.save!
+      end
+    end
   end
 end

@@ -1,13 +1,19 @@
 <template>
   <div class="all-at-once">
     <aside class="question-sidebar">
+      <div class="question-sidebar__card">
       <div class="question-sidebar__grid">
         <button
           v-for="(q, idx) in questions" :key="q.id"
           @click="scrollTo(idx)"
           class="question-sidebar__cell"
-          :class="{ 'question-sidebar__cell--answered': isAnswered(q) }"
-        >{{ idx + 1 }}</button>
+          :class="{
+            'question-sidebar__cell--answered': isAnswered(q),
+            'question-sidebar__cell--active':   idx === activeIndex,
+          }"
+          :title="String(idx + 1)"
+        ><span class="question-sidebar__cell-bar"></span></button>
+      </div>
       </div>
     </aside>
 
@@ -17,7 +23,10 @@
         class="question-item"
         :ref="el => { if (el) questionEls[idx] = el }"
       >
-        <p class="question-item__counter">Вопрос {{ idx + 1 }}</p>
+        <div class="question-item__header">
+          <p class="question-item__counter">Вопрос {{ idx + 1 }}</p>
+          <BookmarkButton v-if="q.db_id" :question-id="q.db_id" :initial="bookmarkedIds.includes(q.db_id)" />
+        </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
 
         <QuestionOptions
@@ -26,6 +35,7 @@
           :optionStyle="optionStyle"
           :optionLetterStyle="optionLetterStyle"
           :optionLetter="optionLetter"
+          @pick="onPick(q, $event)"
         />
       </div>
 
@@ -44,13 +54,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
+import BookmarkButton from '@/components/BookmarkButton.vue'
 
 const props = defineProps({
   questions:         Array,
   answers:           Object,
   answeredCount:     Number,
+  bookmarkedIds:     { type: Array, default: () => [] },
   isAnswered:        Function,
   optionStyle:       Function,
   optionLetterStyle: Function,
@@ -60,12 +72,87 @@ const props = defineProps({
 
 defineEmits(['submit'])
 
-const questionEls = ref([])
+const questionEls   = ref([])
+const activeIndex   = ref(0)
+const focusedOptIdx = ref(0)
 
 function scrollTo(idx) {
+  activeIndex.value = idx
+  focusedOptIdx.value = 0
   const el = questionEls.value[idx]
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+function onPick(q, optId) {
+  props.answers[q.id] = optId
+}
+
+function currentQuestion() {
+  return props.questions[activeIndex.value]
+}
+
+function handleKeydown(e) {
+  const q = currentQuestion()
+  if (!q) return
+
+  if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    scrollTo((activeIndex.value + 1) % props.questions.length)
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    scrollTo((activeIndex.value - 1 + props.questions.length) % props.questions.length)
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault()
+    const opts = q.options
+    if (!opts?.length) return
+    if (q.type === 'multiple') {
+      if (e.key === 'ArrowUp') {
+        focusedOptIdx.value = focusedOptIdx.value <= 0 ? opts.length - 1 : focusedOptIdx.value - 1
+      } else {
+        focusedOptIdx.value = focusedOptIdx.value >= opts.length - 1 ? 0 : focusedOptIdx.value + 1
+      }
+    } else {
+      const currentOptId  = props.answers[q.id]
+      const currentOptPos = opts.findIndex(o => o.id === currentOptId)
+      let nextPos
+      if (e.key === 'ArrowUp') {
+        nextPos = currentOptPos <= 0 ? opts.length - 1 : currentOptPos - 1
+      } else {
+        nextPos = currentOptPos >= opts.length - 1 ? 0 : currentOptPos + 1
+      }
+      props.answers[q.id] = opts[nextPos].id
+    }
+  } else if (e.key === ' ') {
+    e.preventDefault()
+    const opts = q.options
+    if (!opts?.length) return
+    if (q.type === 'multiple') {
+      const optId = opts[focusedOptIdx.value]?.id
+      if (!optId) return
+      if (!Array.isArray(props.answers[q.id])) props.answers[q.id] = []
+      const idx = props.answers[q.id].indexOf(optId)
+      if (idx === -1) props.answers[q.id].push(optId)
+      else props.answers[q.id].splice(idx, 1)
+    } else {
+      props.answers[q.id] = null
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (q.type === 'multiple') {
+      const opts = q.options
+      if (!opts?.length) return
+      const optId = opts[focusedOptIdx.value]?.id
+      if (!optId) return
+      if (!Array.isArray(props.answers[q.id])) props.answers[q.id] = []
+      const idx = props.answers[q.id].indexOf(optId)
+      if (idx === -1) props.answers[q.id].push(optId)
+      else props.answers[q.id].splice(idx, 1)
+    }
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 </script>
 
 <style scoped>
@@ -76,42 +163,79 @@ function scrollTo(idx) {
 }
 
 .question-sidebar {
-  width: 3rem;
+  width: 1.5rem;
   flex-shrink: 0;
   position: sticky;
   top: 1rem;
 }
 
+.question-sidebar__card {
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.375rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .question-sidebar__grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
 }
 
 .question-sidebar__cell {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: #F3F4F6;
-  color: #9CA3AF;
+  width: 100%;
+  height: 14px;
   border: none;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  background: transparent;
+  padding: 0;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  outline: none;
 }
 
-.question-sidebar__cell--answered {
-  background: #C7D2FE;
-  color: #3730A3;
+.question-sidebar__cell:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.question-sidebar__cell:hover {
-  background: #E0E7FF;
-  color: #4F63F5;
+.question-sidebar__cell-bar {
+  display: block;
+  width: 0.625rem;
+  height: 2px;
+  border-radius: 2px;
+  background: #D1D5DB;
+  transition: background 0.15s;
+}
+
+.question-sidebar__cell--answered .question-sidebar__cell-bar {
+  background: #4F63F5;
+}
+
+.question-sidebar__cell--active .question-sidebar__cell-bar {
+  background: #4F63F5;
+  height: 4px;
 }
 
 .all-at-once__content {
@@ -129,11 +253,17 @@ function scrollTo(idx) {
   scroll-margin-top: 1rem;
 }
 
+.question-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
 .question-item__counter {
   font-weight: 500;
   font-size: 0.75rem;
   color: #9CA3AF;
-  margin-bottom: 0.25rem;
 }
 
 .question-item__text {
