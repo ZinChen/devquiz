@@ -25,7 +25,7 @@
       >
         <div class="question-item__header">
           <p class="question-item__counter">Вопрос {{ idx + 1 }}</p>
-          <BookmarkButton v-if="q.db_id" :question-id="q.db_id" :initial="bookmarkedIds.includes(q.db_id)" />
+          <BookmarkButton v-if="q.dbId" :question-id="q.dbId" :initial="bookmarkedIds.includes(q.dbId)" />
         </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
 
@@ -42,7 +42,7 @@
       <div class="submit-row">
         <button
           type="submit"
-          class="btn px-8 btn-primary"
+          class="btn btn-primary all-at-once__submit-btn"
           :disabled="answeredCount < questions.length"
         >Завершить тест</button>
       </div>
@@ -283,5 +283,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   color: #9CA3AF;
   text-align: right;
   margin-top: 0.5rem;
+}
+
+.all-at-once__submit-btn {
+  padding-left: 2rem;
+  padding-right: 2rem;
 }
 </style>

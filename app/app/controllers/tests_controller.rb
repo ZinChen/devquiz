@@ -1,11 +1,6 @@
 class TestsController < ApplicationController
   def index
-    difficulty = params[:difficulty]
-
-    tests = TestMetadatum.order(attempts_count: :desc)
-    tests = tests.where(difficulty: difficulty) if difficulty.present?
-
-    tests_list = tests.to_a
+    tests_list = TestMetadatum.order(attempts_count: :desc).to_a
     total = tests_list.size
     tag_counts = tests_list.flat_map(&:tag_list).tally
     visible_tags = tag_counts
@@ -14,9 +9,8 @@ class TestsController < ApplicationController
       .map(&:first)
 
     render inertia: "Tests/Index", props: {
-      tests:             tests_list.map { |t| test_props(t) },
-      all_tags:          visible_tags,
-      filter_difficulty: difficulty
+      tests:    tests_list.map { |t| test_props(t) },
+      all_tags: visible_tags,
     }
   end
 

@@ -1,60 +1,60 @@
 <template>
   <AppLayout>
-    <h1 class="text-2xl font-bold mb-6">Мой кабинет</h1>
+    <h1 class="dashboard-title">Мой кабинет</h1>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      <div v-for="s in summaryCards" :key="s.label" class="card border border-gray-100 shadow-sm p-5 text-center">
-        <div class="text-2xl font-bold" style="color:#4F63F5">{{ s.value }}</div>
-        <div class="text-xs text-gray-500 mt-1">{{ s.label }}</div>
+    <div class="dashboard-cards">
+      <div v-for="s in summaryCards" :key="s.label" class="stat-card">
+        <div class="stat-card__value">{{ s.value }}</div>
+        <div class="stat-card__label">{{ s.label }}</div>
       </div>
     </div>
 
-    <h2 class="font-semibold text-lg mb-4">История прохождений</h2>
+    <h2 class="dashboard-section-title">История прохождений</h2>
 
-    <div v-if="attempts.length" class="flex flex-col gap-3 mb-10">
+    <div v-if="attempts.length" class="attempts-list">
       <div
         v-for="a in attempts" :key="a.id"
-        class="card border border-gray-100 shadow-sm p-4 flex items-center justify-between"
+        class="attempt-row"
       >
         <div>
-          <p class="font-medium text-sm">{{ a.test_title }}</p>
-          <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(a.completed_at) }}</p>
+          <p class="attempt-row__title">{{ a.testTitle }}</p>
+          <p class="attempt-row__date">{{ formatDate(a.completedAt) }}</p>
         </div>
-        <div class="flex items-center gap-6">
-          <span class="text-xs text-gray-400">{{ a.correct_count }}/{{ a.total_questions }}</span>
-          <span class="font-bold text-lg" :style="{ color: scoreColor(a.score) }">{{ a.score.toFixed(0) }}%</span>
+        <div class="attempt-row__score-wrap">
+          <span class="attempt-row__count">{{ a.correctCount }}/{{ a.totalQuestions }}</span>
+          <span class="attempt-row__score" :style="{ color: scoreColor(a.score) }">{{ a.score.toFixed(0) }}%</span>
         </div>
       </div>
     </div>
 
-    <div v-else class="text-center py-12 text-gray-400 mb-10">
+    <div v-else class="dashboard-empty">
       <p>Вы ещё не прошли ни одного теста</p>
-      <Link href="/" class="btn btn-sm mt-4" style="background:#4F63F5;color:#fff;border:none">
+      <Link href="/" class="btn btn-sm btn-primary dashboard-empty__btn">
         К тестам
       </Link>
     </div>
 
-    <h2 class="font-semibold text-lg mb-4">Избранные вопросы</h2>
+    <h2 class="dashboard-section-title">Избранные вопросы</h2>
 
-    <div v-if="bookmarks.length" class="flex flex-col gap-3">
+    <div v-if="bookmarks.length" class="bookmarks-list">
       <div
         v-for="b in bookmarks" :key="b.id"
         class="bookmark-card"
       >
         <div class="bookmark-card__header">
-          <span class="bookmark-card__test">{{ b.test_title }}</span>
+          <span class="bookmark-card__test">{{ b.testTitle }}</span>
           <button class="bookmark-remove" title="Убрать из избранного" @click="removeBookmark(b)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
         </div>
-        <p class="bookmark-card__text">{{ b.question_text }}</p>
+        <p class="bookmark-card__text">{{ b.questionText }}</p>
         <div class="bookmark-card__options">
           <div
             v-for="opt in b.options" :key="opt.id"
             class="bookmark-option"
-            :class="b.correct_ids.includes(opt.id) ? 'bookmark-option--correct' : ''"
+            :class="b.correctIds.includes(opt.id) ? 'bookmark-option--correct' : ''"
           >
             {{ opt.text }}
           </div>
@@ -63,9 +63,9 @@
       </div>
     </div>
 
-    <div v-else class="text-center py-10 text-gray-400">
+    <div v-else class="dashboard-empty dashboard-empty--sm">
       <p>Нет избранных вопросов</p>
-      <p class="text-xs mt-1">Добавляйте вопросы в избранное во время прохождения теста</p>
+      <p class="dashboard-empty__hint">Добавляйте вопросы в избранное во время прохождения теста</p>
     </div>
   </AppLayout>
 </template>
@@ -85,15 +85,15 @@ const props = defineProps({
 const bookmarks = ref(props.bookmarks)
 
 const summaryCards = computed(() => [
-  { label: 'Попыток',           value: props.stats.total_attempts },
-  { label: 'Средний балл',      value: props.stats.avg_score.toFixed(1) + '%' },
-  { label: 'Лучший результат',  value: props.stats.best_score.toFixed(0) + '%' },
-  { label: 'Тестов пройдено',   value: props.stats.tests_completed },
+  { label: 'Попыток',           value: props.stats.totalAttempts },
+  { label: 'Средний балл',      value: props.stats.avgScore.toFixed(1) + '%' },
+  { label: 'Лучший результат',  value: props.stats.bestScore.toFixed(0) + '%' },
+  { label: 'Тестов пройдено',   value: props.stats.testsCompleted },
 ])
 
 async function removeBookmark(b) {
   try {
-    await axios.delete('/bookmarks', { data: { question_id: b.question_id } })
+    await axios.delete('/bookmarks', { data: { question_id: b.questionId } })
     bookmarks.value = bookmarks.value.filter(x => x.id !== b.id)
   } catch {}
 }
@@ -110,6 +110,122 @@ function formatDate(d) {
 </script>
 
 <style scoped>
+.dashboard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .dashboard-cards { grid-template-columns: repeat(4, 1fr); }
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4F63F5;
+}
+
+.stat-card__label {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 0.25rem;
+}
+
+.dashboard-section-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.attempts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.attempt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1rem;
+}
+
+.attempt-row__title {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.attempt-row__date {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin-top: 0.125rem;
+}
+
+.attempt-row__score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.attempt-row__count {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+.attempt-row__score {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.dashboard-empty {
+  text-align: center;
+  padding: 3rem 0;
+  color: #9CA3AF;
+  margin-bottom: 2.5rem;
+}
+
+.dashboard-empty--sm {
+  padding: 2.5rem 0;
+  margin-bottom: 0;
+}
+
+.dashboard-empty__btn {
+  margin-top: 1rem;
+}
+
+.dashboard-empty__hint {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .bookmark-card {
   background: #fff;
   border: 1px solid #F3F4F6;

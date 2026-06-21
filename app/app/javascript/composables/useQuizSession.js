@@ -78,7 +78,7 @@ export function useQuizSession(test, questionsSource) {
   })
 
   const timerWarning = computed(() =>
-    test.estimated_time && elapsed.value > test.estimated_time * 60
+    test.estimatedTime && elapsed.value > test.estimatedTime * 60
   )
 
   function submit() {
@@ -110,7 +110,7 @@ export function useQuizSession(test, questionsSource) {
   }
 
   function formatText(text) {
-    return text.replace(/`([^`]+)`/g, '<code class="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono">$1</code>')
+    return text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
   }
 
   const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']

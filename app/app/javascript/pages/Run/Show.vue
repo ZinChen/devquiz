@@ -1,56 +1,55 @@
 <template>
   <AppLayout>
-    <div class="max-w-2xl mx-auto">
-      <div class="card border border-gray-100 shadow-sm p-8 mb-6 text-center">
-        <p class="text-gray-500 mb-1">Тест завершён: {{ test.title }}</p>
-        <div class="text-6xl font-bold my-4" :style="{ color: scoreColor }">
+    <div class="result-wrap">
+      <div class="result-summary">
+        <p class="result-summary__label">Тест завершён: {{ test.title }}</p>
+        <div class="result-summary__score" :style="{ color: scoreColor }">
           {{ attempt.score.toFixed(0) }}%
         </div>
-        <p class="text-gray-600 mb-2">
-          {{ attempt.correct_count }} правильных из {{ attempt.total_questions }}
+        <p class="result-summary__correct">
+          {{ attempt.correctCount }} правильных из {{ attempt.totalQuestions }}
         </p>
-        <p class="text-sm text-gray-400">Время: {{ formatTime(attempt.time_spent) }}</p>
+        <p class="result-summary__time">Время: {{ formatTime(attempt.timeSpent) }}</p>
 
-        <div class="flex justify-center gap-3 mt-6">
-          <Link :href="`/tests/${test.slug}/run/new`" class="btn" style="background:#4F63F5;color:#fff;border:none">
+        <div class="result-summary__actions">
+          <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary">
             Пройти снова
           </Link>
           <Link href="/" class="btn btn-ghost">Все тесты</Link>
         </div>
       </div>
 
-      <h2 class="font-semibold text-lg mb-4">Разбор ответов</h2>
+      <h2 class="result-breakdown-title">Разбор ответов</h2>
 
       <div
-        v-for="(item, idx) in answersDetail" :key="item.question_id"
-        class="card border shadow-sm p-5 mb-3"
+        v-for="(item, idx) in answersDetail" :key="item.questionId"
+        class="result-item"
         :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
       >
-        <div class="flex items-start gap-2 mb-3">
+        <div class="result-item__header">
           <span
-            class="badge badge-sm shrink-0 mt-0.5"
-            :style="item.correct ? 'background:#D1FAE5;color:#065F46;border:none' : 'background:#FEE2E2;color:#991B1B;border:none'"
+            class="result-item__badge"
+            :style="item.correct ? 'background:#D1FAE5;color:#065F46' : 'background:#FEE2E2;color:#991B1B'"
           >
             {{ item.correct ? '✓' : '✗' }}
           </span>
-          <p class="text-sm font-medium" v-html="formatText(item.question_text)"></p>
+          <p class="result-item__question" v-html="formatText(item.questionText)"></p>
         </div>
 
-        <div class="flex flex-col gap-1 text-sm mb-3">
+        <div class="result-item__options">
           <div
             v-for="(opt, oi) in item.options" :key="opt.id"
-            class="flex items-start gap-2 px-3 py-1.5 rounded-lg"
+            class="result-option"
             :style="optionStyle(item, opt.id)"
           >
-            <span class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold border mt-0.5"
-              :style="optionLetterStyle(item, opt.id)">
+            <span class="result-option__letter" :style="optionLetterStyle(item, opt.id)">
               {{ optionLetter(oi) }}
             </span>
             {{ opt.text }}
           </div>
         </div>
 
-        <p v-if="item.explanation" class="text-xs text-gray-500 border-t border-gray-100 pt-3 mt-1">
+        <p v-if="item.explanation" class="result-item__explanation">
           {{ item.explanation }}
         </p>
       </div>
@@ -83,25 +82,155 @@ function formatTime(seconds) {
 }
 
 function formatText(text) {
-  return text?.replace(/`([^`]+)`/g, '<code class="bg-gray-100 rounded px-1 py-0.5 text-sm font-mono">$1</code>') || ''
+  return text?.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>') || ''
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 function optionLetter(idx) { return LETTERS[idx] || String(idx + 1) }
 
 function optionStyle(item, optId) {
-  const isCorrect  = item.correct_ids.includes(optId)
-  const isSelected = item.selected_options.includes(optId)
+  const isCorrect  = item.correctIds.includes(optId)
+  const isSelected = item.selectedOptions.includes(optId)
   if (isCorrect)  return { background: '#D1FAE5', color: '#065F46' }
   if (isSelected) return { background: '#FEE2E2', color: '#991B1B' }
   return { background: '#F7F8FA', color: '#374151' }
 }
 
 function optionLetterStyle(item, optId) {
-  const isCorrect  = item.correct_ids.includes(optId)
-  const isSelected = item.selected_options.includes(optId)
+  const isCorrect  = item.correctIds.includes(optId)
+  const isSelected = item.selectedOptions.includes(optId)
   if (isCorrect)  return { background: '#10B981', color: '#fff', borderColor: '#10B981' }
   if (isSelected) return { background: '#EF4444', color: '#fff', borderColor: '#EF4444' }
   return { background: '#fff', color: '#9CA3AF', borderColor: '#E5E7EB' }
 }
 </script>
+
+<style scoped>
+.result-wrap {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.result-summary {
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.result-summary__label {
+  color: #6B7280;
+  margin-bottom: 0.25rem;
+}
+
+.result-summary__score {
+  font-size: 3.75rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+
+.result-summary__correct {
+  color: #4B5563;
+  margin-bottom: 0.5rem;
+}
+
+.result-summary__time {
+  font-size: 0.875rem;
+  color: #9CA3AF;
+}
+
+.result-summary__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.result-breakdown-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.result-item {
+  background: #fff;
+  border: 1px solid;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.result-item__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.result-item__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.4rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.result-item__question {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.result-item__options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.result-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.result-option__letter {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+  margin-top: 0.125rem;
+}
+
+.result-item__explanation {
+  font-size: 0.75rem;
+  color: #6B7280;
+  border-top: 1px solid #F3F4F6;
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+:deep(.inline-code) {
+  background: #F3F4F6;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+</style>

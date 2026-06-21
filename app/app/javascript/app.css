@@ -7,6 +7,10 @@
   --color-primary: #4F63F5;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   --rounded-box: 0.75rem;
   --rounded-btn: 0.5rem;

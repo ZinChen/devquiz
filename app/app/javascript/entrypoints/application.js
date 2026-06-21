@@ -1,5 +1,5 @@
 import { createApp, h } from 'vue'
-import { createInertiaApp } from '@inertiajs/vue3'
+import { createInertiaApp, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import '../app.css'
 
@@ -16,6 +16,15 @@ function camelizeKeys(val) {
   }
   return val
 }
+
+axios.interceptors.response.use(response => {
+  response.data = camelizeKeys(response.data)
+  return response
+})
+
+router.on('success', (event) => {
+  event.detail.page.props = camelizeKeys(event.detail.page.props)
+})
 
 createInertiaApp({
   resolve: name => {

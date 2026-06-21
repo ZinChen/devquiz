@@ -2,7 +2,7 @@
   <div v-if="tests.length" class="tests-list">
     <Link
       v-for="test in tests" :key="test.slug"
-      :href="`/tests/${test.slug}`"
+      :href="`/tests/${test.slug}/run/new`"
       class="test-row"
     >
       <div class="test-row__body">
@@ -13,8 +13,8 @@
         <p class="test-row__desc">{{ test.description }}</p>
       </div>
       <div class="test-row__meta">
-        <span>{{ test.questions_count }} вопросов</span>
-        <span>~{{ test.estimated_time }} мин</span>
+        <span>{{ test.questionsCount }} вопросов</span>
+        <span>~{{ test.estimatedTime }} мин</span>
       </div>
     </Link>
   </div>

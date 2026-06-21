@@ -2,7 +2,7 @@
   <div v-if="tests.length" class="tests-grid">
     <Link
       v-for="test in tests" :key="test.slug"
-      :href="`/tests/${test.slug}`"
+      :href="`/tests/${test.slug}/run/new`"
       class="test-card"
     >
       <div class="test-card__header">
@@ -17,10 +17,10 @@
         >{{ tag }}</span>
       </div>
       <div class="test-card__meta">
-        <span>{{ test.questions_count }} вопросов</span>
-        <span>~{{ test.estimated_time }} мин</span>
-        <span v-if="test.attempts_count > 0">{{ test.attempts_count }} попыток</span>
-        <span v-if="test.attempts_count > 0">avg {{ test.avg_score.toFixed(0) }}%</span>
+        <span>{{ test.questionsCount }} вопросов</span>
+        <span>~{{ test.estimatedTime }} мин</span>
+        <span v-if="test.attemptsCount > 0">{{ test.attemptsCount }} попыток</span>
+        <span v-if="test.attemptsCount > 0">avg {{ test.avgScore.toFixed(0) }}%</span>
       </div>
     </Link>
   </div>

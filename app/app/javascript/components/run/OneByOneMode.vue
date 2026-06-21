@@ -1,6 +1,6 @@
 <template>
   <div class="one-by-one-wrap">
-    <div class="question-nav mb-4">
+    <div class="question-nav">
       <button
         v-for="(q, idx) in questions" :key="q.id"
         @click="goTo(idx)"
@@ -227,6 +227,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(20, 1fr);
   gap: 4px;
+  margin-bottom: 1rem;
 }
 
 .question-nav__cell {

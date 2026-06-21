@@ -1,7 +1,7 @@
 <template>
   <div class="empty-state">
     <p class="empty-state__text">Тесты не найдены</p>
-    <button @click="$emit('clear')" class="btn btn-sm btn-primary mt-4">
+    <button @click="$emit('clear')" class="btn btn-sm btn-primary empty-state__btn">
       Сбросить фильтры
     </button>
   </div>
@@ -20,5 +20,9 @@ defineEmits(['clear'])
 
 .empty-state__text {
   font-size: 1.125rem;
+}
+
+.empty-state__btn {
+  margin-top: 1rem;
 }
 </style>

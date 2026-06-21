@@ -1,7 +1,10 @@
 <template>
   <AppLayout>
     <div class="run-header">
-      <Link :href="`/tests/${test.slug}`" class="run-header__back">← {{ test.title }}</Link>
+      <nav class="run-breadcrumbs">
+        <Link href="/" class="run-breadcrumbs__link">← Все тесты</Link>
+        <Link :href="`/tests/${test.slug}`" class="run-breadcrumbs__link">← {{ test.title }}</Link>
+      </nav>
       <div class="run-header__right">
         <div class="run-header__progress">
           {{ answeredCount }} / {{ questions.length }}
@@ -95,12 +98,19 @@ const {
   margin-bottom: 0;
 }
 
-.run-header__back {
+.run-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   font-size: 0.875rem;
-  color: #9CA3AF;
 }
 
-.run-header__back:hover {
+.run-breadcrumbs__link {
+  color: #9CA3AF;
+  transition: color 0.15s;
+}
+
+.run-breadcrumbs__link:hover {
   color: #4B5563;
 }
 

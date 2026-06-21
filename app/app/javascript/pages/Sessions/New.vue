@@ -1,20 +1,20 @@
 <template>
-  <AppLayout>
-    <div class="flex justify-center pt-12">
-      <div class="card w-full max-w-sm shadow-sm border border-gray-100 p-8">
-        <h1 class="text-2xl font-semibold mb-2 text-center">Войти</h1>
-        <p class="text-sm text-gray-500 text-center mb-8">Для сохранения результатов войдите через:</p>
+  <AppLayout hide-nav>
+    <div class="login-wrap">
+      <div class="login-card">
+        <h1 class="login-card__title">Войти</h1>
+        <p class="login-card__subtitle">Для сохранения результатов войдите через:</p>
 
-        <div class="flex flex-col gap-3">
-          <a href="/auth/github" class="btn w-full" style="background:#24292e;color:#fff;border:none">
-            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+        <div class="login-card__providers">
+          <a href="/auth/github" class="btn btn-github">
+            <svg class="login-btn-icon" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.238 1.84 1.238 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12"/>
             </svg>
             GitHub
           </a>
 
-          <a href="/auth/google_oauth2" class="btn w-full" style="background:#fff;color:#374151;border:1px solid #E5E7EB">
-            <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
+          <a href="/auth/google_oauth2" class="btn btn-google">
+            <svg class="login-btn-icon" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -27,6 +27,64 @@
     </div>
   </AppLayout>
 </template>
+
+<style scoped>
+.login-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 3rem;
+}
+
+.login-card {
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 2rem;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.login-card__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.login-card__subtitle {
+  font-size: 0.875rem;
+  color: #6B7280;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-card__providers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-github {
+  background: #24292e;
+  color: #fff;
+  border: none;
+  width: 100%;
+}
+
+.btn-google {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #E5E7EB;
+  width: 100%;
+}
+
+.login-btn-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.5rem;
+}
+</style>
 
 <script setup>
 import AppLayout from '@/components/AppLayout.vue'
