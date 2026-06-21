@@ -123,8 +123,15 @@ function formatTime(seconds) {
   return `${m}м ${s}с`
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 function formatText(text) {
-  return text?.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>') || ''
+  if (!text) return ''
+  return text
+    .replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${escapeHtml(code.trimEnd())}</code></pre>`)
+    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']

@@ -26,10 +26,9 @@ export function useQuizSession(test, questionsSource) {
   const elapsed      = ref(0)
   const savedIndex   = ref(resolveSavedIndex())
   let timer
+  let saveTimer
 
   onMounted(() => {
-    timer = setInterval(() => elapsed.value++, 1000)
-
     questions.value.forEach(q => {
       answers.value[q.id] = q.type === 'multiple' ? [] : null
     })
@@ -37,21 +36,36 @@ export function useQuizSession(test, questionsSource) {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
       if (saved) {
-        answers.value   = saved.answers   || answers.value
-        startedAt.value = saved.startedAt || startedAt.value
+        const hasAnswers = saved.answers && Object.values(saved.answers).some(a =>
+          Array.isArray(a) ? a.length > 0 : a !== null
+        )
+
+        if (hasAnswers) {
+          answers.value   = saved.answers
+          startedAt.value = saved.startedAt || startedAt.value
+          elapsed.value   = saved.elapsed   || 0
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
       }
     } catch {}
 
+    timer = setInterval(() => elapsed.value++, 1000)
+    saveTimer = setInterval(() => saveSession(), 10000)
     watch(answers, () => saveSession(), { deep: true })
   })
 
-  onUnmounted(() => clearInterval(timer))
+  onUnmounted(() => {
+    clearInterval(timer)
+    clearInterval(saveTimer)
+  })
 
   function saveSession(extra = {}) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       questions:    questions.value,
       answers:      answers.value,
       startedAt:    startedAt.value,
+      elapsed:      elapsed.value,
       currentIndex: savedIndex.value,
       ...extra,
     }))
@@ -110,7 +124,13 @@ export function useQuizSession(test, questionsSource) {
   }
 
   function formatText(text) {
-    return text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+    return text
+      .replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${escapeHtml(code.trimEnd())}</code></pre>`)
+      .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
 
   const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
