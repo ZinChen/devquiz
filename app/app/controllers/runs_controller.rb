@@ -2,7 +2,7 @@ class RunsController < ApplicationController
   before_action :load_test
 
   def new
-    questions = shuffled_questions_with_db_ids
+    questions = questions_with_db_ids
     bookmarked_ids = current_user ? current_user.bookmarks
       .joins(:question)
       .where(questions: { test_slug: @meta.slug })
@@ -80,18 +80,12 @@ class RunsController < ApplicationController
     @questions ||= YamlSyncService.load_questions(@meta.slug)
   end
 
-  def shuffled_questions
-    load_questions.map do |q|
-      q.merge("options" => q["options"].shuffle)
-    end.shuffle
-  end
-
-  def shuffled_questions_with_db_ids
+  def questions_with_db_ids
     db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
     load_questions.map do |q|
       db_rec = db_map[q["id"].to_s]
-      q.merge("options" => q["options"].shuffle, "db_id" => db_rec&.id)
-    end.shuffle
+      q.merge("db_id" => db_rec&.id)
+    end
   end
 
   def test_props(t)

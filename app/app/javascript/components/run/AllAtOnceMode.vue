@@ -1,6 +1,6 @@
 <template>
   <div class="all-at-once">
-    <aside class="question-sidebar">
+    <aside class="question-sidebar" aria-hidden="true">
       <div class="question-sidebar__card">
       <div class="question-sidebar__grid">
         <button
@@ -183,19 +183,24 @@ onUnmounted(() => {
 
 <style scoped>
 .all-at-once {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
+  max-width: 42rem;
+  margin: 0 auto;
+  position: relative;
 }
 
 .question-sidebar {
   width: 1.5rem;
-  flex-shrink: 0;
-  position: sticky;
-  top: 1rem;
+  position: absolute;
+  left: calc(-1.5rem - 1rem);
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
 }
 
 .question-sidebar__card {
+  position: sticky;
+  top: 1rem;
+  pointer-events: auto;
   background: #fff;
   border: 1px solid #F3F4F6;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
@@ -265,8 +270,7 @@ onUnmounted(() => {
 }
 
 .all-at-once__content {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .question-item {

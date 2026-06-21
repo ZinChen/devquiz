@@ -19,8 +19,20 @@
       <div class="test-card__meta">
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
-        <span v-if="test.attemptsCount > 0">{{ test.attemptsCount }} попыток</span>
-        <span v-if="test.attemptsCount > 0">avg {{ test.avgScore.toFixed(0) }}%</span>
+        <span v-if="test.attemptsCount > 0" class="badge badge-sm test-card__attempts">{{ test.attemptsCount }} попыток</span>
+        <span
+          v-if="test.attemptsCount > 0"
+          class="badge badge-sm score-badge"
+          :class="test.avgScore >= 60 ? 'score--pass' : 'score--fail'"
+        >
+          <svg v-if="test.avgScore >= 60" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="2,6 5,9 10,3"/>
+          </svg>
+          <svg v-else width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/>
+          </svg>
+          {{ test.avgScore.toFixed(0) }}%
+        </span>
       </div>
     </Link>
   </div>
@@ -102,5 +114,33 @@ defineEmits(['clear-filters'])
   gap: 1rem;
   font-size: 0.75rem;
   color: #9CA3AF;
+}
+
+.test-card__attempts {
+  margin-left: auto;
+  background: #6B728020;
+  color: #6B7280;
+  border: none;
+  font-weight: 500;
+}
+
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.score--pass {
+  background: #10B98120;
+  color: #10B981;
+  border: none;
+  font-weight: 500;
+}
+
+.score--fail {
+  background: #EF444420;
+  color: #EF4444;
+  border: none;
+  font-weight: 500;
 }
 </style>

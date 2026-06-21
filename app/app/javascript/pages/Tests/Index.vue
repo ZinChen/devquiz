@@ -23,7 +23,7 @@
         <h1 class="page-header__title">Тесты для разработчиков</h1>
         <p class="page-header__subtitle">Ruby on Rails, PostgreSQL и не только</p>
       </div>
-      <div class="page-header__views">
+      <div class="page-header__views hidden">
         <button
           v-for="view in views" :key="view.key"
           @click="activeView = view.key"
@@ -280,9 +280,9 @@ function tagCount(tag) {
 }
 
 .tag-count {
-  font-size: 0.7em;
+  font-size: 0.9em;
+  min-width: 1.1em;
   opacity: 0.65;
-  min-width: 1.4em;
   text-align: right;
 }
 

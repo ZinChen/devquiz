@@ -23,6 +23,10 @@ body {
   color: #1F2937;
 }
 
+.hidden {
+  visibility: hidden;
+}
+
 .card {
   background-color: #ffffff;
 }
