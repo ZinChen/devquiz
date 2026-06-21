@@ -1,0 +1,683 @@
+---
+slug: pg-advanced-1
+title: PostgreSQL — продвинутый уровень
+description: 'Продвинутые вопросы по PostgreSQL: запросы, индексы, транзакции, оптимизация.'
+tags:
+- postgresql
+- sql
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: Нужно посчитать сумму зарплат по каждому отделу среди активных сотрудников. Какой запрос подойдет?
+  type: single
+  options:
+  - id: a
+    text: select department, sum(salary) from employees group by salary
+    correct: false
+    explanation: Группировка по salary (зарплате) вместо department (отдела) не даст суммы по отделам.
+  - id: b
+    text: select department, sum(salary) group by department where active = true
+    correct: false
+    explanation: Отсутствует FROM, WHERE стоит после GROUP BY — нарушен порядок ключевых слов.
+  - id: c
+    text: select department, sum(salary) from employees where active = true group by department
+    correct: true
+    explanation: 'Правильный порядок: FROM → WHERE (фильтрация строк) → GROUP BY (группировка) → SELECT (агрегация).'
+  - id: d
+    text: select department, sum(salary) from employees order by department
+    correct: false
+    explanation: ORDER BY сортирует результат, но не выполняет группировку, поэтому sum(salary) посчитается по всем строкам.
+  - id: e
+    text: select department, salary from employees group by department where active = true
+    correct: false
+    explanation: В SELECT указано salary без агрегации, но оно не включено в GROUP BY, что вызовет ошибку.
+  difficulty: medium
+  explanation: Сначала фильтруем активных (WHERE), затем группируем по отделам и считаем сумму.
+  extended_explanation: |-
+    В запросе нужно:
+    1. Отфильтровать только активных сотрудников (WHERE active = true)
+    2. Сгруппировать записи по отделам (GROUP BY department)
+    3. Посчитать сумму зарплат в каждой группе (sum(salary))
+
+    ## Что здесь важно по теории
+    - WHERE применяется до GROUP BY, поэтому нельзя использовать агрегатные функции в WHERE.
+    - GROUP BY должно содержать все неагрегированные колонки из SELECT.
+    - ORDER BY используется только для сортировки, не для группировки.
+  recommendation: |-
+    Повторить порядок выполнения SQL-запроса: FROM → WHERE → GROUP BY → SELECT → ORDER BY.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+- id: q2
+  text: |-
+    Что вернёт этот запрос?
+
+    ```
+    select region, count(*)
+    from clients
+    group by region
+    having count(*) > 10
+    ```
+  type: single
+  options:
+  - id: a
+    text: Только регионы с более чем 10 клиентами
+    correct: true
+    explanation: HAVING фильтрует группы, оставляя только те, где количество клиентов больше 10.
+  - id: b
+    text: Только регионы с NULL
+    correct: false
+    explanation: Условие count(*) > 10 не связано с NULL-значениями.
+  - id: c
+    text: Только 10 первых клиентов
+    correct: false
+    explanation: Запрос не использует LIMIT и не сортирует строки.
+  - id: d
+    text: Все регионы без фильтрации
+    correct: false
+    explanation: HAVING применяется, поэтому фильтрация будет выполнена.
+  - id: e
+    text: Ошибка из-за HAVING
+    correct: false
+    explanation: HAVING корректно используется после GROUP BY.
+  difficulty: medium
+  explanation: HAVING фильтрует группы после группировки. Условие count(*) > 10 оставляет только группы с количеством клиентов больше 10.
+  extended_explanation: |-
+    Запрос:
+    1. Группирует клиентов по регионам
+    2. Для каждой группы считает количество записей (count(*))
+    3. Оставляет только те группы, где количество больше 10
+
+    ## Что здесь важно по теории
+    - WHERE нельзя использовать с агрегатными функциями
+    - HAVING применяется именно к группам, а не к отдельным строкам
+    - COUNT(*) считает количество строк в группе, включая NULL
+  recommendation: |-
+    Повторить разницу между WHERE и HAVING: WHERE фильтрует строки до группировки, HAVING — после.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html#QUERIES-GROUP
+- id: q3
+  text: В таблице customers есть поле interests типа text[]. В некоторых строках уже есть значения вроде {'music, travel'}. Вам нужно добавить тег 'sports' только тем клиентам, у кого его нет. Какой из вариантов корректнее и безопаснее реализует задачу?
+  type: single
+  options:
+  - id: a
+    text: update customers set interests = interests || array['sports'] where interests != 'sports'
+    correct: false
+    explanation: Оператор != сравнивает массив со строкой, что некорректно; условие не проверяет наличие элемента в массиве.
+  - id: b
+    text: update customers set interests = interests || 'sports' where interests is null
+    correct: false
+    explanation: Проверка только на NULL не обрабатывает существующие массивы без элемента 'sports'.
+  - id: c
+    text: update customers set interests = 'sports' where interests @> array['sports']
+    correct: false
+    explanation: Условие @> проверяет наличие элемента, но обновление заменяет весь массив на строку 'sports'.
+  - id: d
+    text: update customers set interests = array_prepend('sports', interests)
+    correct: false
+    explanation: array_prepend добавляет элемент в начало, но нет условия WHERE, поэтому добавит всем, даже если элемент уже есть.
+  - id: e
+    text: update customers set interests = array_append(interests, 'sports') where not 'sports' = any(interests)
+    correct: true
+    explanation: array_append добавляет элемент в конец массива, ANY проверяет наличие элемента, NOT исключает строки где элемент уже есть.
+  difficulty: medium
+  explanation: array_append добавляет элемент в конец массива. Условие WHERE not 'sports' = any(interests) проверяет отсутствие элемента.
+  extended_explanation: |-
+    Для безопасного добавления элемента в массив без создания дубликатов нужно:
+    1. Проверить, что элемента еще нет в массиве (WHERE not 'sports' = any(interests))
+    2. Добавить элемент с помощью array_append (добавляет в конец) или array_prepend (в начало)
+
+    ## Что здесь важно по теории
+    - ANY проверяет наличие элемента в массиве
+    - array_append(массив, элемент) возвращает новый массив с добавленным элементом
+    - Простая конкатенация (||) может работать некорректно с разными типами
+  recommendation: |-
+    Повторить функции для работы с массивами: array_append, array_prepend, ANY, array_position.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-array.html
+- id: q4
+  text: |-
+    В чём потенциальная проблема этого запроса?
+
+    ```
+    select count(*)
+    from orders o
+    join order_items i on o.id = i.order_id
+    ```
+  type: single
+  options:
+  - id: a
+    text: JOIN не нужен при подсчёте заказов
+    correct: false
+    explanation: JOIN может быть нужен, если требуется связанная информация, но не для простого подсчета.
+  - id: b
+    text: COUNT(*) требует DISTINCT по умолчанию
+    correct: false
+    explanation: COUNT(*) не требует DISTINCT, он считает все строки результата.
+  - id: c
+    text: Таблицы нужно объединить через подзапрос
+    correct: false
+    explanation: JOIN вполне допустим, проблема не в способе объединения.
+  - id: d
+    text: COUNT(*) может посчитать дубликаты
+    correct: true
+    explanation: При JOIN один заказ может иметь несколько позиций, поэтому заказы будут подсчитаны несколько раз.
+  - id: e
+    text: Нельзя использовать JOIN без LIMIT
+    correct: false
+    explanation: LIMIT не обязателен, проблема не в его отсутствии.
+  difficulty: medium
+  explanation: При JOIN один заказ может иметь несколько позиций, поэтому заказы будут подсчитаны несколько раз (по количеству позиций).
+  extended_explanation: |-
+    Проблема в том, что JOIN умножает строки:
+    - Если один заказ содержит 3 позиции, то в результате JOIN появится 3 строки для этого заказа
+    - COUNT(*) посчитает все эти строки, а не уникальные заказы
+
+    ## Что здесь важно по теории
+    - Для подсчета уникальных заказов нужно использовать COUNT(DISTINCT o.id)
+    - Если нужна информация по заказам с их позициями, JOIN уместен
+    - Всегда проверяйте кардинальность связей при JOIN
+  recommendation: |-
+    Повторить влияние JOIN на количество строк в результате и использование COUNT(DISTINCT).
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q5
+  text: |-
+    Почему этот запрос может работать медленно?
+
+    ```
+    select id
+    from orders
+    where customer_id in (select id from blacklisted_customers)
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT нельзя использовать в подзапросе
+    correct: false
+    explanation: SELECT в подзапросе допустим и широко используется.
+  - id: b
+    text: IN не работает с подзапросами
+    correct: false
+    explanation: IN отлично работает с подзапросами.
+  - id: c
+    text: Подзапрос не индексирован
+    correct: true
+    explanation: Отсутствие индексов на customer_id в orders или на id в blacklisted_customers может вызвать медленное выполнение.
+  - id: d
+    text: Нужно заменить на JOIN
+    correct: false
+    explanation: JOIN может быть эффективнее, но это не единственная причина медленной работы.
+  - id: e
+    text: WHERE нельзя использовать с IN
+    correct: false
+    explanation: WHERE с IN — допустимая конструкция.
+  difficulty: medium
+  explanation: Если на customer_id в orders нет индекса или на id в blacklisted_customers нет индекса, запрос может выполняться медленно.
+  extended_explanation: |-
+    Медленная работа может быть вызвана:
+    1. Отсутствием индекса на customer_id в orders (нужен для быстрого поиска)
+    2. Отсутствием индекса на id в blacklisted_customers (нужен для быстрого выполнения подзапроса)
+    3. Большим размером blacklisted_customers (IN может работать медленно с большими списками)
+    3.1. С проверкой вхождения в большую выборку данных лучше использовать EXISTS
+
+    ## Что здесь важно по теории
+    - Для больших списков JOIN часто эффективнее IN
+    - EXISTS может быть быстрее IN, если нужно только проверить существование
+    - Индексы критически важны для производительности запросов с подзапросами
+  recommendation: |-
+    Повторить индексирование для подзапросов и разницу между IN, EXISTS и JOIN.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes.html
+- id: q6
+  text: Когда BRIN-индекс предпочтительнее B-Tree, несмотря на его меньшую точность?
+  type: single
+  options:
+  - id: a
+    text: Когда выполняется поиск по точным строковым значениям
+    correct: false
+    explanation: Для точного поиска лучше подходит B-Tree.
+  - id: b
+    text: Когда таблица содержит большие объёмы данных, отсортированных по индексу
+    correct: true
+    explanation: BRIN оптимален для больших таблиц с естественным порядком (например, временные ряды).
+  - id: c
+    text: Когда индекс используется для join'ов
+    correct: false
+    explanation: Для join'ов обычно лучше B-Tree из-за точности.
+  - id: d
+    text: Когда данные хранятся в jsonb
+    correct: false
+    explanation: Для jsonb используются GIN индексы.
+  - id: e
+    text: Когда нужно обеспечить уникальность значений
+    correct: false
+    explanation: Уникальность обеспечивает только B-Tree.
+  difficulty: medium
+  explanation: BRIN эффективен для очень больших таблиц, где данные физически отсортированы (например, по дате), и допустимо приблизительное сканирование.
+  extended_explanation: |-
+    BRIN (Block Range INdex) индексы:
+    - Хранят минимальные и максимальные значения для диапазонов блоков
+    - Занимают очень мало места (тысячи раз меньше B-tree)
+    - Эффективны когда данные физически упорядочены (например, временные ряды)
+    - Дают ложноположительные срабатывания, но быстро отсекают большие диапазоны
+
+    ## Что здесь важно по теории
+    - B-tree лучше для точного поиска и уникальных значений
+    - BRIN идеален для архивных таблиц, логов, событий по времени
+    - Не подходит для случайно распределенных данных
+  recommendation: |-
+    Повторить типы индексов в PostgreSQL и их применение: B-tree, BRIN, GIN, GiST.
+    Справка: https://postgrespro.ru/docs/postgresql/current/brin.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-types.html
+- id: q7
+  text: |-
+    Какое влияние окажет добавление индекса на поле created_at в запросе?
+
+    ```
+    select * from logs where created_at >= now() - interval '1 day'
+    ```
+  type: single
+  options:
+  - id: a
+    text: Уменьшит размер таблицы
+    correct: false
+    explanation: Индекс увеличивает общий размер базы данных, а не уменьшает.
+  - id: b
+    text: Увеличит количество возвращаемых строк
+    correct: false
+    explanation: Индекс не влияет на количество строк в результате запроса.
+  - id: c
+    text: Увеличит количество операций записи
+    correct: false
+    explanation: Индекс действительно замедляет запись, но вопрос о влиянии на данный запрос SELECT.
+  - id: d
+    text: Ускорит выборку при большом объеме данных
+    correct: true
+    explanation: Индекс позволит быстро найти записи за последний день без полного сканирования таблицы.
+  - id: e
+    text: Приведет к ошибке времени
+    correct: false
+    explanation: Добавление индекса не вызывает ошибок времени выполнения.
+  difficulty: medium
+  explanation: Индекс на created_at позволит быстро находить записи за последний день, особенно при большом объеме данных.
+  extended_explanation: |-
+    Индекс на created_at:
+    - Позволяет выполнить Index Scan вместо Seq Scan
+    - Значительно ускоряет запросы с фильтрацией по дате
+    - Особенно эффективен при малой селективности (мало строк за последний день)
+
+    ## Что здесь важно по теории
+    - Индексы ускоряют SELECT, но замедляют INSERT/UPDATE/DELETE
+    - Планировщик решает использовать индекс или нет на основе статистики
+    - Для диапазонных запросов B-tree индекс работает отлично
+  recommendation: |-
+    Повторить влияние индексов на операции чтения и записи.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes.html
+- id: q8
+  text: |-
+    Запускаются две транзакции — T1 и T2. Какой вид изолированности транзакции НЕ позволит исполнить commit?
+
+    ```
+    -- source data
+    Class | Value
+    1     | 10
+    1     | 20
+    1     | 100
+    2     | 200
+
+    -- T1
+    SELECT SUM(value) FROM mytab WHERE class = 1;
+    INSERT INTO some_table(class, value) VALUES (2, 30);
+    COMMIT;
+
+    -- T2
+    SELECT SUM(value) FROM mytab WHERE class = 2;
+    INSERT INTO some_table(class, value) VALUES (1, 300);
+    COMMIT;
+    ```
+  type: single
+  options:
+  - id: a
+    text: read uncommitted
+    correct: false
+    explanation: В PostgreSQL read uncommitted работает как read committed, не обнаруживает такие конфликты.
+  - id: b
+    text: read committed
+    correct: false
+    explanation: Read committed позволяет выполнить обе транзакции без ошибок.
+  - id: c
+    text: repeatable read
+    correct: false
+    explanation: Repeatable read предотвращает неповторяющееся чтение, но не такие циклические зависимости.
+  - id: d
+    text: serializable
+    correct: true
+    explanation: Serializable обнаруживает циклические зависимости и откатывает одну из транзакций.
+  difficulty: medium
+  explanation: Serializable обнаруживает циклические зависимости (read-write conflicts) и не позволяет зафиксировать обе транзакции, откатывая одну из них.
+  extended_explanation: |-
+    При уровне SERIALIZABLE PostgreSQL отслеживает зависимости:
+    - T1 читает class=1, T2 читает class=2
+    - T1 вставляет в class=2 (меняет данные, которые прочитала T2)
+    - T2 вставляет в class=1 (меняет данные, которые прочитала T1)
+    - Возникает циклическая зависимость → ошибка сериализации
+
+    ## Что здесь важно по теории
+    - Read Uncommitted в PostgreSQL работает как Read Committed
+    - Repeatable Read предотвращает неповторяющееся чтение, но не все аномалии
+    - Serializable самый строгий уровень, требует обработки ошибок сериализации
+  recommendation: |-
+    Повторить уровни изоляции в PostgreSQL и аномалии конкурентного доступа.
+    Справка: https://postgrespro.ru/docs/postgresql/current/transaction-iso.html
+- id: q9
+  text: |-
+    В PostgreSQL вы создаёте индекс в транзакции над таблицей users. Во время выполнения этой транзакции другая транзакция пытается выполнить команду над той же таблицей. Какая команда выполнится без конфликтов?
+
+    ```
+    -- Первая транзакция
+    begin;
+    create index idx_users_name on users(name);
+    -- Вторая транзакция
+    <выбранная команда>;
+    ```
+  type: single
+  options:
+  - id: a
+    text: vacuum users;
+    correct: false
+    explanation: VACUUM может конфликтовать с созданием индекса.
+  - id: b
+    text: select * from users;
+    correct: true
+    explanation: CREATE INDEX блокирует запись, но не блокирует обычные SELECT.
+  - id: c
+    text: select * from users where id = 1000 for update;
+    correct: false
+    explanation: SELECT FOR UPDATE требует блокировку записи, которая заблокирована CREATE INDEX.
+  - id: d
+    text: create index concurrently idx_users_email on users(email);
+    correct: false
+    explanation: CREATE INDEX CONCURRENTLY не может выполняться внутри явной транзакции.
+  - id: e
+    text: insert into users(name) values ('Alice');
+    correct: false
+    explanation: INSERT блокируется CREATE INDEX.
+  difficulty: medium
+  explanation: CREATE INDEX (без CONCURRENTLY) блокирует запись, но не блокирует обычные SELECT.
+  extended_explanation: |-
+    CREATE INDEX без CONCURRENTLY:
+    - Блокирует таблицу блокировкой SHARE (не дает писать)
+    - Позволяет читать (SELECT) без блокировки
+    - Блокирует INSERT/UPDATE/DELETE, SELECT FOR UPDATE
+
+    ## Что здесь важно по теории
+    - CONCURRENTLY позволяет создавать индекс без блокировки записи, но медленнее
+    - DDL команды в транзакции могут блокировать другие операции
+    - VACUUM может конфликтовать с созданием индекса
+  recommendation: |-
+    Повторить какие блокировки ставит CREATE INDEX и когда нужен вариант CONCURRENTLY.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createindex.html
+- id: q10
+  text: |-
+    Что вернёт запрос?
+
+    ```
+    select department, count(*)
+    from employees
+    group by department
+    having count(*) > 1;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Ничего, если count(*) не указан в SELECT
+    correct: false
+    explanation: count(*) указан в SELECT, поэтому запрос вернет результат.
+  - id: b
+    text: Только департаменты, где 2 и более сотрудников
+    correct: true
+    explanation: HAVING count(*) > 1 оставляет группы с количеством строк больше 1.
+  - id: c
+    text: Только департаменты, где 1 сотрудник
+    correct: false
+    explanation: Условие count(*) > 1 исключает группы с одним сотрудником.
+  - id: d
+    text: Все департаменты
+    correct: false
+    explanation: HAVING применяется, поэтому фильтрация будет выполнена.
+  - id: e
+    text: Только NULL - записи
+    correct: false
+    explanation: Запрос не связан с NULL-значениями.
+  difficulty: medium
+  explanation: HAVING count(*) > 1 оставляет только группы с количеством записей больше 1.
+  extended_explanation: |-
+    Запрос:
+    1. Группирует сотрудников по департаментам
+    2. Для каждого департамента считает количество сотрудников
+    3. Оставляет только те департаменты, где count(*) > 1 (минимум 2 сотрудника)
+
+    ## Что здесь важно по теории
+    - COUNT(*) считает все строки в группе
+    - HAVING применяется после GROUP BY, WHERE - до
+    - COUNT(*) всегда возвращает число, даже для NULL
+  recommendation: |-
+    Повторить использование HAVING для фильтрации групп.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html#QUERIES-GROUP
+- id: q11
+  text: У вас есть рабочая база данных с высокой нагрузкой и её копия. Вы хотите проанализировать производительность запроса, чтобы исключить влияние нагрузки на результаты анализа. Какую команду следует использовать для тестирования на копии базы данных?
+  type: single
+  options:
+  - id: a
+    text: explain analyze
+    correct: false
+    explanation: explain analyze выполняет запрос и показывает время, но не дает статистику буферов.
+  - id: b
+    text: explain
+    correct: false
+    explanation: explain показывает только план, не выполняет запрос и не дает реального времени.
+  - id: c
+    text: Выполнить запрос несколько раз и взять среднее время выполнения.
+    correct: false
+    explanation: Это не стандартная команда, нет детализации по буферам и плану.
+  - id: d
+    text: pgbench для эмуляции нагрузки и затем использовать explain analyze
+    correct: false
+    explanation: pgbench создает нагрузку, но на копии базы мы хотим исключить нагрузку.
+  - id: e
+    text: explain (analyze, buffers)
+    correct: true
+    explanation: explain (analyze, buffers) выполняет запрос, показывает реальное время и статистику буферов.
+  difficulty: medium
+  explanation: EXPLAIN (ANALYZE, BUFFERS) выполняет запрос и показывает реальное время и статистику использования буферов, что дает максимум информации.
+  extended_explanation: |-
+    EXPLAIN (ANALYZE, BUFFERS):
+    - ANALYZE выполняет запрос и показывает реальное время
+    - BUFFERS показывает сколько данных прочитано из кеша и с диска
+    - На копии БД нет нагрузки, можно получить точные метрики
+
+    ## Что здесь важно по теории
+    - Простой EXPLAIN показывает только план, не выполняет запрос
+    - EXPLAIN ANALYZE выполняет запрос, меняя данные
+    - BUFFERS критически важен для анализа проблем с I/O
+  recommendation: |-
+    Повторить чтение плана выполнения, разницу между EXPLAIN и EXPLAIN ANALYZE, а также метрику BUFFERS.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-explain.html
+- id: q12
+  text: |-
+    Что произойдёт при попытке вставить данные в представление?
+
+    ```
+    insert into view_active_users (name, email) values ('Anna', 'a@example.com');
+    ```
+  type: single
+  options:
+  - id: a
+    text: Представление перезапишется
+    correct: false
+    explanation: INSERT добавляет данные, не перезаписывает представление.
+  - id: b
+    text: Произойдёт дублирование записей
+    correct: false
+    explanation: Дублирование не является прямым следствием INSERT в представление.
+  - id: c
+    text: 'Ошибка: представление только для чтения'
+    correct: true
+    explanation: По умолчанию представления в PostgreSQL доступны только для чтения.
+  - id: d
+    text: Запрос выполнится и обновит базовую таблицу
+    correct: false
+    explanation: Это верно только для обновляемых представлений с триггерами.
+  - id: e
+    text: INSERT будет транслирован в базу через RULE
+    correct: false
+    explanation: Правила (RULE) могут перенаправлять INSERT, но это не поведение по умолчанию.
+  difficulty: medium
+  explanation: По умолчанию представления в PostgreSQL доступны только для чтения, если для них не созданы правила или триггеры INSTEAD OF.
+  extended_explanation: |-
+    В PostgreSQL:
+    - Простые представления (одна таблица, без агрегации) можно обновлять
+    - Сложные представления (JOIN, GROUP BY) доступны только для чтения
+    - Чтобы разрешить запись, нужно создавать триггеры INSTEAD OF
+
+    ## Что здесь важно по теории
+    - RULES могут перенаправлять запросы, но их сложнее поддерживать
+    - INSTEAD OF триггеры - современный способ сделать представление обновляемым
+    - По умолчанию INSERT в представление вызывает ошибку
+  recommendation: |-
+    Повторить понятие обновляемых представлений и правила INSTEAD OF.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createview.html
+- id: q13
+  text: |-
+    Вы добавили триггер на таблицу employees, чтобы логировать каждое изменение зарплаты. Как проверить, что триггер действительно сработал после выполнения update employees set salary = salary + 100 where department_id = 2;
+
+    ```
+    create or replace function log_salary_update() returns trigger as $$
+    begin
+        insert into salary_log(emp_id, old_salary, new_salary, changed_at)
+        values (OLD.id, OLD.salary, NEW.salary, now());
+        return NEW;
+    end;
+    $$ language plpgsql;
+
+    create trigger trg_salary_update
+    after update on employees
+    for each row
+    when (OLD.salary is distinct from NEW.salary)
+    execute function log_salary_update();
+    ```
+  type: single
+  options:
+  - id: a
+    text: Использовать pg_stat_statements
+    correct: false
+    explanation: pg_stat_statements показывает статистику запросов, не срабатывание триггеров.
+  - id: b
+    text: Посмотреть журнал ошибок PostgreSQL
+    correct: false
+    explanation: Лог ошибок покажет только проблемы, не успешные срабатывания.
+  - id: c
+    text: Проверить таблицу employees_log
+    correct: false
+    explanation: Таблица для лога называется salary_log, не employees_log.
+  - id: d
+    text: Выполнить explain update...
+    correct: false
+    explanation: EXPLAIN показывает план запроса, не факт срабатывания триггера.
+  - id: e
+    text: Выполнить select * from salary_log where changed_at > now() - interval '1 minute';
+    correct: true
+    explanation: Триггер вставляет записи в salary_log, поэтому прямой SELECT покажет результат.
+  difficulty: medium
+  explanation: Триггер вставляет записи в salary_log, поэтому проверить его срабатывание можно прямым SELECT из этой таблицы.
+  extended_explanation: |-
+    Триггер:
+    - Срабатывает AFTER UPDATE на employees
+    - Вставляет запись в salary_log при изменении зарплаты
+    - Чтобы проверить, сработал ли триггер, нужно посмотреть в salary_log
+
+    ## Что здесь важно по теории
+    - pg_stat_statements показывает статистику запросов, не триггеров
+    - Лог ошибок покажет только проблемы, не успешные срабатывания
+    - EXPLAIN показывает план запроса, не результат
+  recommendation: |-
+    Повторить работу триггеров и отладку с помощью проверки целевых таблиц.
+    Справка: https://postgrespro.ru/docs/postgresql/current/plpgsql-trigger.html
+- id: q14
+  text: |-
+    Какой риск возникает, если пользователь создаёт выраженный индекс на поле, к которому у него нет прав?
+
+    ```
+    CREATE INDEX idx_lower_email ON users (lower(email));
+    ```
+  type: single
+  options:
+  - id: a
+    text: Индекс создается, но выдаст ошибку при обращении
+    correct: false
+    explanation: Индекс не создастся вообще, ошибка будет при CREATE.
+  - id: b
+    text: PostgreSQL создаст индекс без проверки прав
+    correct: false
+    explanation: PostgreSQL всегда проверяет права при создании объектов.
+  - id: c
+    text: Индекс создается, но выдаст ошибку при использовании функции
+    correct: false
+    explanation: Функция lower доступна всем, проблема не в функции.
+  - id: d
+    text: Запрос завершится ошибкой из-за отсутствия доступа к полю
+    correct: true
+    explanation: PostgreSQL проверяет права на чтение столбца email и откажет в создании индекса.
+  - id: e
+    text: Индекс будет создан, но использоваться не сможет
+    correct: false
+    explanation: Индекс не создастся, поэтому не будет и использоваться.
+  difficulty: medium
+  explanation: PostgreSQL проверяет права на чтение столбца при создании индекса. Если прав нет, создание индекса завершится ошибкой.
+  extended_explanation: |-
+    При создании индекса:
+    - PostgreSQL проверяет права на таблицу и на используемые столбцы
+    - Для выражения lower(email) нужно право на чтение столбца email
+    - Если прав нет, возникает ошибка "permission denied"
+
+    ## Что здесь важно по теории
+    - Права проверяются на момент создания, не на момент использования
+    - Владелец таблицы и суперпользователь всегда могут создавать индексы
+    - Индекс не будет создан вообще, если нет прав на чтение данных
+  recommendation: |-
+    Повторить модель привилегий в PostgreSQL и проверку прав при создании объектов.
+    Справка: https://postgrespro.ru/docs/postgresql/current/ddl-priv.html
+- id: q15
+  text: Выросло количество запросов на запись при том же уровне чтения, повысились требования к отказоустойчивости. Какие методики применить, учитывая что запросов по ключу большинство?
+  type: single
+  options:
+  - id: a
+    text: Репликация вместе с горизонтальным шардированием
+    correct: true
+    explanation: Шардирование распределяет запись по узлам, репликация дает отказоустойчивость.
+  - id: b
+    text: Только репликация 'ведущий-ведомый' (master-slave), потому что она горизонтально масштабирует запись между узлами
+    correct: false
+    explanation: Репликация master-slave не масштабирует запись, только чтение.
+  - id: c
+    text: Вертикальное масштабирование (увеличение мощности сервера), потому что оно распределяет запись по нескольким узлам по ключу
+    correct: false
+    explanation: Вертикальное масштабирование не распределяет нагрузку по узлам.
+  - id: d
+    text: Использование пула соединений (pgbouncer), потому что он сам по себе решает масштабирование записи и отказоустойчивость данных
+    correct: false
+    explanation: Пул соединений управляет подключениями, не распределяет данные и не дает отказоустойчивости.
+  difficulty: medium
+  explanation: Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.
+  extended_explanation: |-
+    Для решения проблемы:
+    1. Горизонтальное шардирование распределяет данные по разным узлам по ключу (user_id, region)
+    2. Каждый шард может иметь реплики для отказоустойчивости
+    3. Запросы по ключу попадают на конкретный шард
+
+    ## Что здесь важно по теории
+    - Репликация master-slave масштабирует только чтение
+    - Пул соединений не влияет на хранение данных
+    - Вертикальное масштабирование имеет физические ограничения
+  recommendation: |-
+    Повторить различия между шардированием, репликацией и вертикальным масштабированием для write-heavy нагрузки.
+    Справка: https://postgrespro.ru/docs/postgresql/current/warm-standby.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/high-availability.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/ddl-partitioning.html

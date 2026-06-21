@@ -45,20 +45,43 @@
             <span class="result-option__letter" :style="optionLetterStyle(item, opt.id)">
               {{ optionLetter(oi) }}
             </span>
-            {{ opt.text }}
+            <span class="result-option__body">
+              <span>{{ opt.text }}</span>
+              <span
+                v-if="opt.explanation && (item.correctIds.includes(opt.id) || item.selectedOptions.includes(opt.id))"
+                class="result-option__explanation"
+              >{{ opt.explanation }}</span>
+            </span>
           </div>
         </div>
 
         <p v-if="item.explanation" class="result-item__explanation">
           {{ item.explanation }}
         </p>
+
+        <div v-if="item.extendedExplanation || item.recommendation" class="result-item__details">
+          <button
+            class="result-item__details-toggle"
+            @click="toggleDetails(item.questionId)"
+          >
+            {{ openDetails[item.questionId] ? 'Скрыть подробности' : 'Подробнее' }}
+            <span class="result-item__details-arrow" :class="{ 'result-item__details-arrow--open': openDetails[item.questionId] }">▾</span>
+          </button>
+          <div v-if="openDetails[item.questionId]" class="result-item__details-body">
+            <div v-if="item.extendedExplanation" class="result-item__extended" v-html="formatMarkdown(item.extendedExplanation)"></div>
+            <div v-if="item.recommendation" class="result-item__recommendation">
+              <p class="result-item__recommendation-label">Что повторить</p>
+              <div v-html="formatMarkdown(item.recommendation)"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 
@@ -67,6 +90,25 @@ const props = defineProps({
   attempt:        Object,
   answersDetail:  Array,
 })
+
+const openDetails = reactive({})
+function toggleDetails(questionId) {
+  openDetails[questionId] = !openDetails[questionId]
+}
+
+function formatMarkdown(text) {
+  if (!text) return ''
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/^## (.+)$/gm, '<h4 class="result-md-h4">$1</h4>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="result-md-list">$&</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hul])(.+)$/gm, (m) => m.startsWith('<') ? m : m)
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="result-link">$1</a>')
+}
 
 const scoreColor = computed(() => {
   if (props.attempt.score >= 80) return '#10B981'
@@ -204,6 +246,18 @@ function optionLetterStyle(item, optId) {
   border-radius: 0.5rem;
 }
 
+.result-option__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.result-option__explanation {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-style: italic;
+}
+
 .result-option__letter {
   flex-shrink: 0;
   width: 1.25rem;
@@ -232,5 +286,86 @@ function optionLetterStyle(item, optId) {
   padding: 0.125rem 0.25rem;
   font-size: 0.875rem;
   font-family: monospace;
+}
+
+.result-item__details {
+  margin-top: 0.5rem;
+  border-top: 1px solid #F3F4F6;
+  padding-top: 0.5rem;
+}
+
+.result-item__details-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #4F63F5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.result-item__details-toggle:hover {
+  text-decoration: underline;
+}
+
+.result-item__details-arrow {
+  display: inline-block;
+  transition: transform 0.2s;
+  font-size: 0.875rem;
+}
+
+.result-item__details-arrow--open {
+  transform: rotate(180deg);
+}
+
+.result-item__details-body {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result-item__extended {
+  font-size: 0.8125rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.result-item__recommendation {
+  background: #F0F4FF;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.result-item__recommendation-label {
+  font-weight: 600;
+  color: #4F63F5;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+:deep(.result-md-h4) {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: #1F2937;
+}
+
+:deep(.result-md-list) {
+  margin: 0.25rem 0 0.25rem 1rem;
+  padding: 0;
+}
+
+:deep(.result-link) {
+  color: #4F63F5;
+  word-break: break-all;
+  text-decoration: underline;
 }
 </style>

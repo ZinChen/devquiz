@@ -1,0 +1,637 @@
+---
+slug: sql-advanced-2
+title: PostgreSQL — продвинутый уровень
+description: 'Продвинутые вопросы по SQL: синтаксис, агрегации, JOIN, подзапросы.'
+tags:
+- sql
+- postgresql
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: |-
+    Почему этот запрос может дать неожиданные результаты?
+
+    ```
+    SELECT category, COUNT(price)
+    FROM products
+    GROUP BY category;
+    ```
+  type: single
+  options:
+  - id: a
+    text: category не включён в SELECT
+    correct: false
+    explanation: category как раз включён в SELECT (первая колонка).
+  - id: b
+    text: COUNT(price) не учитывает NULL, и результат может быть занижен
+    correct: true
+    explanation: COUNT(price) подсчитывает только не-NULL значения, поэтому если есть товары с неуказанной ценой, они не будут учтены.
+  - id: c
+    text: GROUP BY не работает с текстовыми колонками
+    correct: false
+    explanation: GROUP BY отлично работает с текстовыми колонками.
+  - id: d
+    text: COUNT нельзя применять к строкам
+    correct: false
+    explanation: COUNT можно применять к строкам, COUNT(*) считает все строки.
+  - id: e
+    text: Запрос вернёт NULL
+    correct: false
+    explanation: Запрос вернёт количество записей (возможно 0, если все price = NULL).
+  difficulty: medium
+  explanation: COUNT(column) игнорирует NULL-значения, поэтому результат может быть меньше ожидаемого.
+  extended_explanation: |-
+    Функция COUNT(price) подсчитывает только те строки, где значение в колонке price **не равно NULL**. Если в таблице есть товары с неуказанной ценой (NULL), они не будут учтены, что может привести к заниженным результатам по сравнению с ожидаемыми.
+
+    ## Что здесь важно по теории
+    - COUNT(*) считает все строки в группе, включая NULL
+    - COUNT(column) считает только не-NULL значения в колонке
+    - Все агрегатные функции кроме COUNT(*) игнорируют NULL
+  recommendation: |-
+    Повторить поведение агрегатных функций с NULL-значениями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q2
+  text: |-
+    Что означает, если `MAX(updated_at)` возвращает `NULL`?
+
+    ```
+    SELECT MAX(updated_at) FROM table;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Ошибка сравнения
+    correct: false
+    explanation: Синтаксически запрос корректен, ошибки нет.
+  - id: b
+    text: Значения `updated_at` отрицательные
+    correct: false
+    explanation: Для дат понятие отрицательности не применимо.
+  - id: c
+    text: Все значения в `updated_at` – `NULL`
+    correct: true
+    explanation: Агрегатные функции игнорируют NULL, и если все значения NULL, результат будет NULL.
+  - id: d
+    text: Поле не имеет индекса
+    correct: false
+    explanation: Индекс не влияет на результат выполнения агрегатной функции.
+  - id: e
+    text: "`MAX()` не применим к датам"
+    correct: false
+    explanation: MAX отлично работает с датами.
+  difficulty: medium
+  explanation: Агрегатные функции (кроме COUNT(*)) игнорируют NULL. Если все значения NULL, результат будет NULL.
+  extended_explanation: |-
+    Агрегатная функция `MAX()` (как и другие агрегатные функции, кроме `COUNT(*)`) игнорирует NULL-значения. Если **все** значения в столбце `updated_at` равны NULL, то `MAX(updated_at)` вернет `NULL`, так как не нашлось ни одного не-NULL значения для обработки.
+
+    ## Что здесь важно по теории
+    - MAX, MIN, SUM, AVG игнорируют NULL
+    - COUNT(*) учитывает NULL-строки
+    - COUNT(column) игнорирует NULL
+  recommendation: |-
+    Повторить поведение агрегатных функций с NULL-значениями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q3
+  text: |-
+    Что произойдёт при выполнении запроса:
+
+    ```
+    select * from A inner join B on A.id = B.id where B.id is null
+    ```
+  type: single
+  options:
+  - id: a
+    text: Будет одно совпадение
+    correct: false
+    explanation: Невозможно, т.к. условие противоречиво.
+  - id: b
+    text: Результат будет пустым
+    correct: true
+    explanation: INNER JOIN требует совпадения, а условие WHERE B.id IS NULL никогда не выполнится для строк, прошедших JOIN.
+  - id: c
+    text: Будут строки только из таблицы A
+    correct: false
+    explanation: При INNER JOIN строки без совпадений в B не попадают.
+  - id: d
+    text: Будут строки с NULL
+    correct: false
+    explanation: NULL в B.id возможны только при LEFT JOIN.
+  - id: e
+    text: Будет ошибка
+    correct: false
+    explanation: Синтаксически запрос корректен.
+  difficulty: medium
+  explanation: INNER JOIN исключает строки с NULL в ключе соединения, поэтому условие WHERE B.id IS NULL никогда не сработает.
+  extended_explanation: |-
+    Запрос делает:
+    1. `INNER JOIN` — соединяет таблицы A и B, оставляя только те строки, где условие `A.id = B.id` истинно
+    2. `WHERE B.id IS NULL` — пытается отфильтровать результат, оставляя только строки с NULL-значением в колонке B.id
+
+    Противоречие: если строка прошла `INNER JOIN`, значит у нее есть совпадающий id в обеих таблицах, следовательно **B.id не может быть NULL**. Поэтому результат пустой.
+  recommendation: |-
+    Повторить типы JOIN и их влияние на NULL-значения.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html#QUERIES-JOIN
+- id: q4
+  text: 'Как получить сумму sales, где для каждого клиента глубоко вложенное условие: если category = ''A'', брать полную сумму, если ''B'' — только половину, если другое — ноль?'
+  type: single
+  options:
+  - id: a
+    text: SELECT SUM(CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END) FROM purchases
+    correct: true
+    explanation: Корректно реализует требуемую логику с CASE.
+  - id: b
+    text: SELECT SUM(DECODE(category, 'A', sales, 'B', sales/2, 0)) FROM purchases
+    correct: false
+    explanation: DECODE работает в Oracle, это не универсальный SQL.
+  - id: c
+    text: SELECT SUM(SELECT CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END FROM purchases)
+    correct: false
+    explanation: 'Синтаксическая ошибка: подзапрос не может быть аргументом SUM.'
+  - id: d
+    text: SELECT SUM(IF(category = 'A', sales, IF(category = 'B', sales/2, 0)))) FROM purchases
+    correct: false
+    explanation: Лишняя закрывающая скобка, синтаксическая ошибка.
+  - id: e
+    text: SELECT SUM(CASE WHEN category = 'A' THEN sales ELSE 0 END) FROM purchases
+    correct: false
+    explanation: Учитывает только category = 'A', игнорирует условие для 'B'.
+  difficulty: medium
+  explanation: CASE позволяет реализовать условную логику внутри агрегатной функции SUM.
+  extended_explanation: |-
+    Вариант корректно реализует требуемую логику:
+    - Для category = 'A' — полная сумма (sales)
+    - Для category = 'B' — половина суммы (sales/2)
+    - Для всех остальных категорий — 0
+    - Затем все эти значения суммируются функцией SUM()
+
+    ## Что здесь важно по теории
+    - CASE можно использовать внутри агрегатных функций
+    - SUM игнорирует NULL, но CASE возвращает числовые значения
+    - Условная агрегация позволяет считать разные метрики в одном запросе
+  recommendation: |-
+    Повторить использование CASE внутри агрегатных функций.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-conditional.html
+- id: q5
+  text: |-
+    В этом SQL-запросе допущено несколько ошибок (в данных при этом ошибок нет). Выберите вариант со всеми перечисленными ошибками:
+
+    ```
+    with base as (
+       select *
+       from payments
+       where exists(select payment_system_id from payment_systems)
+    )
+    select *
+    from base
+    where amount > (select countries, count(distinct payment_types) from table countries group by 1)
+    left join (
+       select
+       from (select id from users union select id from employees)
+       ) on base.id = users.id
+    group by 1,2
+    right join (select payment_id, old_payment_id from payments_history) old on base.id = old.id
+    having sum(revenue) > (select min(amount) from revenue)
+    ```
+  type: single
+  options:
+  - id: a
+    text: один из подзапросов в WHERE возвращает две колонки; подзапрос нельзя указывать в WHERE; для одного подзапроса нет алиаса
+    correct: false
+    explanation: Подзапрос можно указывать в WHERE, проблема в количестве колонок.
+  - id: b
+    text: подзапрос нельзя писать в HAVING; для всех подзапросов нет алиаса; JOIN происходит по полю, которого нет в подзапросе
+    correct: false
+    explanation: Подзапрос в HAVING допустим, проблема не в этом.
+  - id: c
+    text: подзапросы не могут быть больше первого уровня вложенности; подзапрос нельзя писать в HAVING; один из подзапросов в WHERE возвращает две колонки
+    correct: false
+    explanation: Подзапросы могут быть любой вложенности.
+  - id: d
+    text: JOIN происходит по полю, которого нет в подзапросе; EXISTS нельзя применять в CTE; для всех подзапросов нет алиаса
+    correct: false
+    explanation: EXISTS можно применять в CTE.
+  - id: e
+    text: один из подзапросов в WHERE возвращает две колонки; для двух подзапросов нет алиаса; JOIN происходит по полю, которого нет в подзапросе
+    correct: true
+    explanation: 'Верно: подзапрос в WHERE возвращает две колонки, у подзапроса в LEFT JOIN нет алиаса, в RIGHT JOIN обращение к old.id при отсутствии колонки id.'
+  difficulty: medium
+  explanation: 'В запросе три ошибки: подзапрос в WHERE возвращает две колонки, у подзапроса в LEFT JOIN нет алиаса, в RIGHT JOIN обращение к несуществующей колонке.'
+  extended_explanation: |-
+    ## Разбор ошибок в запросе:
+    1. **Ошибка в WHERE** — подзапрос `(select countries, count(distinct payment_types)...)` возвращает **две колонки**, но используется в сравнении `amount > (...)`, где требуется одно значение
+    2. **Ошибка в LEFT JOIN** — подзапрос `(select ... from (select id from users union select id from employees))` не имеет **алиаса** (должно быть имя после скобок)
+    3. **Ошибка в RIGHT JOIN** — подзапрос `old` содержит колонки `payment_id` и `old_payment_id`, но обращение идет к `old.id` — такой колонки нет
+  recommendation: |-
+    Повторить правила написания подзапросов и требования к алиасам.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+- id: q6
+  text: Как обновить материальное представление, чтобы оно учитывало только данные за последние 3 месяца?
+  type: single
+  options:
+  - id: a
+    text: Применить WHERE dt > now() к уже существующему представлению
+    correct: false
+    explanation: WHERE применяется при SELECT, но данные в материализованном представлении хранятся физически.
+  - id: b
+    text: Удалить представление и создать его заново с фильтром WHERE dt > current_date - interval '3 months'
+    correct: true
+    explanation: Чтобы изменить логику выборки, нужно пересоздать представление с новым запросом.
+  - id: c
+    text: Обновить материализованное представление через UPDATE
+    correct: false
+    explanation: Материализованные представления не поддерживают прямые UPDATE.
+  - id: d
+    text: Выполнить REFRESH MATERIALIZED VIEW с фильтром
+    correct: false
+    explanation: REFRESH обновляет данные, но не меняет запрос.
+  - id: e
+    text: Использовать ALTER MATERIALIZED VIEW с добавлением условия
+    correct: false
+    explanation: ALTER меняет свойства, но не запрос.
+  difficulty: medium
+  explanation: Чтобы изменить запрос материализованного представления, нужно удалить его и создать заново.
+  extended_explanation: |-
+    Материализованное представление (materialized view) — это объект базы данных, который хранит результат запроса физически. Чтобы изменить логику выборки данных, нужно изменить сам запрос, на котором основано представление. Это делается путем:
+    1. Удаления существующего материализованного представления (`DROP MATERIALIZED VIEW`)
+    2. Создания нового с нужным условием в `WHERE`
+
+    ## Что здесь важно по теории
+    - REFRESH обновляет данные, но не структуру
+    - ALTER не меняет запрос
+    - Нужно пересоздавать представление для изменения логики
+  recommendation: |-
+    Повторить работу с материализованными представлениями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-creatematerializedview.html
+- id: q7
+  text: Какой SQL-запрос нужно использовать чтобы заменить все вхождения символа '-' на пробел в столбце title таблицы books?
+  type: single
+  options:
+  - id: a
+    text: select substr(title, ' ', '') from books
+    correct: false
+    explanation: SUBSTR вырезает подстроку, не заменяет.
+  - id: b
+    text: select replace(title, ' ', '') from books
+    correct: false
+    explanation: Убирает пробелы, а не дефисы.
+  - id: c
+    text: select regexp_replace(title, ' ', '') from books
+    correct: false
+    explanation: Убирает пробелы через регулярное выражение.
+  - id: d
+    text: select replace(title, ' ', '-') from books
+    correct: false
+    explanation: Меняет пробелы на дефисы (обратная операция).
+  - id: e
+    text: Правильный ответ не представлен
+    correct: true
+    explanation: 'Нужно: SELECT REPLACE(title, ''-'', '' '') FROM books;'
+  difficulty: medium
+  explanation: 'Для замены символов используется REPLACE с правильным порядком аргументов: REPLACE(строка, что_меняем, на_что_меняем).'
+  extended_explanation: |-
+    Ни один из предложенных вариантов не делает нужную замену. Правильный запрос:
+    ```sql
+    SELECT REPLACE(title, '-', ' ') FROM books;
+    ```
+
+    ## Что здесь важно по теории
+    - REPLACE чувствителен к регистру
+    - Первый аргумент — что ищем, второй — на что заменяем
+    - Для сложных замен используйте REGEXP_REPLACE
+  recommendation: |-
+    Повторить строковые функции: REPLACE, SUBSTR, REGEXP_REPLACE.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-string.html
+- id: q8
+  text: |-
+    Выберите вариант, где для каждого запроса указана ошибка, из-за которой запрос либо не сработает, либо вернет неверные значения:
+
+    ```
+    select
+    to_char(transaction_date::date, 'YYYY-MM') as month,
+    sum(cast(regexp_replace(amount, '[^0-9.]', '', 'g')) as numeric)) as total_approved_amount
+    from transactions
+    where
+    status = 'approved'
+    and date_trunc('YEAR', transaction_date::date) = '2023'
+    group by month
+    order by month
+    ```
+  type: single
+  options:
+  - id: a
+    text: to_char(transaction_date, 'YYYY-MM') не поддерживает преобразование дата, а sum(...) не суммирует значения типа numeric
+    correct: false
+    explanation: to_char поддерживает даты, sum суммирует numeric.
+  - id: b
+    text: regexp_replace искажает числовые значения, а group by month некорректно сгруппирует данные
+    correct: false
+    explanation: group by month корректен.
+  - id: c
+    text: cast(regexp_replace(...)) as numeric нельзя применять в агрегатных функциях, а date_trunc('YEAR', transaction_date::date) = '2023' не фильтрует по году
+    correct: false
+    explanation: CAST можно применять в агрегатных функциях.
+  - id: d
+    text: regexp_replace возвращает некорректное значение для CAST, а date_trunc('YEAR', transaction_date::date) = '2023' записано с ошибкой
+    correct: true
+    explanation: regexp_replace может оставлять лишние точки, сравнение с '2023' некорректно.
+  - id: e
+    text: date_trunc не работает с датами в формате YYYY, а regexp_replace удаляет только буквы, но не лишние символы
+    correct: false
+    explanation: date_trunc работает, проблема в сравнении.
+  difficulty: medium
+  explanation: 'Две ошибки: regexp_replace может создать некорректное число (лишние точки), и сравнение date_trunc с ''2023'' некорректно.'
+  extended_explanation: |-
+    ## Разбор ошибок:
+    1. **Проблема с regexp_replace:** для значения `'1.43 EUR'` после замены получится `'1.43.'` (лишняя точка в конце), что не преобразуется в numeric
+    2. **Ошибка в условии:** `date_trunc('YEAR', ...)` возвращает дату (например, '2023-01-01'), а сравнивается со строкой '2023' — неявное приведение может не сработать
+
+    ## Правильно:
+    ```sql
+    EXTRACT(YEAR FROM transaction_date::date) = 2023
+    -- или
+    transaction_date::date BETWEEN '2023-01-01' AND '2023-12-31'
+    ```
+  recommendation: |-
+    Повторить функции преобразования типов и работу с датами.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-formatting.html
+- id: q9
+  text: Дана таблица transactions с полями id, user_id, trans_date, amount. Как получить для каждой транзакции сумму amount текущей и двух предыдущих транзакций данного пользователя по времени?
+  type: single
+  options:
+  - id: a
+    text: SELECT *, SUM(amount) OVER (PARTITION BY user_id ROWS 2 PRECEDING) FROM transactions
+    correct: false
+    explanation: Нет ORDER BY, окна будут в произвольном порядке.
+  - id: b
+    text: SELECT *, SUM(amount) OVER (ORDER BY user_id, trans_date ROWS 2 PRECEDING) FROM transactions
+    correct: false
+    explanation: Нет PARTITION BY, смешиваются пользователи.
+  - id: c
+    text: SELECT *, SUM(sum) OVER (PARTITION BY user_id ORDER BY trans_date) FROM transactions
+    correct: false
+    explanation: SUM(sum) — sum не имя колонки, нет ограничения на 2 строки.
+  - id: d
+    text: SELECT *, SUM(sum) OVER (ORDER BY trans_date ROWS 2 PRECEDING) FROM transactions
+    correct: false
+    explanation: Нет PARTITION BY, смешиваются пользователи, sum не колонка.
+  - id: e
+    text: SELECT *, SUM(amount) OVER (PARTITION BY user_id ORDER BY trans_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM transactions
+    correct: true
+    explanation: 'Корректно: PARTITION BY user_id, ORDER BY trans_date, ROWS BETWEEN 2 PRECEDING AND CURRENT ROW.'
+  difficulty: medium
+  explanation: Для каждой транзакции нужно окно по пользователю (PARTITION BY), упорядоченное по времени (ORDER BY), с рамкой из текущей и двух предыдущих строк.
+  extended_explanation: |-
+    Правильная оконная функция:
+    ```sql
+    SUM(amount) OVER (
+      PARTITION BY user_id
+      ORDER BY trans_date
+      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    )
+    ```
+    - PARTITION BY user_id — отдельно для каждого пользователя
+    - ORDER BY trans_date — хронологический порядок
+    - ROWS BETWEEN 2 PRECEDING AND CURRENT ROW — текущая и две предыдущие транзакции
+  recommendation: |-
+    Повторить оконные функции и указание рамок окна.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-window.html
+- id: q10
+  text: Вы хотите удалить колонку temp_flag из таблицы sessions. Какой SQL-запрос это реализует?
+  type: single
+  options:
+  - id: a
+    text: delete temp_flag from sessions
+    correct: false
+    explanation: DELETE удаляет строки, а не колонки.
+  - id: b
+    text: remove column temp_flag in sessions
+    correct: false
+    explanation: Нет такой команды в SQL.
+  - id: c
+    text: alter sessions remove column temp_flag
+    correct: false
+    explanation: Отсутствует ключевое слово TABLE, REMOVE COLUMN нестандартно.
+  - id: d
+    text: alter table sessions drop column temp_flag
+    correct: true
+    explanation: 'Правильный синтаксис: ALTER TABLE table_name DROP COLUMN column_name;'
+  - id: e
+    text: drop column temp_flag from sessions
+    correct: false
+    explanation: Отсутствует ALTER TABLE.
+  difficulty: medium
+  explanation: Для удаления колонки используется ALTER TABLE с DROP COLUMN.
+  extended_explanation: |-
+    Стандартный синтаксис удаления колонки в SQL:
+    ```sql
+    ALTER TABLE table_name DROP COLUMN column_name;
+    ```
+    В данном случае: `ALTER TABLE sessions DROP COLUMN temp_flag`
+
+    ## Что здесь важно по теории
+    - DELETE работает со строками, не с колонками
+    - DROP COLUMN удаляет колонку и все данные в ней
+    - Можно добавить CASCADE для удаления зависимостей
+  recommendation: |-
+    Повторить команды изменения структуры таблиц.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-altertable.html
+- id: q11
+  text: |-
+    Какой индекс станет наиболее эффективным для ускорения следующего запроса:
+
+    ```
+    SELECT id
+    FROM sales
+    WHERE customer_id = 42 AND order_date >= DATE '2023-01-01';
+    ```
+  type: single
+  options:
+  - id: a
+    text: CREATE INDEX idx_sales_cust_date ON sales(customer_id, order_date);
+    correct: true
+    explanation: Сначала колонка с равенством (customer_id), затем с диапазоном (order_date).
+  - id: b
+    text: CREATE INDEX idx_sales_date ON sales(order_date);
+    correct: false
+    explanation: Только по дате — сначала отбор по диапазону, потом фильтр по customer_id.
+  - id: c
+    text: CREATE INDEX idx_sales_cust ON sales(customer_id);
+    correct: false
+    explanation: Отфильтрует по customer_id, но потом нужно сканировать все его записи для проверки даты.
+  - id: d
+    text: CREATE INDEX idx_sales_id ON sales(id);
+    correct: false
+    explanation: Бесполезен для условий WHERE.
+  - id: e
+    text: CREATE INDEX idx_sales_date_cust ON sales(order_date, customer_id);
+    correct: false
+    explanation: 'Менее эффективно: сначала диапазон, потом точное равенство.'
+  difficulty: medium
+  explanation: Для условий с равенством и диапазоном эффективнее индекс, где первой идет колонка с равенством.
+  extended_explanation: |-
+    Запрос содержит:
+    - точное равенство по `customer_id`
+    - диапазонное условие по `order_date`
+
+    Для максимальной эффективности индекс должен:
+    1. Сначала включать колонку с **равенством** (`customer_id`) — быстро найти все строки нужного клиента
+    2. Затем включать колонку с **диапазоном** (`order_date`) — эффективно отфильтровать по дате в рамках уже отобранных строк
+
+    Индекс `(order_date, customer_id)` менее эффективен, так как сначала нужно просканировать большой диапазон дат, потом фильтровать по клиенту.
+  recommendation: |-
+    Повторить создание составных индексов и порядок колонок.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-multicolumn.html
+- id: q12
+  text: Как выдать пользователю reader только права на чтение таблицы invoices?
+  type: single
+  options:
+  - id: a
+    text: REVOKE ALL ON invoices FROM reader
+    correct: false
+    explanation: Отбирает все права, противоположное действие.
+  - id: b
+    text: GRANT UPDATE ON invoices TO reader
+    correct: false
+    explanation: Дает право изменять данные.
+  - id: c
+    text: GRANT INSERT, DELETE ON invoices TO reader
+    correct: false
+    explanation: Дает право добавлять и удалять строки.
+  - id: d
+    text: GRANT SELECT ON invoices TO reader
+    correct: true
+    explanation: SELECT — право на чтение.
+  - id: e
+    text: GRANT EXECUTE ON invoices TO reader
+    correct: false
+    explanation: EXECUTE для функций/процедур, не для таблиц.
+  difficulty: medium
+  explanation: Право на чтение в SQL дает команда GRANT SELECT.
+  extended_explanation: |-
+    Права на чтение в SQL означают возможность выполнять команду `SELECT`. Именно это дает `GRANT SELECT ON invoices TO reader`.
+
+    ## Что здесь важно по теории
+    - SELECT — чтение данных
+    - INSERT, UPDATE, DELETE — изменение данных
+    - EXECUTE — для хранимых процедур
+    - REVOKE отбирает права
+  recommendation: |-
+    Повторить систему привилегий в PostgreSQL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-grant.html
+- id: q13
+  text: 'Дано: таблица sales(product_id, sale_date, amount). Как выбрать продукт(ы), чей объем продаж был хотя бы в одну дату строго больше, чем все продажи любого другого продукта в эту же дату?'
+  type: single
+  options:
+  - id: a
+    text: SELECT s1.product_id FROM sales s1 WHERE s1.amount > ANY (SELECT s2.amount FROM sales s2 WHERE s2.product_id = s1.product_id)
+    correct: false
+    explanation: Сравнивает с продажами того же продукта, а не других.
+  - id: b
+    text: SELECT product_id FROM sales WHERE amount > ANY (SELECT amount FROM sales)
+    correct: false
+    explanation: Сравнивает со всеми продажами вообще, а не в ту же дату.
+  - id: c
+    text: SELECT DISTINCT product_id FROM sales WHERE amount > ALL (SELECT amount FROM sales WHERE product_id <> sales)
+    correct: false
+    explanation: Синтаксически неверно (сравнение product_id с таблицей sales).
+  - id: d
+    text: SELECT product_id FROM sales WHERE EXISTS (SELECT 1 FROM sales WHERE amount < amount)
+    correct: false
+    explanation: Бессмысленное условие amount < amount всегда false.
+  - id: e
+    text: SELECT s1.product_id FROM sales s1 WHERE s1.amount > ALL (SELECT s2.amount FROM sales s2 WHERE s2.sale_date = s1.sale_date)
+    correct: true
+    explanation: Проверяет, что в эту же дату сумма больше всех других продаж.
+  difficulty: medium
+  explanation: Нужно проверить, что в какую-то дату продажи продукта были максимальными среди всех продуктов.
+  extended_explanation: |-
+    Требуется: продукт(ы), у которых **хотя бы в одну дату** объем продаж был **строго больше, чем все продажи любого другого продукта в эту же дату**.
+
+    Вариант 5 работает так:
+    - Для каждой строки `s1` (продажа продукта в дату `sale_date` с суммой `amount`)
+    - Подзапрос берет **все продажи всех других продуктов в эту же дату**
+    - `> ALL` означает: сумма `s1.amount` больше каждой из этих сумм
+    - Если хотя бы для одной даты это выполняется — продукт попадает в результат
+  recommendation: |-
+    Повторить операторы ANY, ALL и коррелированные подзапросы.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+- id: q14
+  text: Что делает оператор INTERSECT?
+  type: single
+  options:
+  - id: a
+    text: Объединяет строки без дубликатов
+    correct: false
+    explanation: Это UNION.
+  - id: b
+    text: Возвращает строки, которые есть в обоих подзапросах
+    correct: true
+    explanation: INTERSECT возвращает пересечение двух запросов.
+  - id: c
+    text: Создаёт объединение с сохранением всех строк
+    correct: false
+    explanation: Это UNION ALL.
+  - id: d
+    text: Возвращает уникальные строки только из первого подзапроса
+    correct: false
+    explanation: Нет такого оператора.
+  - id: e
+    text: Удаляет строки, которые есть в одном подзапросе
+    correct: false
+    explanation: Это EXCEPT/MINUS.
+  difficulty: medium
+  explanation: INTERSECT возвращает только строки, присутствующие в обоих запросах.
+  extended_explanation: |-
+    `INTERSECT` — это оператор работы с множествами в SQL. Он возвращает **пересечение** двух запросов: только те строки, которые присутствуют **и в первом, и во втором** результате.
+
+    ## Что здесь важно по теории
+    - UNION — объединение без дубликатов
+    - UNION ALL — объединение с дубликатами
+    - INTERSECT — пересечение
+    - EXCEPT — разность (строки из первого, которых нет во втором)
+  recommendation: |-
+    Повторить операторы UNION, INTERSECT, EXCEPT.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-union.html
+- id: q15
+  text: 'Выберите операторы, относящиеся только к DDL:'
+  type: single
+  options:
+  - id: a
+    text: RENAME, ALTER, TRUNCATE, DELETE
+    correct: false
+    explanation: DELETE — это DML.
+  - id: b
+    text: CREATE, DROP, RENAME, UPDATE
+    correct: false
+    explanation: UPDATE — это DML.
+  - id: c
+    text: DROP, ALTER, CREATE, RENAME
+    correct: true
+    explanation: Все эти операторы изменяют структуру объектов.
+  - id: d
+    text: INSERT, DROP, DELETE, UPDATE
+    correct: false
+    explanation: INSERT, DELETE, UPDATE — DML.
+  - id: e
+    text: SELECT, TRUNCATE, UPDATE, DROP
+    correct: false
+    explanation: SELECT — DQL, UPDATE — DML.
+  difficulty: medium
+  explanation: 'DDL (Data Definition Language) — операторы определения данных: CREATE, ALTER, DROP, RENAME, TRUNCATE.'
+  extended_explanation: |-
+    **DDL (Data Definition Language)** — операторы определения данных, работают со структурой объектов базы данных.
+
+    К DDL относятся:
+    - `CREATE` — создать объект
+    - `ALTER` — изменить объект
+    - `DROP` — удалить объект
+    - `TRUNCATE` — очистить таблицу (структура сохраняется)
+    - `RENAME` — переименовать объект
+
+    **DML (Data Manipulation Language)** — операторы манипуляции данными: INSERT, UPDATE, DELETE
+    **DQL (Data Query Language)** — SELECT
+  recommendation: |-
+    Повторить классификацию SQL-операторов: DDL, DML, DQL, DCL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-commands.html

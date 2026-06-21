@@ -1,0 +1,485 @@
+---
+slug: pg-intermediate-1
+title: PostgreSQL — средний уровень
+description: 'Вопросы среднего уровня по PostgreSQL: базовые конструкции и типовые ошибки.'
+tags:
+- postgresql
+- sql
+- hh
+difficulty: intermediate
+estimated_time: 15
+questions:
+- id: q1
+  text: |-
+    Получите список имен и фамилий сотрудников с зарплатой до 50 000 рублей из таблицы Employees.
+
+    ```
+    Employees
+    employee_id    Integer
+    first_name     String
+    last_name      String
+    department     String
+    job_title      String
+    salary         Integer
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT first_name, last_name FROM Employees WHERE salary < 50000;
+    correct: true
+  - id: b
+    text: SELECT first_name, last_name WHERE salary < 50000;
+    correct: false
+  - id: c
+    text: FROM Employees SELECT first_name, last_name WHERE salary < 50000;
+    correct: false
+  - id: d
+    text: CHOOSE first_name, last_name FROM Employees HAVING salary < 50000;
+    correct: false
+  - id: e
+    text: SELECT first_name, last_name WHERE salary < 50000 FROM Employees;
+    correct: false
+  difficulty: medium
+  explanation: 'Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации.'
+  extended_explanation: |-
+    Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: select, where, базовый sql.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить базовый синтаксис `SELECT ... FROM ... WHERE ...` и порядок частей запроса.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-select.html
+- id: q2
+  text: Переименуйте столбец new_email в email в существующей таблице Clients.
+  type: single
+  options:
+  - id: a
+    text: ALTER TABLE Clients RENAME COLUMN new_email TO email;
+    correct: true
+  - id: b
+    text: UPDATE TABLE Clients RENAME COLUMN new_email TO email;
+    correct: false
+  - id: c
+    text: UPDATE TABLE Clients RENAME new_email TO email;
+    correct: false
+  - id: d
+    text: ALTER TABLE Clients RENAME new_email TO email;
+    correct: false
+  - id: e
+    text: INTO TABLE Clients RENAME new_email TO email;
+    correct: false
+  difficulty: medium
+  explanation: 'В PostgreSQL для переименования столбца используется команда ALTER TABLE с опцией RENAME COLUMN. Синтаксис: ALTER TABLE table_name RENAME COLUMN old_name TO new_name;'
+  extended_explanation: |-
+    В PostgreSQL для переименования столбца используется команда ALTER TABLE с опцией RENAME COLUMN. Синтаксис: ALTER TABLE table_name RENAME COLUMN old_name TO new_name;
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: alter table, rename column, ddl.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить команды изменения структуры таблицы, особенно `ALTER TABLE ... RENAME COLUMN`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-altertable.html
+- id: q3
+  text: |-
+    Каким будет результат выполнения следующего кода для таблицы Cars, если car_id — первичный ключ с автоинкрементом?
+
+    ```
+    INSERT INTO Cars (distributor_id, car_model)
+    VALUES (5, 'BMW X5 M50d');
+
+    Таблица Cars до вставки:
+    | car_id | distributor_id | car_model           | number |
+    |--------|----------------|---------------------|--------|
+    | 1      | 1              | BMW X5 M50d         | 16     |
+    | 2      | 2              | Mercedes-Benz C-Class | 7    |
+    | 3      | 3              | Lexus LX            | 7      |
+    ```
+  type: single
+  options:
+  - id: a
+    text: Добавится новая запись (4, 5, 'BMW X5 M50d', Null)
+    correct: false
+  - id: b
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', Null)
+    correct: false
+  - id: c
+    text: Добавится новая запись (Null, 5, 'BMW X5 M50d', Null)
+    correct: false
+  - id: d
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', 7)
+    correct: false
+  - id: e
+    text: Отобразится ошибка
+    correct: true
+  difficulty: medium
+  explanation: По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
+  extended_explanation: |-
+    По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: insert, serial, default, первичный ключ.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить вставку строк с автоинкрементными ключами, `serial`/`identity` и значениями по умолчанию.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-insert.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/datatype-numeric.html#DATATYPE-SERIAL
+- id: q4
+  text: |-
+    Отсортируйте все покупки от последней к первой, а по каждому дню — от меньшей суммы продаж к большей в таблице Sales.
+
+    ```
+    Sales
+    | sale_id     | Integer |
+    | employee_id | Integer |
+    | sale_title  | String  |
+    | date        | Date    |
+    | sale_amount | Double  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT * FROM Sales ORDER BY date DESC, sale_amount ASC;
+    correct: true
+  - id: b
+    text: SELECT * FROM Sales ORDER BY sale_amount ASC, date DESC;
+    correct: false
+  - id: c
+    text: SELECT * FROM Sales ORDER BY date, sale_amount DESC, ASC;
+    correct: false
+  - id: d
+    text: SELECT * FROM Sales SORT BY date DESC, sale_amount ASC;
+    correct: false
+  - id: e
+    text: SELECT * FROM Sales ORDER BY date, sale_amount;
+    correct: false
+  difficulty: medium
+  explanation: В ORDER BY сначала указывается первичная сортировка (date DESC — от поздних к ранним), затем вторичная (sale_amount ASC — по возрастанию суммы в рамках каждой даты).
+  extended_explanation: |-
+    В ORDER BY сначала указывается первичная сортировка (date DESC — от поздних к ранним), затем вторичная (sale_amount ASC — по возрастанию суммы в рамках каждой даты).
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: order by, сортировка, базовый sql.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить сортировку по нескольким колонкам и направление `ASC`/`DESC` для каждого поля.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-order.html
+- id: q5
+  text: |-
+    Найдите модуль разницы между средней и максимальной заработной платой сотрудников в таблице Employees.
+
+    ```
+    Employees
+    | employee_id | Integer |
+    | first_name  | String  |
+    | last_name   | String  |
+    | department  | String  |
+    | job_title   | String  |
+    | salary      | Integer |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT ABS(AVG(salary) - MAX(salary)) FROM Employees;
+    correct: true
+  - id: b
+    text: SELECT AVG(salary) - MAX(salary) FROM Employees;
+    correct: false
+  - id: c
+    text: SELECT MEDIAN(salary) - MAX(salary) FROM Employees;
+    correct: false
+  - id: d
+    text: SELECT ABS(SUM(*)/COUNT(*) - MAX(salary)) FROM Employees;
+    correct: false
+  - id: e
+    text: SELECT ABS(MEDIAN(salary) - MAX(salary)) FROM Employees;
+    correct: false
+  difficulty: medium
+  explanation: Для вычисления модуля разницы используется функция ABS(). AVG(salary) вычисляет среднюю зарплату, MAX(salary) — максимальную. Функции MEDIAN в PostgreSQL нет (есть PERCENTILE_CONT).
+  extended_explanation: |-
+    Для вычисления модуля разницы используется функция ABS(). AVG(salary) вычисляет среднюю зарплату, MAX(salary) — максимальную. Функции MEDIAN в PostgreSQL нет (есть PERCENTILE_CONT).
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: агрегатные функции, avg, max, abs.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить агрегатные функции `AVG`, `MAX` и применение `ABS` к вычисляемому выражению.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-math.html
+- id: q6
+  text: |-
+    Найдите численность населения городов, оканчивающихся на -burg, по регионам в таблице Cities.
+
+    ```
+    Cities
+    | city_id    | Integer |
+    | city_name  | String  |
+    | region_id  | Integer |
+    | population | Double  |
+    | rating     | Double  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT region_id, SUM(population) FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    correct: true
+  - id: b
+    text: SELECT region_id, SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';
+    correct: false
+  - id: c
+    text: SELECT region_id, population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    correct: false
+  - id: d
+    text: SELECT region_id, SUM(ALL population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    correct: false
+  - id: e
+    text: SELECT SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';
+    correct: false
+  difficulty: medium
+  explanation: Сначала фильтруем города по условию (WHERE city_name LIKE '%burg'), затем группируем по регионам (GROUP BY region_id) и суммируем население. HAVING используется для фильтрации после группировки.
+  extended_explanation: |-
+    Сначала фильтруем города по условию (WHERE city_name LIKE '%burg'), затем группируем по регионам (GROUP BY region_id) и суммируем население. HAVING используется для фильтрации после группировки.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: group by, sum, like, фильтрация.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить разницу между `WHERE` и `HAVING`, группировку и шаблонный поиск через `LIKE`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-matching.html
+- id: q7
+  text: Получите список сотрудников, содержащий названия их отделов, а также имена и фамилии сотрудников в столбце employees_list, из таблиц Employees и Departments, учитывая, что общий столбец между ними — dep_id.
+  type: single
+  options:
+  - id: a
+    text: SELECT dep_name, CONCAT(first_name, ' ', last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    correct: true
+  - id: b
+    text: SELECT dep_name, SUM(first_name, ' ', last_name) AS employees_list FROM Employees OUTER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    correct: false
+  - id: c
+    text: SELECT dep_name, ADD(first_name, last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    correct: false
+  - id: d
+    text: SELECT dep_name, JOIN(first_name, ' ', last_name) AS employees_list FROM Employees LEFT JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    correct: false
+  - id: e
+    text: SELECT dep_name, (first_name + last_name) AS employees_list FROM Employees RIGHT JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    correct: false
+  difficulty: medium
+  explanation: Для объединения строк в PostgreSQL используется функция CONCAT() или оператор ||. INNER JOIN возвращает только те записи, где есть совпадение в обеих таблицах. В вопросе на скриншоте было 'second_name', но в схеме Employees есть 'last_name'.
+  extended_explanation: |-
+    Для объединения строк в PostgreSQL используется функция CONCAT() или оператор ||. INNER JOIN возвращает только те записи, где есть совпадение в обеих таблицах. В вопросе на скриншоте было 'second_name', но в схеме Employees есть 'last_name'.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: join, concat, строковые функции.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить `INNER JOIN`, соединение таблиц по ключу и формирование строк через `CONCAT` или `||`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-join.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-string.html
+- id: q8
+  text: |-
+    Найдите имена сотрудников, зарплата которых больше средней зарплаты всех сотрудников в таблице Employees.
+
+    ```
+    Employees
+    | employee_id | Integer |
+    | first_name  | String  |
+    | last_name   | String  |
+    | department  | String  |
+    | job_title   | String  |
+    | salary      | Integer |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT first_name, last_name FROM Employees WHERE salary > (SELECT AVG(salary) FROM employees);
+    correct: true
+  - id: b
+    text: SELECT first_name, last_name FROM Employees WHERE AVG(salary) > salary;
+    correct: false
+  - id: c
+    text: SELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary > AVG(salary);
+    correct: false
+  - id: d
+    text: SELECT first_name, last_name FROM Employees WHERE salary > AVG(salary);
+    correct: false
+  - id: e
+    text: SELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) > salary;
+    correct: false
+  difficulty: medium
+  explanation: Нельзя использовать агрегатные функции (AVG) непосредственно в WHERE. Нужен подзапрос, который вычисляет среднюю зарплату, а затем сравнивает с ней каждую запись. Вариант с SUM/COUNT тоже работает, но менее читаем.
+  extended_explanation: |-
+    Нельзя использовать агрегатные функции (AVG) непосредственно в WHERE. Нужен подзапрос, который вычисляет среднюю зарплату, а затем сравнивает с ней каждую запись. Вариант с SUM/COUNT тоже работает, но менее читаем.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: подзапросы, avg, where, агрегация.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить использование скалярных подзапросов в `WHERE` для сравнения со значением агрегата.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q9
+  text: |-
+    Вам нужно добавить столбец city в представление PeopleView с данными из двух таблиц Respondents и Info. Какая ошибка допущена в запросе?
+
+    ```
+    CREATE VIEW PeopleView OR REPLACE
+    AS SELECT Respondents.age, Respondents.city, Info.phone_number, Info.address
+    FROM Respondents, Info
+    WHERE Respondents.respondent_id = Info.respondent_id;
+
+    Respondents
+    - respondent_id: integer
+    - city: string
+    - age: integer
+    - phone_number: string
+    - known_languages: array
+
+    Info
+    - info_id: integer
+    - respondent_id: integer
+    - phone_number: string
+    - address: string
+    ```
+  type: single
+  options:
+  - id: a
+    text: Вместо CREATE VIEW PeopleView OR REPLACE нужно написать CREATE OR REPLACE VIEW PeopleView
+    correct: true
+  - id: b
+    text: Не нужно указывать, из каких таблиц взяты данные, можно написать age, phone_number, city, address.
+    correct: false
+  - id: c
+    text: В запросе не нужно использовать VIEW.
+    correct: false
+  - id: d
+    text: Не нужно указывать обе таблицы в строке с FROM.
+    correct: false
+  - id: e
+    text: Перед SELECT есть AS, который не нужен.
+    correct: false
+  difficulty: medium
+  explanation: 'Правильный синтаксис для создания или замены представления: CREATE OR REPLACE VIEW имя_представления AS запрос;. Порядок слов OR REPLACE фиксирован.'
+  extended_explanation: |-
+    Правильный синтаксис для создания или замены представления: CREATE OR REPLACE VIEW имя_представления AS запрос;. Порядок слов OR REPLACE фиксирован.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: view, create or replace view, ddl.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить правильный синтаксис `CREATE OR REPLACE VIEW ... AS SELECT ...`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createview.html
+- id: q10
+  text: Индексацию какого столбца следует рассмотреть в первую очередь, если необходимо проиндексировать таблицу для повышения производительности запросов?
+  type: single
+  options:
+  - id: a
+    text: Столбец с большим количеством уникальных значений
+    correct: true
+  - id: b
+    text: Столбец, который часто обновляется
+    correct: false
+  - id: c
+    text: Столбец с двумя различными значениями (например, да/нет)
+    correct: false
+  - id: d
+    text: Столбец, который используется в операторах SELECT без WHERE
+    correct: false
+  - id: e
+    text: Столбец с большим количеством значений Null
+    correct: false
+  difficulty: medium
+  explanation: Индексы наиболее эффективны для столбцов с высокой селективностью (большим количеством уникальных значений). Часто обновляемые столбцы индексировать невыгодно из-за накладных расходов на поддержание индекса. Столбцы с низкой кардинальностью (например, boolean) бесполезны для индексации.
+  extended_explanation: |-
+    Индексы наиболее эффективны для столбцов с высокой селективностью (большим количеством уникальных значений). Часто обновляемые столбцы индексировать невыгодно из-за накладных расходов на поддержание индекса. Столбцы с низкой кардинальностью (например, boolean) бесполезны для индексации.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: индексы, селективность, оптимизация запросов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить когда индекс действительно полезен и почему высокая селективность повышает его ценность.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-intro.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-types.html
+- id: q11
+  text: Выберите ОШИБОЧНОЕ утверждение об обработке транзакций в языке SQL.
+  type: single
+  options:
+  - id: a
+    text: Транзакции могут быть вложенными, то есть одна транзакция может содержать другую
+    correct: true
+  - id: b
+    text: Параллельное выполнение транзакций возможно, только если эти транзакции независимы и не влияют друг на друга
+    correct: false
+  - id: c
+    text: Операции отмены транзакции выполняются в порядке, обратном порядку их записи в файл журнала транзакций
+    correct: false
+  - id: d
+    text: При исполнении транзакции можно выбрать, какие операции внутри нее должны быть выполнены, а какие — нет
+    correct: false
+  - id: e
+    text: Фиксация транзакции обеспечивает сохранение изменений в базе данных, сделанных при выполнении этой транзакции
+    correct: false
+  difficulty: medium
+  explanation: В стандартном SQL (и в PostgreSQL) транзакции не могут быть вложенными. Хотя существуют точки сохранения (SAVEPOINT), они не создают полноценных вложенных транзакций. Остальные утверждения верны.
+  extended_explanation: |-
+    В стандартном SQL (и в PostgreSQL) транзакции не могут быть вложенными. Хотя существуют точки сохранения (SAVEPOINT), они не создают полноценных вложенных транзакций. Остальные утверждения верны.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: транзакции, основы sql.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить свойства транзакций, `COMMIT`, `ROLLBACK` и отличие `SAVEPOINT` от вложенных транзакций.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-transactions.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-savepoint.html
+- id: q12
+  text: |-
+    Какой фактор следует учитывать в первую очередь для повышения производительности запроса, включающего несколько объединений:
+
+    ```
+    SELECT * FROM table1
+    INNER JOIN table2 ON table2.id = table1.order_id
+    INNER JOIN table3 ON table3.id = table2.client_id;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Наличие ограничения первичного ключа для присоединяемых столбцов
+    correct: true
+  - id: b
+    text: Порядок соединения таблиц
+    correct: false
+  - id: c
+    text: Количество строк в результирующем наборе
+    correct: false
+  - id: d
+    text: Соглашение об именах таблиц
+    correct: false
+  - id: e
+    text: Типы данных соединяемых столбцов
+    correct: false
+  difficulty: medium
+  explanation: Для эффективных соединений критически важно наличие индексов на соединяемых столбцах. Наличие первичного ключа автоматически создает индекс и гарантирует уникальность, что позволяет планировщику строить оптимальные планы выполнения. Порядок соединения важен, но он вторичен по отношению к наличию индексов.
+  extended_explanation: |-
+    Для эффективных соединений критически важно наличие индексов на соединяемых столбцах. Наличие первичного ключа автоматически создает индекс и гарантирует уникальность, что позволяет планировщику строить оптимальные планы выполнения. Порядок соединения важен, но он вторичен по отношению к наличию индексов.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: join, первичный ключ, индексы, производительность.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить роль первичных ключей и индексов на колонках соединения при выполнении `JOIN`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-join.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-intro.html

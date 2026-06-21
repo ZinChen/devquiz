@@ -1,0 +1,623 @@
+---
+slug: pg-advanced-2
+title: SQL — продвинутый уровень
+description: 'Продвинутые вопросы по PostgreSQL: запросы, индексы, транзакции, оптимизация.'
+tags:
+- postgresql
+- sql
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: Определите департаменты, где средняя зарплата превышает 5000, и выведите их id.
+  type: single
+  options:
+  - id: a
+    text: SELECT department_id FROM employees GROUP BY department_id HAVING AVG(salary) > 5000
+    correct: true
+    explanation: 'Правильный синтаксис: GROUP BY для группировки, HAVING для фильтрации групп по агрегатной функции.'
+  - id: b
+    text: SELECT department_id, AVG(salary) FROM employees GROUP BY department_id WHERE AVG(salary) > 5000
+    correct: false
+    explanation: WHERE не может содержать агрегатные функции, нужно использовать HAVING.
+  - id: c
+    text: SELECT DISTINCT department_id FROM employees WHERE AVG(salary) > 5000
+    correct: false
+    explanation: WHERE не может содержать агрегатные функции, и нет группировки.
+  - id: d
+    text: SELECT department_id FROM employees WHERE AVG(salary) > 5000 GROUP BY department_id
+    correct: false
+    explanation: Агрегатная функция в WHERE недопустима.
+  - id: e
+    text: SELECT department_id FROM employees GROUP BY department_id WHERE AVG(salary) > 5000
+    correct: false
+    explanation: WHERE должен идти до GROUP BY, и в нем нельзя использовать агрегаты.
+  difficulty: medium
+  explanation: HAVING фильтрует группы после группировки, WHERE фильтрует строки до группировки.
+  extended_explanation: |-
+    Запрос должен:
+    1. Сгруппировать записи по department_id
+    2. Рассчитать среднюю зарплату для каждой группы
+    3. Оставить только те группы, где средняя зарплата > 5000
+
+    ## Что здесь важно по теории
+    - WHERE применяется до GROUP BY и не может использовать агрегаты
+    - HAVING применяется после GROUP BY специально для фильтрации групп
+    - SELECT может содержать как группируемые колонки, так и агрегаты
+  recommendation: |-
+    Повторить порядок выполнения SQL-запроса и разницу между WHERE и HAVING.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+- id: q2
+  text: Что означает, если MAX(updated_at) возвращает NULL?
+  type: single
+  options:
+  - id: a
+    text: Значения updated_at отрицательные
+    correct: false
+    explanation: Даты не бывают отрицательными, и MAX вернул бы наибольшее значение.
+  - id: b
+    text: Поле не имеет индекса
+    correct: false
+    explanation: Индекс не влияет на результат агрегатной функции.
+  - id: c
+    text: Ошибка сравнения
+    correct: false
+    explanation: Ошибки не возникает, запрос выполняется корректно.
+  - id: d
+    text: MAX() не применим к датам
+    correct: false
+    explanation: MAX полностью применим к датам, сравнивая их хронологически.
+  - id: e
+    text: Все значения в updated_at – NULL
+    correct: true
+    explanation: Агрегатные функции игнорируют NULL, но если все значения NULL, результат будет NULL.
+  difficulty: medium
+  explanation: MAX игнорирует NULL, но если все значения NULL, возвращается NULL.
+  extended_explanation: |-
+    Агрегатные функции:
+    - Пропускают NULL-значения при вычислениях
+    - Если все значения в столбце NULL, то не с чем работать
+    - Возвращают NULL, обозначая отсутствие не-NULL значений
+
+    ## Что здесь важно по теории
+    - COUNT(*) считает строки, включая NULL
+    - COUNT(column) считает только не-NULL значения
+    - MAX/MIN/SUM/AVG возвращают NULL, если нет не-NULL значений
+  recommendation: |-
+    Повторить поведение агрегатных функций с NULL-значениями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q3
+  text: |-
+    Что произойдёт при выполнении запроса:
+
+    ```
+    select * from A inner join B on A.id = B.id where B.id is null
+    ```
+  type: single
+  options:
+  - id: a
+    text: Будет ошибка
+    correct: false
+    explanation: Синтаксически запрос корректен, ошибки не будет.
+  - id: b
+    text: Будут строки только из таблицы A
+    correct: false
+    explanation: INNER JOIN требует совпадения из обеих таблиц.
+  - id: c
+    text: Результат будет пустым
+    correct: true
+    explanation: INNER JOIN возвращает только строки с совпадением, поэтому B.id не может быть NULL.
+  - id: d
+    text: Будут строки с NULL
+    correct: false
+    explanation: В INNER JOIN не попадают строки с NULL в условии соединения.
+  - id: e
+    text: Будет одно совпадение
+    correct: false
+    explanation: Условие WHERE B.id IS NULL не может выполниться после INNER JOIN.
+  difficulty: medium
+  explanation: INNER JOIN возвращает только строки с совпадением, поэтому B.id не может быть NULL, и условие WHERE отсеивает всё.
+  extended_explanation: |-
+    Логика выполнения:
+    1. INNER JOIN соединяет строки где A.id = B.id
+    2. NULL никогда не равен NULL в SQL
+    3. Поэтому в результат JOIN попадают только строки с не-NULL совпадениями
+    4. WHERE B.id IS NULL не может найти такие строки
+
+    ## Что здесь важно по теории
+    - NULL в SQL означает неизвестное значение
+    - NULL = NULL дает NULL (не TRUE)
+    - Для поиска NULL нужно использовать IS NULL
+  recommendation: |-
+    Повторить поведение различных типов JOIN с NULL-значениями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html#QUERIES-JOIN
+- id: q4
+  text: 'Как получить сумму sales, где для каждого клиента глубоко вложенное условие: если category = ''A'', брать полную сумму, если ''B'' — только половину, если другое — ноль?'
+  type: single
+  options:
+  - id: a
+    text: SELECT SUM(CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END) FROM purchases
+    correct: true
+    explanation: Корректный синтаксис CASE с правильной логикой для всех категорий.
+  - id: b
+    text: SELECT SUM(SELECT CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END FROM purchases)
+    correct: false
+    explanation: 'Неверный синтаксис: нельзя вкладывать SELECT в SUM.'
+  - id: c
+    text: SELECT SUM(CASE WHEN category = 'A' THEN sales ELSE 0 END) FROM purchases
+    correct: false
+    explanation: Учитывает только категорию A, игнорируя условие для B.
+  - id: d
+    text: SELECT SUM(IF(category = 'A', sales, IF(category = 'B', sales/2, 0))) FROM purchases
+    correct: true
+    explanation: Работает в MySQL, используя вложенные IF вместо CASE.
+  - id: e
+    text: SELECT SUM(DECODE(category, 'A', sales, 'B', sales/2, 0)) FROM purchases
+    correct: true
+    explanation: Работает в Oracle, используя DECODE вместо CASE.
+  difficulty: medium
+  explanation: CASE позволяет реализовать условную логику внутри SUM. Несколько вариантов корректны в разных СУБД.
+  extended_explanation: |-
+    ## Почему первый вариант правильный
+    Это стандартный ANSI SQL:
+    - CASE выражение проверяет category
+    - Для 'A' берется полная sales
+    - Для 'B' берется половина sales
+    - Для остальных — 0
+    - SUM складывает результаты
+
+    ## Диалектные особенности
+    - MySQL: IF() работает как тернарный оператор
+    - Oracle: DECODE() — функция для условной логики
+    - Все СУБД поддерживают стандартный CASE
+  recommendation: |-
+    Повторить использование CASE в агрегатных функциях и диалектные особенности.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-conditional.html
+- id: q5
+  text: |-
+    Что вернет следующий запрос?
+
+    ```
+    SELECT name FROM suppliers
+    WHERE supplier_id IN (SELECT supplier_id FROM products WHERE price > 1000)
+    AND supplier_id NOT IN (SELECT supplier_id FROM products WHERE discontinued = 'Y')
+    ```
+  type: single
+  options:
+  - id: a
+    text: Все поставщиков вне зависимости от товаров и статуса
+    correct: false
+    explanation: Запрос содержит фильтры, поэтому вернет не всех.
+  - id: b
+    text: Все поставщиков, у которых есть товары дороже 1000 и ни одного снятого с продаж
+    correct: true
+    explanation: IN проверяет наличие дорогих товаров, NOT IN исключает имеющих снятые.
+  - id: c
+    text: Все поставщиков, у которых есть товары дороже 1000, снятые с продажи
+    correct: false
+    explanation: NOT IN исключает поставщиков со снятыми товарами.
+  - id: d
+    text: Все поставщиков, у которых нет ни одного снятого с продажи
+    correct: false
+    explanation: Также нужно наличие дорогих товаров по первому условию.
+  - id: e
+    text: Все поставщиков, у которых нет ни одного товара дороже 1000
+    correct: false
+    explanation: IN требует наличия дорогих товаров, противоположное условие.
+  difficulty: medium
+  explanation: Первое условие отбирает поставщиков с дорогими товарами, второе исключает тех, у кого есть снятые.
+  extended_explanation: |-
+    Запрос работает в два этапа:
+    1. Находит всех поставщиков, у которых есть товары дороже 1000
+    2. Из них исключает тех, у которых есть снятые с продаж товары
+
+    ## Что здесь важно по теории
+    - IN вернет TRUE, если значение есть в подзапросе
+    - NOT IN вернет TRUE, если значения нет в подзапросе
+    - Оба условия должны выполниться (AND)
+  recommendation: |-
+    Повторить логику работы IN и NOT IN с подзапросами.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+- id: q6
+  text: Как обновить материальное представление, чтобы оно учитывало только данные за последние 3 месяца?
+  type: single
+  options:
+  - id: a
+    text: Удалить представление и создать его заново с фильтром WHERE dt > current_date - interval '3 months'
+    correct: true
+    explanation: Единственный способ изменить запрос, лежащий в основе материализованного представления.
+  - id: b
+    text: Выполнить REFRESH MATERIALIZED VIEW с фильтром
+    correct: false
+    explanation: REFRESH обновляет данные по существующему определению, не меняя запрос.
+  - id: c
+    text: Обновить материализованное представление через UPDATE
+    correct: false
+    explanation: Материализованные представления обычно только для чтения.
+  - id: d
+    text: Применить WHERE dt > now() к уже существующему представлению
+    correct: false
+    explanation: Это фильтр при запросе, само представление останется старым.
+  - id: e
+    text: Использовать ALTER MATERIALIZED VIEW с добавлением условия
+    correct: false
+    explanation: Нет синтаксиса для изменения запроса представления через ALTER.
+  difficulty: medium
+  explanation: Изменить определение материализованного представления можно только через DROP и CREATE.
+  extended_explanation: |-
+    Материализованные представления:
+    - Хранят результат запроса физически
+    - Определение задается при CREATE и не меняется
+    - REFRESH обновляет данные по старому определению
+    - Для нового условия нужно новое определение
+
+    ## Что здесь важно по теории
+    - REFRESH не принимает параметры фильтрации
+    - ALTER не меняет запрос представления
+    - Только пересоздание меняет логику выборки
+  recommendation: |-
+    Повторить создание и обновление материализованных представлений.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-creatematerializedview.html
+- id: q7
+  text: В таблице products поле sku содержит коды вида 'PRD-001-ABC'. Какой вариант гарантированно извлечёт числовую часть 001 в любой СУБД, поддерживающей стандарт ANSI SQL?
+  type: single
+  options:
+  - id: a
+    text: select regexp_replace(sku, '[^0-9]', '', 'g') from products
+    correct: false
+    explanation: Функции регулярных выражений не входят в стандарт ANSI SQL.
+  - id: b
+    text: select substr(sku, 4, 3) from products
+    correct: true
+    explanation: SUBSTR — стандартная функция ANSI SQL для извлечения подстроки.
+  - id: c
+    text: select split_part(sku, '-', 2) from products
+    correct: false
+    explanation: split_part — специфичная функция PostgreSQL, не входит в стандарт.
+  - id: d
+    text: select substring(sku, 5, 3) from products
+    correct: false
+    explanation: 'Неверная позиция: 5-й символ даст ''-01'', а не ''001''.'
+  - id: e
+    text: select regexp_substr(sku, '[0-9]') from products
+    correct: false
+    explanation: Функции регулярных выражений не входят в стандарт ANSI SQL.
+  difficulty: medium
+  explanation: SUBSTR (или SUBSTRING) с фиксированными позициями — единственный переносимый способ при известном формате.
+  extended_explanation: |-
+    При известном фиксированном формате:
+    - 'PRD-001-ABC' — позиция числовой части известна
+    - 4-й символ — начало числа, длина 3 символа
+    - SUBSTR(sku, 4, 3) гарантированно работает во всех ANSI-совместимых СУБД
+
+    ## Что здесь важно по теории
+    - Регулярные выражения — расширение, не входящее в стандарт
+    - split_part есть только в PostgreSQL
+    - SUBSTR — стандартная функция (в некоторых СУБД SUBSTRING)
+  recommendation: |-
+    Повторить стандартные строковые функции SQL.
+    Справка: https://contribute.postgrespro.ru/documentation/sql/string-functions
+- id: q8
+  text: 'Что вернет: LAG(registered_on, 1, DATE ''2000-01-01'') OVER (ORDER BY user_id) если у самой первой строки в выборке зарегистрированная дата — NULL?'
+  type: single
+  options:
+  - id: a
+    text: 'NULL'
+    correct: false
+    explanation: Было бы NULL, если бы не было значения по умолчанию.
+  - id: b
+    text: DATE '2000-01-01'
+    correct: true
+    explanation: Для первой строки нет предыдущей, поэтому возвращается значение по умолчанию.
+  - id: c
+    text: '0'
+    correct: false
+    explanation: 0 не соответствует типу данных date и логике функции.
+  - id: d
+    text: Ошибка
+    correct: false
+    explanation: Синтаксис корректен, ошибки не будет.
+  - id: e
+    text: registered_on
+    correct: false
+    explanation: Так было бы для непервых строк, но не для первой.
+  difficulty: medium
+  explanation: 'LAG с тремя параметрами: сдвиг на 1 строку, значение по умолчанию, если предыдущей строки нет.'
+  extended_explanation: |-
+    Функция LAG(column, offset, default):
+    - Смотрит значение из строки, смещенной на offset назад
+    - Если такой строки нет, возвращает default
+    - Для первой строки нет предыдущей → возвращает DATE '2000-01-01'
+
+    ## Что здесь важно по теории
+    - Третий параметр необязательный, без него вернется NULL
+    - ORDER BY определяет порядок для подсчета предыдущей строки
+    - Значение registered_on в первой строке не влияет на LAG
+  recommendation: |-
+    Повторить оконные функции LAG и LEAD и их параметры.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-window.html
+- id: q9
+  text: Для каждой продажи в таблице sales (shop_id, sale_date, revenue) надо вычислить разницу в revenue по сравнению с предшествующей продажей того же магазина. Как этого добиться?
+  type: single
+  options:
+  - id: a
+    text: SELECT *, revenue - LAG(revenue, 1) OVER (ORDER BY sale_date) AS diff FROM sales
+    correct: false
+    explanation: Нет PARTITION BY shop_id — считается по всем магазинам подряд.
+  - id: b
+    text: SELECT *, revenue - LEAD(revenue, 1) OVER (PARTITION BY shop_id ORDER BY sale_date) AS diff FROM sales
+    correct: false
+    explanation: LEAD берет следующую продажу, а нужна предыдущая.
+  - id: c
+    text: SELECT *, revenue - LAG(revenue, 1) OVER (PARTITION BY shop_id ORDER BY revenue) AS diff FROM sales
+    correct: false
+    explanation: ORDER BY revenue сортирует по сумме, теряя хронологию.
+  - id: d
+    text: SELECT *, revenue - LAG(revenue, 1) OVER (PARTITION BY shop_id ORDER BY sale_date) AS diff FROM sales
+    correct: true
+    explanation: PARTITION BY shop_id для отдельного подсчета по магазинам, ORDER BY sale_date для хронологии.
+  - id: e
+    text: SELECT *, revenue - FIRST_VALUE(revenue) OVER (PARTITION BY shop_id ORDER BY sale_date) AS diff FROM sales
+    correct: false
+    explanation: FIRST_VALUE дает разницу с первой продажей, а не с предыдущей.
+  difficulty: medium
+  explanation: LAG с PARTITION BY shop_id и ORDER BY sale_date дает предыдущую продажу того же магазина.
+  extended_explanation: |-
+    Компоненты окна:
+    - PARTITION BY shop_id: отдельный счет для каждого магазина
+    - ORDER BY sale_date: хронологический порядок продаж
+    - LAG(revenue, 1): значение revenue из предыдущей строки
+    - revenue - LAG(...): разница с предыдущей продажей
+
+    ## Что здесь важно по теории
+    - Без PARTITION BY будет смешивать продажи разных магазинов
+    - ORDER BY определяет что значит "предыдущая"
+    - LEAD дает следующую, а не предыдущую
+  recommendation: |-
+    Повторить использование оконных функций для анализа соседних строк.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-window.html
+- id: q10
+  text: 'Выберите синтаксически корректный запрос для добавления нескольких столбцов в таблицу:'
+  type: single
+  options:
+  - id: a
+    text: modify table public.table_1 (user_id int, salary float, department_id str)
+    correct: false
+    explanation: Нет команды MODIFY TABLE, есть ALTER TABLE.
+  - id: b
+    text: alter table public.table_1 (user_id int, add salary float, add department_id int)
+    correct: false
+    explanation: Нельзя смешивать объявление и ADD внутри скобок.
+  - id: c
+    text: alter table public.table_1 add user_id int, add salary float, add department_id int
+    correct: true
+    explanation: Корректно в PostgreSQL и MySQL — можно несколько ADD через запятую.
+  - id: d
+    text: update table public.table_1 (user_id int, salary float, department_id str)
+    correct: false
+    explanation: UPDATE не используется для изменения структуры таблицы.
+  - id: e
+    text: alter table public.table_1 add (user_id int, salary float, department_id int)
+    correct: true
+    explanation: Корректно в Oracle и некоторых других СУБД — ADD с несколькими колонками в скобках.
+  difficulty: medium
+  explanation: 'Синтаксис добавления столбцов зависит от СУБД: либо несколько ADD, либо ADD (колонки через запятую).'
+  extended_explanation: |-
+    ## Почему оба варианта могут быть правильными
+    Разные СУБД поддерживают разный синтаксис:
+    - PostgreSQL, MySQL: ALTER TABLE ... ADD col1 type, ADD col2 type
+    - Oracle: ALTER TABLE ... ADD (col1 type, col2 type)
+    - Оба варианта синтаксически корректны в своих СУБД
+
+    ## Что здесь важно по теории
+    - Тип данных str не существует, должен быть VARCHAR или TEXT
+    - UPDATE для изменения структуры не используется
+    - MODIFY используется для изменения типа, не для создания
+  recommendation: |-
+    Повторить синтаксис ALTER TABLE в разных СУБД.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-altertable.html
+- id: q11
+  text: |-
+    Какой индекс станет наиболее эффективным для ускорения следующего запроса:
+
+    ```
+    SELECT id FROM sales WHERE customer_id = 42 AND order_date >= DATE '2023-01-01'
+    ```
+  type: single
+  options:
+  - id: a
+    text: CREATE INDEX idx_sales_date_cust ON sales(order_date, customer_id)
+    correct: false
+    explanation: Первый столбец — диапазонный (order_date), что менее эффективно.
+  - id: b
+    text: CREATE INDEX idx_sales_cust_date ON sales(customer_id, order_date)
+    correct: true
+    explanation: Сначала точное равенство (customer_id), затем диапазон (order_date).
+  - id: c
+    text: CREATE INDEX idx_sales_id ON sales(id)
+    correct: false
+    explanation: Индекс на id бесполезен для данного WHERE.
+  - id: d
+    text: CREATE INDEX idx_sales_date ON sales(order_date)
+    correct: false
+    explanation: Поможет по дате, но не сузит сразу по клиенту.
+  - id: e
+    text: CREATE INDEX idx_sales_cust ON sales(customer_id)
+    correct: false
+    explanation: Сузит до клиента, но потом нужно сканировать все его записи по дате.
+  difficulty: medium
+  explanation: Для условий с равенством и диапазоном эффективнее индекс, где первым идет столбец с равенством.
+  extended_explanation: |-
+    Индекс (customer_id, order_date):
+    - Быстро находит все строки с customer_id = 42 (точное совпадение)
+    - Внутри этого набора данные уже отсортированы по order_date
+    - Эффективно отсекает строки с order_date < '2023-01-01'
+
+    ## Что здесь важно по теории
+    - Первый столбец должен быть с оператором равенства (=)
+    - Второй — с диапазоном (>=, BETWEEN, <)
+    - Обратный порядок менее эффективен для данного запроса
+  recommendation: |-
+    Повторить правила построения составных индексов.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-multicolumn.html
+- id: q12
+  text: 'Дано: employees (id, department_id, salary). Найдите топ-3 по зарплате в каждом департаменте; если у нескольких сотрудников одинаковые зарплаты и попадают в топ-3, вывести всех.'
+  type: single
+  options:
+  - id: a
+    text: SELECT * FROM (SELECT *, RANK() OVER (PARTITION BY department_id ORDER BY salary DESC) as rnk FROM employees) t WHERE rnk <= 3
+    correct: true
+    explanation: RANK дает одинаковый ранг при равных зарплатах, условие rnk <= 3 включает всех.
+  - id: b
+    text: SELECT * FROM (SELECT *, DENSE_RANK() OVER (ORDER BY department_id, salary DESC) as rnk FROM employees) t WHERE rnk <= 3
+    correct: false
+    explanation: Нет PARTITION BY, ранг считается по всему набору.
+  - id: c
+    text: SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY department_id ORDER BY salary DESC) as rnk FROM employees) t WHERE rnk <= 3
+    correct: false
+    explanation: ROW_NUMBER дает уникальные номера, при равных зарплатах выберет только одного.
+  - id: d
+    text: SELECT * FROM (SELECT *, DENSE_RANK() OVER (PARTITION BY salary ORDER BY department_id) as rnk FROM employees) t WHERE rnk <= 3
+    correct: false
+    explanation: PARTITION BY salary — неверная группировка.
+  - id: e
+    text: SELECT * FROM (SELECT *, RANK() OVER (ORDER BY department_id) as rnk FROM employees) t WHERE rnk <= 3
+    correct: false
+    explanation: Нет PARTITION BY department_id, нет сортировки по зарплате.
+  difficulty: medium
+  explanation: RANK с PARTITION BY department_id дает ранги в каждом отделе, включая одинаковые ранги при равных зарплатах.
+  extended_explanation: |-
+    ## Почему RANK подходит
+    Сравнение функций ранжирования:
+    - ROW_NUMBER: всегда уникальные номера (1,2,3,4,...)
+    - RANK: одинаковые значения = одинаковый ранг, пропуски (1,1,3,4,...)
+    - DENSE_RANK: одинаковые значения = одинаковый ранг, без пропусков (1,1,2,3,...)
+
+    Для условия "топ-3 с одинаковыми зарплатами":
+    - RANK при зарплатах 100,100,90 даст ранги 1,1,3 — все попадут в rnk <= 3
+    - ROW_NUMBER при тех же данных даст 1,2,3 — оба с зарплатой 100 попадут
+    - Но если четвертая зарплата тоже 100? ROW_NUMBER присвоит 4, исключит
+  recommendation: |-
+    Повторить разницу между RANK, DENSE_RANK и ROW_NUMBER.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-window.html
+- id: q13
+  text: В чём ключевое различие между ANY и EXISTS?
+  type: single
+  options:
+  - id: a
+    text: EXISTS работает только с числами
+    correct: false
+    explanation: EXISTS работает с любыми типами данных.
+  - id: b
+    text: ANY быстрее, чем EXISTS
+    correct: false
+    explanation: Скорость зависит от оптимизатора, не общее правило.
+  - id: c
+    text: EXISTS проверяет наличие строк, ANY — сравнивает значения
+    correct: true
+    explanation: EXISTS возвращает TRUE при наличии строк, ANY используется в сравнениях.
+  - id: d
+    text: EXISTS поддерживает только подзапросы без WHERE
+    correct: false
+    explanation: EXISTS отлично работает с WHERE внутри подзапроса.
+  - id: e
+    text: ANY используется только с WHERE IN
+    correct: false
+    explanation: ANY может использоваться с <, >, <=, >=, =, <>.
+  difficulty: medium
+  explanation: EXISTS проверяет наличие строк в подзапросе, ANY сравнивает выражение со значениями из подзапроса.
+  extended_explanation: |-
+    EXISTS:
+    - SELECT * FROM table WHERE EXISTS (SELECT 1 FROM other WHERE condition)
+    - Возвращает TRUE, если подзапрос вернул хотя бы одну строку
+    - Не использует значения подзапроса, только факт наличия
+
+    ANY (SOME):
+    - SELECT * FROM table WHERE column > ANY (SELECT value FROM other)
+    - Сравнивает column с каждым значением из подзапроса
+    - Возвращает TRUE, если хоть одно сравнение истинно
+  recommendation: |-
+    Повторить различия между ANY, IN, EXISTS.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+- id: q14
+  text: Какая особенность отличает EXCEPT от UNION?
+  type: single
+  options:
+  - id: a
+    text: UNION всегда удаляет NULL
+    correct: false
+    explanation: UNION удаляет дубликаты, но NULL считается обычным значением.
+  - id: b
+    text: EXCEPT возвращает все строки из обоих запросов
+    correct: false
+    explanation: Так работает UNION ALL, а не EXCEPT.
+  - id: c
+    text: EXCEPT возвращает строки, уникальные только для первого набора
+    correct: true
+    explanation: EXCEPT берет строки из первого запроса, которых нет во втором.
+  - id: d
+    text: EXCEPT сортирует результат
+    correct: false
+    explanation: EXCEPT не гарантирует порядок без ORDER BY.
+  - id: e
+    text: UNION работает только с числовыми значениями
+    correct: false
+    explanation: UNION работает с любыми сравнимыми типами.
+  difficulty: medium
+  explanation: EXCEPT возвращает строки из первого запроса, отсутствующие во втором. UNION объединяет результаты.
+  extended_explanation: |-
+    Множественные операции:
+    - UNION: все строки из обоих запросов, дубликаты удаляются
+    - UNION ALL: все строки из обоих запросов, дубликаты сохраняются
+    - INTERSECT: строки, присутствующие в обоих запросах
+    - EXCEPT: строки из первого запроса, которых нет во втором
+
+    ## Что здесь важно по теории
+    - Для EXCEPT важен порядок: первый минус второй
+    - Все операции требуют совместимости типов и количества колонок
+    - По умолчанию удаляют дубликаты (кроме ALL)
+  recommendation: |-
+    Повторить множественные операции: UNION, INTERSECT, EXCEPT.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-union.html
+- id: q15
+  text: 'Выберите операторы, относящиеся только к DDL:'
+  type: single
+  options:
+  - id: a
+    text: SELECT, TRUNCATE, UPDATE, DROP
+    correct: false
+    explanation: SELECT и UPDATE — DML, не DDL.
+  - id: b
+    text: INSERT, DROP, DELETE, UPDATE
+    correct: false
+    explanation: INSERT, DELETE, UPDATE — DML.
+  - id: c
+    text: CREATE, DROP, RENAME, UPDATE
+    correct: false
+    explanation: UPDATE — DML.
+  - id: d
+    text: DROP, ALTER, CREATE, RENAME
+    correct: true
+    explanation: Все эти команды изменяют структуру объектов БД — DDL.
+  - id: e
+    text: RENAME, ALTER, TRUNCATE, DELETE
+    correct: false
+    explanation: DELETE — DML.
+  difficulty: medium
+  explanation: 'DDL (Data Definition Language) — команды для определения структуры данных: CREATE, ALTER, DROP, RENAME, TRUNCATE.'
+  extended_explanation: |-
+    Классификация SQL команд:
+    - DDL (Data Definition Language): CREATE, ALTER, DROP, RENAME, TRUNCATE — работа со структурой
+    - DML (Data Manipulation Language): SELECT, INSERT, UPDATE, DELETE — работа с данными
+    - DCL (Data Control Language): GRANT, REVOKE — управление доступом
+    - TCL (Transaction Control Language): COMMIT, ROLLBACK, SAVEPOINT — управление транзакциями
+    - DQL (Data Query Language: только SELECT
+
+    ## Что здесь важно по теории
+    - TRUNCATE часто относят к DDL (удаляет данные, но меняет структуру хранения)
+    - DELETE — DML, даже без WHERE
+    - SELECT — DML (или отдельно DQL в некоторых классификациях)
+  recommendation: |-
+    Повторить классификацию SQL-команд: DDL, DML, DCL, TCL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-commands.html

@@ -1,0 +1,581 @@
+---
+slug: pg-advanced-3
+title: PostgreSQL — продвинутый уровень
+description: 'Продвинутые вопросы по PostgreSQL: запросы, индексы, транзакции, оптимизация.'
+tags:
+- postgresql
+- sql
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: |-
+    Существует структура базы данных. Какая команда на месте […] позволит создать новую запись в таблице role?
+
+    ```
+    -- schema
+    create type permission as enum (
+      'read',
+      'write',
+      'execute'
+    );
+    ...
+    create table role(
+      ...
+      permissions permission[],
+      ...
+    );
+    -- query
+    Insert into table(...)
+    values (..., [...], ...);
+    ```
+  type: single
+  options:
+  - id: a
+    text: array['read']::permission[]
+    correct: true
+  - id: b
+    text: "'read'::permission"
+    correct: false
+  - id: c
+    text: ARRAY('read')
+    correct: false
+  - id: d
+    text: "'read'"
+    correct: false
+  difficulty: medium
+  explanation: Для вставки значения в колонку типа массив enum (permission[]) необходимо явно привести массив к этому типу, используя `array['read']::permission[]`.
+  extended_explanation: |-
+    Для вставки значения в колонку типа массив enum (permission[]) необходимо явно привести массив к этому типу, используя `array['read']::permission[]`.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: массивы, enum, приведение типов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить массивы в PostgreSQL, enum-типы и явное приведение типов.
+    Справка: https://postgrespro.ru/docs/postgresql/current/arrays.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/datatype-enum.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-expressions.html#SQL-SYNTAX-TYPE-CASTS
+- id: q2
+  text: Какое утверждение относительно генерируемых колонок является ложью?
+  type: single
+  options:
+  - id: a
+    text: Генерируемые колонки могут ссылаться на другие генерируемые колонки
+    correct: true
+  - id: b
+    text: Генерируемые колонки можно свободно заполнять вручную при INSERT
+    correct: false
+  - id: c
+    text: Генерируемые колонки могут ссылаться на данные из любых других таблиц без ограничений
+    correct: false
+  - id: d
+    text: Генерируемые колонки в PostgreSQL не вычисляются выражением и не зависят от исходных данных
+    correct: false
+  difficulty: medium
+  explanation: В PostgreSQL генерируемые колонки могут ссылаться только на обычные колонки той же таблицы, но не на другие генерируемые колонки.
+  extended_explanation: |-
+    В PostgreSQL генерируемые колонки могут ссылаться только на обычные колонки той же таблицы, но не на другие генерируемые колонки.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: generated columns, ddl, проектирование таблиц.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить ограничения generated columns и правила выражений для вычисляемых столбцов.
+    Справка: https://postgrespro.ru/docs/postgresql/current/ddl-generated-columns.html
+- id: q3
+  text: |-
+    Имеется следующая структура. Было решено во все существующие записи в таблице role добавить пермиссию 'read' так, чтобы не было дубликатов. Как этого достичь?
+
+    ```
+    Create type permission as enum ('read','write','execute','transfer','download');
+    Create table role(
+      ...
+      Permissions permission[],
+      ...
+    );
+    ```
+  type: single
+  options:
+  - id: a
+    text: Update role set permissions = array_append(permissions,'read') where array_position(permissions, 'read') is null
+    correct: true
+  - id: b
+    text: Update role set permissions = permissions || permissions
+    correct: false
+  - id: c
+    text: Update role set permissions = array_cat(permissions, permissions)
+    correct: false
+  - id: d
+    text: Update role set permissions = array_remove(permissions, 'read')
+    correct: false
+  difficulty: medium
+  explanation: Ключевое условие — избежать дубликатов. Вариант с `array_append` внутри UPDATE, дополненный условием `WHERE array_position(...) IS NULL`, гарантирует добавление только при отсутствии элемента.
+  extended_explanation: |-
+    Ключевое условие — избежать дубликатов. Вариант с `array_append` внутри UPDATE, дополненный условием `WHERE array_position(...) IS NULL`, гарантирует добавление только при отсутствии элемента.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: массивы, update, функции массивов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить функции `array_append`, `array_position` и безопасное обновление массивов без дублей.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-array.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-update.html
+- id: q4
+  text: |-
+    Вы создаете временную таблицу temp_data, объединяя результаты двух запросов с несовместимыми типами данных (например, integer и text). Требования: Автоматически принимать структуру первого запроса, Сохранять дублирующиеся строки. Какой подход использовать?
+
+    ```
+    Create temporary table temp_data as
+    <operator>
+    select id, data from source1
+    <operator>
+    select id, into from source2;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Использовать UNION ALL, чтобы сохранить дубликаты и автоматически привести типы данных
+    correct: true
+  - id: b
+    text: Использовать UNION, потому что он сохраняет все дубликаты без изменений
+    correct: false
+  - id: c
+    text: Использовать JOIN, чтобы просто поставить результаты двух SELECT друг под другом
+    correct: false
+  - id: d
+    text: Использовать EXCEPT, чтобы объединить оба набора строк и сохранить все дубликаты
+    correct: false
+  difficulty: medium
+  explanation: "`UNION ALL` объединяет результаты двух `SELECT` без удаления дублей. `UNION` удаляет дубли, а `JOIN` и `EXCEPT` решают другие задачи."
+  extended_explanation: |-
+    `UNION ALL` объединяет результаты двух `SELECT` без удаления дублей. `UNION` удаляет дубли, а `JOIN` и `EXCEPT` решают другие задачи.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: временные таблицы, операции над множествами.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить разницу между `UNION` и `UNION ALL`, а также правила приведения типов в set-операциях.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-union.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createtableas.html
+- id: q5
+  text: |-
+    У вас есть две связанные таблицы, где t2 использует значение из последовательности по умолчанию при обновлении ссылочной записи. Какие проблемы могут возникнуть при удалении записей из t1?
+
+    ```
+    Create sequence seq start with 1 increment by 1;
+    Create table t1(
+      Id serial primary key
+    );
+    Create table t2(
+      Id integer default nextval('seq') references t1(id) on delete set default
+    );
+    ```
+  type: single
+  options:
+  - id: a
+    text: Удаление записи из t1 приведет к изменению ссылающихся записей в t2 на значение по умолчанию из последовательности, что может нарушать логику приложения
+    correct: true
+  - id: b
+    text: Удаление записи из t1 всегда безопасно, потому что ON DELETE SET DEFAULT не проверяет внешний ключ повторно
+    correct: false
+  - id: c
+    text: Удаление записи из t1 автоматически создаст недостающую строку в t1 для нового значения по умолчанию
+    correct: false
+  - id: d
+    text: Удаление записи из t1 всегда заменяет внешний ключ в t2 на NULL даже при ON DELETE SET DEFAULT
+    correct: false
+  difficulty: medium
+  explanation: При `ON DELETE SET DEFAULT` PostgreSQL подставляет в дочерние строки значение по умолчанию. В этой схеме это значение берётся из последовательности, поэтому ссылка в `t2` может измениться на новый `id`, что действительно способно ломать логику приложения; при этом такое значение ещё должно удовлетворять внешнему ключу.
+  extended_explanation: |-
+    При `ON DELETE SET DEFAULT` PostgreSQL подставляет в дочерние строки значение по умолчанию. В этой схеме это значение берётся из последовательности, поэтому ссылка в `t2` может измениться на новый `id`, что действительно способно ломать логику приложения; при этом такое значение ещё должно удовлетворять внешнему ключу.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: внешние ключи, sequence, default.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить поведение `ON DELETE SET DEFAULT`, внешние ключи и влияние `nextval(...)` в значениях по умолчанию.
+    Справка: https://postgrespro.ru/docs/postgresql/current/ddl-constraints.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-sequence.html
+- id: q6
+  text: |-
+    В таблице some_table содержится 1 миллион записей. На колонке id создан B-Tree индекс, а на колонке name — GIN-индекс для полнотекстового поиска. Какой запрос будет оптимально использовать индексы, если выборка данных составляет менее 0.1% от общего объёма?
+
+    ```
+    Create table some_table(
+      Id serial,
+      Name varchar(30),
+      Description text
+    );
+    Create index some_table_id_index on some_table using btree(id);
+    Create index some_table_name_gin_index on some_table using gin(to_tsvector('english', name));
+    ```
+  type: single
+  options:
+  - id: a
+    text: Select * from some_table where to_tsvector('english', name) @@ to_tsquery('example');
+    correct: true
+  - id: b
+    text: Select * from some_table where name like '%example%' и это использует созданный GIN-индекс по to_tsvector без изменений
+    correct: false
+  - id: c
+    text: Select * from some_table where id = 500000 и это тот же полнотекстовый поиск через GIN-индекс по name
+    correct: false
+  - id: d
+    text: Select * from some_table where id > 500000 and id < 500100 и это использует GIN-индекс по name
+    correct: false
+  difficulty: medium
+  explanation: Индекс создан на выражении `to_tsvector('english', name)`. Чтобы он использовался, условие WHERE должно в точности повторять это выражение.
+  extended_explanation: |-
+    Индекс создан на выражении `to_tsvector('english', name)`. Чтобы он использовался, условие WHERE должно в точности повторять это выражение.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: полнотекстовый поиск, индексы.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как работают GIN-индексы для полнотекстового поиска и почему условие должно совпадать с индексируемым выражением.
+    Справка: https://postgrespro.ru/docs/postgresql/current/textsearch-intro.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/textsearch-indexes.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-expressional.html
+- id: q7
+  text: |-
+    Таблица logs содержит миллиарды записей и используется для анализа активности. Наиболее частый запрос к таблице выбирает записи по колонке user_id и фильтрует их по диапазону значений в колонке event_time. Какой индекс лучше всего подходит для ускорения выполнения запроса?
+
+    ```
+    Create table logs (
+      Id serial primary key,
+      User_id integer not null,
+      Event_time timestamp not null,
+      Action text
+    );
+    -- common query
+    Select * from logs
+    Where user_id = 12345
+      and event_time between '2024-01-01' and '2024-01-01';
+    ```
+  type: single
+  options:
+  - id: a
+    text: Create index logs_user_event_index on logs(user_id, event_time);
+    correct: true
+  - id: b
+    text: Create index logs_event_user_index on logs(event_time, user_id), потому что диапазон по event_time должен идти первым для равенства по user_id
+    correct: false
+  - id: c
+    text: Create index logs_user_index on logs(user_id), потому что диапазон по event_time составному индексу не помогает
+    correct: false
+  - id: d
+    text: Create index logs_event_index on logs(event_time), потому что условие по user_id не влияет на выбор порядка колонок
+    correct: false
+  difficulty: medium
+  explanation: Для условий с равенством (`=`) и диапазоном (`BETWEEN`) наиболее эффективен составной индекс, где колонка с равенством (user_id) стоит первой.
+  extended_explanation: |-
+    Для условий с равенством (`=`) и диапазоном (`BETWEEN`) наиболее эффективен составной индекс, где колонка с равенством (user_id) стоит первой.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: индексы, составной индекс, оптимизация запросов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить порядок колонок в составных B-tree индексах и сочетание условий равенства с диапазонными условиями.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-multicolumn.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-types.html
+- id: q8
+  text: |-
+    Существует таблица some_table. Запускаются две транзакции — t1 и t2. Какой уровень изоляции транзакций НЕ позволит выполнить commit?
+
+    ```
+    -- source data
+    Class | Value
+    1     | 10
+    1     | 20
+    1     | 100
+    2     | 200
+    -- t1
+    Select SUM(value) from mytab where class = 1;
+    Insert into some_table(class, value) values (2, 30);
+    Commit;
+    -- t2
+    Select SUM(value) from mytab where class = 2;
+    Insert into some_table(class, value) values (1, 300);
+    Commit;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Serializable
+    correct: true
+  - id: b
+    text: Repeatable Read, потому что в PostgreSQL он всегда отклоняет такие циклические зависимости на COMMIT
+    correct: false
+  - id: c
+    text: Read Committed, потому что любой конфликт чтения и записи обязательно приводит к ошибке сериализации
+    correct: false
+  - id: d
+    text: Read Uncommitted, потому что в PostgreSQL он строже, чем Serializable
+    correct: false
+  difficulty: medium
+  explanation: В PostgreSQL уровень `SERIALIZABLE` обнаруживает конфликты на основе зависимостей между транзакциями. Здесь создается циклическая зависимость, которая приведет к ошибке сериализации.
+  extended_explanation: |-
+    В PostgreSQL уровень `SERIALIZABLE` обнаруживает конфликты на основе зависимостей между транзакциями. Здесь создается циклическая зависимость, которая приведет к ошибке сериализации.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: транзакции, уровни изоляции, права доступа.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить аномалии конкурентного доступа и особенности уровня изоляции `SERIALIZABLE` в PostgreSQL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/transaction-iso.html
+- id: q9
+  text: |-
+    В PostgreSQL вы создаете индекс в транзакции над таблицей users. Во время выполнения этой транзакции другая транзакция пытается выполнять одну из следующих команд над той же таблицей. Какая команда выполнится без конфликтов?
+
+    ```
+    -- first transaction
+    Begin;
+    Create index idx_users_name on users(name);
+    -- second transaction
+    <chosen command>
+    ```
+  type: single
+  options:
+  - id: a
+    text: Select * from users;
+    correct: true
+  - id: b
+    text: Insert into users(name) values ('test'); -- не конфликтует с обычным CREATE INDEX
+    correct: false
+  - id: c
+    text: Update users set name = 'new' where id = 1; -- проходит без ожидания параллельно с CREATE INDEX
+    correct: false
+  - id: d
+    text: Delete from users where id = 1; -- всегда выполняется без блокировки со стороны CREATE INDEX
+    correct: false
+  difficulty: medium
+  explanation: В PostgreSQL команда `CREATE INDEX` (без `CONCURRENTLY`) блокирует таблицу для изменений (`INSERT`/`UPDATE`/`DELETE`), но не блокирует операции чтения (`SELECT`).
+  extended_explanation: |-
+    В PostgreSQL команда `CREATE INDEX` (без `CONCURRENTLY`) блокирует таблицу для изменений (`INSERT`/`UPDATE`/`DELETE`), но не блокирует операции чтения (`SELECT`).
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: блокировки, индексы, ddl, конкурентность.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить какие блокировки ставит `CREATE INDEX` и когда нужен вариант `CONCURRENTLY`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createindex.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/explicit-locking.html
+- id: q10
+  text: |-
+    Какие утверждения о следующем запросе правдивы?
+
+    ```
+    Create materialized view some_view as
+    select *
+    from some_table
+    order by id desc
+    with no data
+    ```
+  type: single
+  options:
+  - id: a
+    text: Для представления some_view можно создать индекс
+    correct: true
+  - id: b
+    text: Представление some_view сразу наполнено данными даже при WITH NO DATA
+    correct: false
+  - id: c
+    text: Представление some_view обновляется автоматически при каждом изменении some_table
+    correct: false
+  - id: d
+    text: К представлению some_view можно обращаться через SELECT сразу после WITH NO DATA без REFRESH
+    correct: false
+  difficulty: medium
+  explanation: Материализованное представление с `WITH NO DATA` создаётся без данных и до `REFRESH MATERIALIZED VIEW` не предназначено для чтения через `SELECT`, но индекс на нём создавать можно.
+  extended_explanation: |-
+    Материализованное представление с `WITH NO DATA` создаётся без данных и до `REFRESH MATERIALIZED VIEW` не предназначено для чтения через `SELECT`, но индекс на нём создавать можно.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: materialized view, индексы.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить жизненный цикл materialized view, `WITH NO DATA` и обновление через `REFRESH MATERIALIZED VIEW`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-creatematerializedview.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-refreshmaterializedview.html
+- id: q11
+  text: У вас есть рабочая база данных с высокой нагрузкой и ее копия. Вы хотите проанализировать производительность запроса, чтобы исключить влияние нагрузки на результаты анализа. Какую команду следует использовать для тестирования на копии базы данных.
+  type: single
+  options:
+  - id: a
+    text: explain (analyze, buffers)
+    correct: true
+  - id: b
+    text: explain, потому что он показывает фактическое время выполнения и статистику буферов
+    correct: false
+  - id: c
+    text: explain (analyze), потому что он сам по себе уже выводит статистику буферов
+    correct: false
+  - id: d
+    text: explain (verbose), потому что verbose заменяет analyze и buffers
+    correct: false
+  difficulty: medium
+  explanation: Чтобы получить реальное время выполнения и статистику использования буферов без влияния параллельной нагрузки, лучше всего использовать `EXPLAIN (ANALYZE, BUFFERS)` на копии данных.
+  extended_explanation: |-
+    Чтобы получить реальное время выполнения и статистику использования буферов без влияния параллельной нагрузки, лучше всего использовать `EXPLAIN (ANALYZE, BUFFERS)` на копии данных.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: explain, analyze, buffers, производительность.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить чтение плана выполнения, разницу между `EXPLAIN` и `EXPLAIN ANALYZE`, а также метрику `BUFFERS`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-explain.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/using-explain.html
+- id: q12
+  text: |-
+    В таблице orders содержится 1 миллион записей. На колонке customer_id есть индекс B-Tree. Вы выполняете запрос с фильтрацией по customer_id и выбираете 90% строк. Какой тип сканирования таблицы будет использован планировщиком PostgreSQL?
+
+    ```
+    Create table orders(
+      Order_id serial primary key,
+      Customer_id integer not null,
+      Order_date date,
+      Total_amount numeric
+    );
+    -- index
+    Create index idx_orders_customer_id on orders(customer_id);
+    -- query
+    Explain
+    select * from orders where customer_id < 900000;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Seq Scan
+    correct: true
+  - id: b
+    text: Index Scan, потому что PostgreSQL всегда предпочитает индекс при наличии условия по индексируемой колонке
+    correct: false
+  - id: c
+    text: Index Only Scan, потому что SELECT * никогда не требует чтения heap
+    correct: false
+  - id: d
+    text: Bitmap Index Scan, потому что он обязательно дешевле Seq Scan при выборке около 90% таблицы
+    correct: false
+  difficulty: medium
+  explanation: Если условие выбирает большой процент строк (~90%), последовательное сканирование (Seq Scan) оказывается дешевле, чем чтение через индекс.
+  extended_explanation: |-
+    Если условие выбирает большой процент строк (~90%), последовательное сканирование (Seq Scan) оказывается дешевле, чем чтение через индекс.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: планировщик, seq scan, selectivity, индексы.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как селективность условия влияет на выбор между `Seq Scan`, `Index Scan` и bitmap-сканированием.
+    Справка: https://postgrespro.ru/docs/postgresql/current/using-explain.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/planner-optimizer.html
+- id: q13
+  text: |-
+    В таблицу action_log сохраняются данные, журналирующие некоторые действия. После релиза частота вставки записей с action='login' возросла в десять раз. Решено временно не вставлять данные с action='login', сохранив уже существующие записи. Как это сделать?
+
+    ```
+    Create table action_log(
+      Id serial,
+      Action varchar,
+      Description text
+    );
+    ```
+  type: single
+  options:
+  - id: a
+    text: Создать before insert trigger, запрещающий 'login'
+    correct: true
+  - id: b
+    text: Удалить все записи с action='login' из таблицы, чтобы прекратить будущие вставки
+    correct: false
+  - id: c
+    text: Создать RULE, потому что это единственный безопасный способ запретить только новые INSERT с action='login'
+    correct: false
+  - id: d
+    text: Изменить тип колонки action, и это автоматически запретит только новые значения 'login' без других изменений
+    correct: false
+  difficulty: medium
+  explanation: Самый безопасный способ временно запретить вставку определенных строк — создать триггер `BEFORE INSERT`, проверяющий значение NEW.action.
+  extended_explanation: |-
+    Самый безопасный способ временно запретить вставку определенных строк — создать триггер `BEFORE INSERT`, проверяющий значение NEW.action.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: триггеры, бизнес-правила.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить применение `BEFORE INSERT` триггеров для валидации и отклонения новых строк.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createtrigger.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/plpgsql-trigger.html
+- id: q14
+  text: Пользователь manuel должен получить полный доступ к таблице kinds. Команда выполнена другим пользователем. Каков результат, если исполнитель не суперпользователь и не владелец таблицы?
+  type: single
+  options:
+  - id: a
+    text: Команда завершится ошибкой, так как исполнитель команды не является владельцем таблицы
+    correct: true
+  - id: b
+    text: Команда выполнится успешно, так как GRANT на таблицу может выполнять любой пользователь базы
+    correct: false
+  - id: c
+    text: Команда завершится ошибкой только потому, что пользователь manuel не подключен к базе в этот момент
+    correct: false
+  - id: d
+    text: Команда выполнится успешно только потому, что пользователь manuel является членом роли исполнителя
+    correct: false
+  difficulty: medium
+  explanation: В PostgreSQL выдавать права на объект может его владелец, суперпользователь или роль, которой соответствующее право было передано с `GRANT OPTION`. Обычного доступа к таблице для этого недостаточно.
+  extended_explanation: |-
+    В PostgreSQL выдавать права на объект может его владелец, суперпользователь или роль, которой соответствующее право было передано с `GRANT OPTION`. Обычного доступа к таблице для этого недостаточно.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: права доступа, безопасность.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить модель привилегий в PostgreSQL, владельцев объектов и `GRANT OPTION`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-grant.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/user-manag.html
+- id: q15
+  text: Выросло количество запросов на запись при том же уровне чтения, повысились требования к отказоустойчивости. Какие методики применить, учитывая что запросов по ключу большинство?
+  type: single
+  options:
+  - id: a
+    text: Репликация вместе с горизонтальным шардированием
+    correct: true
+  - id: b
+    text: Только репликация 'ведущий-ведомый' (master-slave), потому что она горизонтально масштабирует запись между узлами
+    correct: false
+  - id: c
+    text: Вертикальное масштабирование (увеличение мощности сервера), потому что оно распределяет запись по нескольким узлам по ключу
+    correct: false
+  - id: d
+    text: Использование пула соединений (pgbouncer), потому что он сам по себе решает масштабирование записи и отказоустойчивость данных
+    correct: false
+  difficulty: medium
+  explanation: Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.
+  extended_explanation: |-
+    Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: масштабирование, шардирование, репликация, отказоустойчивость.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить различия между шардированием, репликацией и вертикальным масштабированием для write-heavy нагрузки.
+    Справка: https://postgrespro.ru/docs/postgresql/current/warm-standby.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/high-availability.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/ddl-partitioning.html

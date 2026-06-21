@@ -112,13 +112,15 @@ class RunsController < ApplicationController
       q = questions_map[ans.question_id]
       next unless q
       {
-        question_id:      ans.question_id,
-        question_text:    q["text"],
-        options:          q["options"].map { |o| o.slice("id", "text") },
-        correct_ids:      q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
-        selected_options: ans.selected_options,
-        correct:          ans.correct,
-        explanation:      q["explanation"]
+        question_id:          ans.question_id,
+        question_text:        q["text"],
+        options:              q["options"].map { |o| o.slice("id", "text", "explanation") },
+        correct_ids:          q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
+        selected_options:     ans.selected_options,
+        correct:              ans.correct,
+        explanation:          q["explanation"],
+        extended_explanation: q["extended_explanation"].presence,
+        recommendation:       q["recommendation"].presence
       }
     end.compact
   end

@@ -1,0 +1,807 @@
+---
+slug: git-advanced-1
+title: Git — продвинутый уровень (первые 10 вопросов)
+description: 'Продвинутые вопросы по Git: rebase, merge, cherry-pick, хуки и история.'
+tags:
+- git
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: Как выполнить слияние ветки hotfix в текущую ветку, чтобы избежать fast-forward?
+  type: single
+  options:
+  - id: a
+    text: git merge hotfix --ff-only
+    correct: false
+    explanation: "--ff-only требует только fast-forward слияния, что противоположно условию."
+  - id: b
+    text: git cherry-pick hotfix
+    correct: false
+    explanation: cherry-pick применяет отдельные коммиты, а не сливает ветку целиком.
+  - id: c
+    text: git rebase hotfix
+    correct: false
+    explanation: rebase переписывает историю, но не создает коммит слияния.
+  - id: d
+    text: git merge --squash hotfix
+    correct: false
+    explanation: "--squash объединяет все коммиты в один, но не создает коммит слияния."
+  - id: e
+    text: git merge hotfix --no-ff
+    correct: true
+    explanation: "--no-ff гарантирует создание отдельного коммита слияния даже при возможности fast-forward."
+  difficulty: medium
+  explanation: Флаг --no-ff гарантирует создание отдельного коммита слияния, сохраняя информацию о ветке hotfix.
+  extended_explanation: |-
+    При обычном слиянии Git выполняет fast-forward, если целевая ветка не имеет новых коммитов:
+    - История становится линейной
+    - Информация о существовании отдельной ветки теряется
+
+    Флаг `--no-ff` (no fast-forward) гарантирует создание коммита слияния, даже если технически возможно fast-forward. Это сохраняет в истории факт существования ветки hotfix.
+  recommendation: |-
+    Повторить типы слияний в Git: fast-forward, no-fast-forward, squash.
+    Справка: https://git-scm.com/docs/git-merge
+- id: q2
+  text: Какой способ выбрать, чтобы восстановить удалённую директорию (с файлами), если вы уже зафиксировали её удаление коммитом назад?
+  type: single
+  options:
+  - id: a
+    text: Использовать git stash pop
+    correct: false
+    explanation: stash работает с временно сохраненными изменениями, не с удаленными файлами в истории.
+  - id: b
+    text: Использовать git restore <директория>
+    correct: false
+    explanation: restore восстанавливает файлы из индекса или рабочей директории, но удаленный коммит уже в истории.
+  - id: c
+    text: Использовать git checkout <коммит> -- <директория>
+    correct: true
+    explanation: checkout из указанного коммита восстанавливает файлы/директории в рабочую директорию и индекс.
+  - id: d
+    text: Применить git clean
+    correct: false
+    explanation: clean удаляет неотслеживаемые файлы, не восстанавливает удаленные.
+  - id: e
+    text: Выполнить git revert HEAD
+    correct: false
+    explanation: revert отменяет изменения коммита, но создает новый коммит, что сложнее простого восстановления файлов.
+  difficulty: medium
+  explanation: git checkout <коммит> -- <директория> восстанавливает файлы из указанного коммита, перезаписывая текущее состояние.
+  extended_explanation: |-
+    Если удаление уже закоммичено:
+    1. Нужен коммит, где директория еще существовала (например, HEAD~1)
+    2. `git checkout HEAD~1 -- директория/` восстановит файлы из того коммита
+    3. После этого можно сделать новый коммит с восстановленными файлами
+  recommendation: |-
+    Повторить команды для работы с историей: checkout из коммита, revert, restore.
+    Справка: https://git-scm.com/docs/git-checkout
+- id: q3
+  text: |-
+    Вы работаете в ветке feature/import-module. В процессе вы добавили новый модуль импорта данных, но при попытке откатить один из коммитов случайно потеряли все последние изменения.
+
+    Вы выполняете git log и видите следующее:
+
+    1 commit 5f12b2a
+    2 Author: Some Developer
+    3 Date: Tue Apr 23 17:15:00 2025
+    4 Initial import module setup
+    5 commit 3a67d2c
+    6 Author: Some Developer
+    7 Date: Tue Apr 23 16:20:00 2025
+    8 Fixed validation logic
+    9 Затем вы смотрите git reflog:
+    10 3a67d2c HEAD@{0}: reset: moving to HEAD~1
+    11 9b1e104 HEAD@{1}: commit: Initial import module setup
+    12 3a67d2c HEAD@{2}: commit: Fixed validation logic
+
+    Какая команда была выполнена и как восстановить утраченные изменения?
+  type: single
+  options:
+  - id: a
+    text: Выполнена `git reset --hard HEAD~1`, для восстановления нужно выполнить `git cherry-pick 9b1e104`
+    correct: true
+    explanation: Из reflog видно reset --hard, и потерянный коммит 9b1e104 можно применить через cherry-pick.
+  - id: b
+    text: Выполнена `git reset --soft`, изменения остались в staging, нужно сделать `git commit`
+    correct: false
+    explanation: 'reflog показывает reset: moving to HEAD~1, что указывает на --hard (потеря коммита).'
+  - id: c
+    text: Выполнена `git rebase -i`, и нужный коммит был удален, восстановление — `git reflog && git reset --hard HEAD@{2}`
+    correct: false
+    explanation: В reflog нет указаний на rebase, только на reset.
+  - id: d
+    text: Выполнена `git revert`, удалившая фиксы, для восстановления надо выполнить `git reset --hard 9b1e104`
+    correct: false
+    explanation: revert создает новый коммит, в reflog нет упоминания revert.
+  - id: e
+    text: Выполнена `reset --mixed`, изменения остались в рабочей директории, и нужно снова их закоммитить
+    correct: false
+    explanation: mixed не теряет изменения в рабочей директории, но в логе видна потеря коммита.
+  difficulty: medium
+  explanation: Из reflog видно, что был выполнен `git reset --hard HEAD~1`. Коммит 9b1e104 можно восстановить через `git cherry-pick 9b1e104`.
+  extended_explanation: |-
+    Анализ reflog:
+    - `3a67d2c HEAD@{0}: reset: moving to HEAD~1` — явное указание на reset --hard
+    - `9b1e104 HEAD@{1}: commit: Initial import module setup` — потерянный коммит
+    - `3a67d2c HEAD@{2}: commit: Fixed validation logic` — предыдущий коммит
+
+    После `reset --hard` коммит 9b1e104 стал недостижим, но не удален. Его можно применить через cherry-pick.
+  recommendation: |-
+    Повторить работу с reflog и восстановление потерянных коммитов.
+    Справка: https://git-scm.com/docs/git-reflog
+- id: q4
+  text: |-
+    Вы работали в ветке hotfix/missing-footer, в которой внесли важные изменения. После этого вы выполнили:
+
+    1. git checkout develop
+    2. git branch -d hotfix/missing-footer
+
+    Через некоторое время вы понимаете, что забыли выполнить merge этой ветки. Вы пробуете восстановить ее:
+
+    1. git checkout hotfix/missing-footer
+
+    Но получаете сообщение об ошибке: ветка не найдена.
+
+    Как восстановить работу из удаленной ветки?
+  type: single
+  options:
+  - id: a
+    text: Нужно использовать `git reset --hard origin/hotfix/missing-footer` — это всегда работает
+    correct: false
+    explanation: reset --hard работает с существующими ссылками, ветка была только локальной.
+  - id: b
+    text: 'Можно выполнить `git reflog` и найти коммит из удаленной ветки, затем создать ветку снова: `git checkout -b hotfix/missing-footer <commit>`'
+    correct: true
+    explanation: reflog хранит историю действий, можно найти последний коммит ветки до удаления.
+  - id: c
+    text: Невозможно восстановить удаленную ветку — всегда нужно сначала делать `merge` или `push`
+    correct: false
+    explanation: Восстановление возможно через reflog, если коммиты еще не удалены сборщиком мусора.
+  - id: d
+    text: Единственный способ — пересоздать ветку вручную и повторить все изменения
+    correct: false
+    explanation: Коммиты существуют в репозитории, их можно восстановить через reflog.
+  - id: e
+    text: Git удаляет все коммиты ветки, если не было `merge` — восстановление невозможно
+    correct: false
+    explanation: Коммиты не удаляются сразу, они становятся недостижимыми, но доступны через reflog.
+  difficulty: medium
+  explanation: reflog хранит историю перемещения HEAD. Можно найти хеш последнего коммита ветки и создать ветку заново.
+  extended_explanation: |-
+    При удалении ветки:
+    1. Сама ссылка (ветка) удаляется
+    2. Коммиты остаются в репозитории (становятся недостижимыми)
+    3. reflog хранит историю операций с HEAD, включая коммиты из удаленной ветки
+
+    Команда восстановления:
+    ```bash
+    git reflog  # найти нужный коммит, например 9b1e104
+    git checkout -b hotfix/missing-footer 9b1e104
+  recommendation: |-
+    Повторить работу с reflog и восстановление удаленных веток.
+    Справка: https://git-scm.com/docs/git-reflog
+- id: q5
+  text: |-
+    Команда использует Github Flow, и разработчик создает фичу в отдельной ветке, открывает pull request в main, получает approve и выполняет merge. После этого он удаляет feature-ветку. Команда использует GitHub Actions для деплоя сразу после merge в main.
+
+    Как можно оценить такую практику?
+  type: single
+  options:
+  - id: a
+    text: Правильно — но только если проект не в продакшене, иначе нужен staging
+    correct: false
+    explanation: GitHub Flow предполагает деплой в прод сразу после merge, с использованием фича-флагов.
+  - id: b
+    text: Неправильно — feature-ветки желательно сохранять для истории и возможного отказа
+    correct: false
+    explanation: В GitHub Flow ветки удаляют после merge, история хранится в коммитах main.
+  - id: c
+    text: Неправильно — корректнее использовать develop вместо main для слияния фич
+    correct: false
+    explanation: Это Git Flow, а не GitHub Flow. В GitHub Flow только main.
+  - id: d
+    text: Неправильно — деплой в production обычно связывают с release-веткой, а не с main
+    correct: false
+    explanation: Это описание Git Flow, не GitHub Flow.
+  - id: e
+    text: Правильно — это соответствует GitHub Flow и обеспечивает быструю поставку
+    correct: true
+    explanation: GitHub Flow основан на одной основной ветке и автоматическом деплое после merge.
+  difficulty: medium
+  explanation: GitHub Flow предполагает работу с одной основной веткой (main) и автоматический деплой после слияния.
+  extended_explanation: |-
+    GitHub Flow — это легковесный подход:
+    1. Одна основная ветка (main)
+    2. Новые фичи в отдельных ветках
+    3. Pull Request с ревью и тестами
+    4. Merge в main
+    5. Автоматический деплой после merge
+
+    Фича-ветки удаляют после merge, так как их роль завершена. GitHub Flow особенно эффективен для проектов с непрерывной поставкой (continuous delivery) и фича-флагами.
+  recommendation: |-
+    Повторить различия между Git Flow и GitHub Flow.
+    Справка: https://guides.github.com/introduction/flow/
+- id: q6
+  text: При слиянии feature-ветки в main конфликт возник в файле src/config.js. После автоматического разрешения, тесты не проходят, хотя конфликт считался устранённым. Какова наиболее вероятная причина?
+  type: single
+  options:
+  - id: a
+    text: Не был выполнен git fetch перед merge
+    correct: false
+    explanation: fetch не влияет на разрешение конфликтов, он только обновляет remote-ссылки.
+  - id: b
+    text: Коммит слияния не был подписан GPG-ключом
+    correct: false
+    explanation: Отсутствие подписи не влияет на выполнение тестов.
+  - id: c
+    text: В файле оставлены конфликтные метки («<<<<<<<<», «=======», «>>>>>>>»)
+    correct: true
+    explanation: При автоматическом разрешении могли остаться маркеры конфликта, что приводит к ошибкам.
+  - id: d
+    text: В истории присутствует rebase вместо merge
+    correct: false
+    explanation: Способ слияния не влияет на наличие конфликтных меток.
+  - id: e
+    text: Были удалены связанные подмодули
+    correct: false
+    explanation: Подмодули не связаны с конфликтами в файлах.
+  difficulty: medium
+  explanation: Если после разрешения конфликта в файле остались маркеры <<<<<<<, =======, >>>>>>>, это приведет к синтаксическим ошибкам и падению тестов.
+  extended_explanation: |-
+    При конфликте Git вставляет маркеры:
+    <<<<<<< HEAD
+    код из текущей ветки
+    =======
+    код из сливаемой ветки
+    >>>>>>> feature-branch
+    Если разработчик не удалил все маркеры, они останутся в файле как обычный текст, что вызовет ошибки. Автоматическое разрешение конфликтов в IDE или через Git не всегда корректно обрабатывает все случаи, поэтому всегда нужно проверять файлы вручную после разрешения конфликтов.
+
+    ## Дополнительная информация
+    - Маркеры конфликтов не являются синтаксически правильным кодом для большинства языков программирования
+    - Git не удаляет маркеры автоматически, это ответственность разработчика
+    - После разрешения конфликта нужно выполнить `git add` для файла и продолжить слияние
+    - Тесты не проходят, потому что файл с маркерами содержит некорректный синтаксис
+  recommendation: |-
+    Повторить процесс разрешения конфликтов и маркеры конфликтов в Git.
+    Справка: https://git-scm.com/docs/git-merge#_how_conflicts_are_presented
+- id: q7
+  text: Что содержит файл .gitmodules в проекте с подмодулями?
+  type: single
+  options:
+  - id: a
+    text: Список всех коммитов подмодулей, использованных в проекте
+    correct: false
+    explanation: Конкретные коммиты хранятся в основном репозитории, не в .gitmodules.
+  - id: b
+    text: Информацию о синхронизации между основным репозиторием и подмодулями
+    correct: false
+    explanation: Синхронизация управляется командами submodule, не файлом.
+  - id: c
+    text: Настройки игнорирования файлов подмодулей
+    correct: false
+    explanation: Игнорирование настраивается в .gitignore, не в .gitmodules.
+  - id: d
+    text: Список всех веток подмодулей, доступных для проекта
+    correct: false
+    explanation: Ветки не хранятся в .gitmodules, только URL и путь.
+  - id: e
+    text: 'Метаданные подмодулей: их URL и пути в репозитории'
+    correct: true
+    explanation: ".gitmodules содержит соответствие локального пути и URL репозитория подмодуля."
+  difficulty: medium
+  explanation: ".gitmodules хранит метаданные подмодулей — локальный путь и URL репозитория."
+  extended_explanation: |-
+    Файл .gitmodules имеет формат:
+
+    [submodule "path/to/submodule"]
+    path = path/to/submodule
+    url = https://github.com/user/repo.git
+
+    Он нужен для:
+    - Клонирования подмодулей при `git clone --recursive`
+    - Обновления URL подмодулей
+    - Инициализации подмодулей после клонирования
+
+    Конкретный коммит подмодуля, на который указывает проект, хранится в самом репозитории (в дереве коммита), а не в .gitmodules. Это называется "gitlink" — специальная запись в индексе, указывающая на конкретный коммит в подмодуле.
+
+    ## Важные команды для подмодулей
+    - `git submodule add <url> <path>` — добавить новый подмодуль
+    - `git submodule update --init --recursive` — инициализировать и обновить подмодули после клонирования
+    - `git submodule sync` — синхронизировать URL из .gitmodules с локальной конфигурацией
+    - `git submodule foreach 'git pull origin main'` — выполнить команду во всех подмодулях
+  recommendation: |-
+    Повторить работу с подмодулями и структуру .gitmodules.
+    Справка: https://git-scm.com/docs/gitmodules
+- id: q8
+  text: Объясните, как технически работает Git LFS и какие преимущества он предоставляет по сравнению со стандартным Git при работе с большими файлами.
+  type: single
+  options:
+  - id: a
+    text: Git LFS позволяет подключать внешнее хранилище через Git remote и хранить большие файлы отдельно от основного репозитория, но с теми же идентификаторами коммитов
+    correct: false
+    explanation: Описание неточное, LFS не использует те же идентификаторы коммитов для больших файлов.
+  - id: b
+    text: Git LFS заменяет большие файлы в репозитории на текстовые указатели (pointer files), содержащие SHA-256 хеш и метаданные, а сами файлы хранятся на отдельном LFS-сервере, это ускоряет операции клонирования и извлечения
+    correct: true
+    explanation: Точное описание механизма работы Git LFS.
+  - id: c
+    text: Git LFS создает отдельный репозиторий для больших файлов и автоматически синхронизирует его с основным репозиторием при выполнении команд push и pull, это уменьшает размер основного репозитория
+    correct: false
+    explanation: Нет отдельного репозитория, есть LFS-сервер с объектами.
+  - id: d
+    text: Git LFS использует специальный алгоритм сжатия для больших файлов, который эффективнее стандартного алгоритма Git, это позволяет хранить большие файлы с меньшими затратами дискового пространства
+    correct: false
+    explanation: LFS не меняет алгоритмы сжатия, он выносит файлы из репозитория.
+  - id: e
+    text: Git LFS автоматически разбивает большие файлы на фрагменты и хранит только изменившиеся фрагменты при каждом коммите, это позволяет эффективно отслеживать изменения в бинарных файлах
+    correct: false
+    explanation: LFS не реализует дельта-сжатие, он хранит полные версии файлов на сервере.
+  difficulty: medium
+  explanation: Git LFS хранит в репозитории только указатели на файлы, а сами файлы — на отдельном сервере, что уменьшает размер репозитория и ускоряет клонирование.
+  extended_explanation: |-
+    Git LFS (Large File Storage) работает следующим образом:
+
+    ### Технический механизм
+    1. **При добавлении файла**: Git LFS перехватывает операцию и вместо реального файла сохраняет текстовый указатель (pointer file):
+      version https://git-lfs.github.com/spec/v1
+      oid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393
+      size 12345
+
+    2. **Хранение**: Реальный файл загружается на отдельный LFS-сервер (например, GitHub LFS, GitLab LFS или собственный сервер)
+
+    3. **Клонирование**: При `git clone` скачиваются только указатели (маленькие текстовые файлы), что делает операцию быстрой
+
+    4. **Переключение на коммит**: Когда вы переключаетесь на коммит, содержащий LFS-файлы, Git LFS автоматически скачивает реальные файлы с сервера
+
+    ### Преимущества
+    - **Быстрое клонирование**: не нужно скачивать все версии больших файлов
+    - **Меньший размер репозитория**: история содержит только указатели
+    - **Эффективная работа с бинарными файлами**: изображения, видео, архивы, модели данных
+    - **Кэширование**: скачанные LFS-файлы кэшируются локально
+
+    ### Недостатки
+    - Требуется установка и настройка Git LFS
+    - Ограничения по трафику и хранилищу на некоторых хостингах
+    - Не поддерживает дельта-сжатие (каждая версия файла хранится полностью)
+
+    ### Пример использования
+    ```bash
+    # Установка Git LFS
+    git lfs install
+
+    # Отслеживание определенных типов файлов
+    git lfs track "*.psd"
+    git lfs track "*.zip"
+
+    # Добавление и коммит работают как обычно
+    git add design.psd
+    git commit -m "Add design file"
+    git push origin main
+    ```
+  recommendation: |-
+    Повторить принципы работы Git LFS.
+    Справка: https://git-lfs.com/
+- id: q9
+  text: |-
+    Ветка feature содержит несколько коммитов с неудачно закоммиченным файлом config.yaml, который позже был исправлен. В результате команда решила полностью удалить все изменения файла из истории, чтобы избежать раскрытия конфиденциальных настроек.
+
+    Исходное состояние ветки (вывод git log --oneline):
+
+    1 a4b5c67 (HEAD -> feature) Refactored service logic
+    2 d9f0a11 Fixed config.yaml typo
+    3 7c1d3f2 Added temporary config.yaml
+    4 e3a98cd Initial commit
+
+    После переписывания истории, чтобы удалить файл config.yaml, вывод git log --oneline стал таким:
+
+    5 b9e7d42 (HEAD -> feature) Refactored service logic
+    6 41f3b60 Initial commit
+
+    Какую операцию выполнила команда?
+  type: single
+  options:
+  - id: a
+    text: Выполнила git cherry-pick для создания новой ветки без config.yaml
+    correct: false
+    explanation: cherry-pick применяет отдельные коммиты, но не удаляет файл из всех коммитов сразу.
+  - id: b
+    text: Выполнила git commit --amend и git push --force
+    correct: false
+    explanation: amend изменяет только последний коммит, не удаляет файл из всей истории.
+  - id: c
+    text: Выполнила git revert на коммит c config.yaml
+    correct: false
+    explanation: revert создает новые коммиты, отменяющие изменения, но файл остается в истории.
+  - id: d
+    text: Выполнила git rebase -i с удалением коммитов, содержащих изменения файла
+    correct: false
+    explanation: rebase -i удаляет коммиты, но оставляет изменения в соседних коммитах.
+  - id: e
+    text: Выполнила git filter-branch --index-filter 'git rm --cached config.yaml' --all
+    correct: true
+    explanation: filter-branch переписывает всю историю, удаляя файл из всех коммитов.
+  difficulty: medium
+  explanation: git filter-branch --index-filter применяет команду к индексу каждого коммита, удаляя файл из всей истории.
+  extended_explanation: |-
+    Для полного удаления файла из истории нужен filter-branch:
+    ```bash
+    git filter-branch --index-filter "git rm --cached --ignore-unmatch config.yaml" -- --all
+    ```
+
+    Эта команда:
+    1. Проходит по всем коммитам во всех ветках
+    2. Для каждого коммита выполняет `git rm --cached config.yaml` в индексе
+    3. Переписывает коммиты, исключая файл
+    4. Коммиты, которые после удаления файла стали пустыми (не содержат изменений), исчезают
+
+    Результат: коммиты d9f0a11 и 7c1d3f2 исчезают, так как после удаления файла они становятся пустыми. Важно: после такой операции нужен force-push, и все коллеги должны переклонировать репозиторий.
+  recommendation: |-
+    Повторить инструменты для массового переписывания истории: filter-branch, filter-repo.
+    Справка: https://git-scm.com/docs/git-filter-branch
+- id: q10
+  text: Требуется синхронизировать локальный репозиторий с удалённым main, переписав всю локальную историю этой ветки. Ваши действия?
+  type: single
+  options:
+  - id: a
+    text: git reset --hard origin/main
+    correct: true
+    explanation: reset --hard перемещает текущую ветку на указанный коммит, перезаписывая локальную историю.
+  - id: b
+    text: git merge origin/main
+    correct: false
+    explanation: merge создает коммит слияния, сохраняя локальную историю.
+  - id: c
+    text: git fetch origin
+    correct: false
+    explanation: fetch только обновляет remote-ссылки, не меняет локальную ветку.
+  - id: d
+    text: git push --force origin main
+    correct: false
+    explanation: push --force отправляет изменения на удаленный репозиторий, не обновляет локальную ветку.
+  - id: e
+    text: git checkout main
+    correct: false
+    explanation: checkout переключает ветки, но не синхронизирует с удаленным репозиторием.
+  difficulty: medium
+  explanation: git reset --hard origin/main перемещает текущую ветку на коммит, на который указывает origin/main, полностью заменяя локальную историю.
+  extended_explanation: |-
+    Для полной синхронизации локальной ветки с удаленной (переписывание локальной истории):
+    1. `git fetch origin` — обновить remote-ссылку origin/main
+    2. `git reset --hard origin/main` — переместить локальную main на тот же коммит
+
+    После этого локальная main будет точной копией удаленной. Все локальные коммиты, которых нет в origin/main, будут потеряны (но их можно восстановить через reflog, если нужно).
+
+    Важно: эта операция переписывает историю локальной ветки. Если ветка уже была опубликована, потребуется force-push, что может создать проблемы для других разработчиков.
+  recommendation: |-
+    Повторить разницу между reset, merge, fetch и pull.
+    Справка: https://git-scm.com/docs/git-reset
+- id: q11
+  text: В проекте изменился адрес репозитория подмодуля. Как обновить его в основном проекте?
+  type: single
+  options:
+  - id: a
+    text: git add --update-submodules
+    correct: false
+    explanation: Нет такой команды, есть git submodule update.
+  - id: b
+    text: git move --submodule
+    correct: false
+    explanation: Нет такой команды для подмодулей.
+  - id: c
+    text: git submodule update --remote
+    correct: false
+    explanation: update --remote обновляет подмодули до последних коммитов, но не меняет URL.
+  - id: d
+    text: Изменить .gitmodules, затем git submodule sync
+    correct: true
+    explanation: sync синхронизирует URL из .gitmodules с локальной конфигурацией.
+  - id: e
+    text: git remote set-url
+    correct: false
+    explanation: remote set-url меняет URL основного репозитория, не подмодуля.
+  difficulty: medium
+  explanation: После изменения .gitmodules нужно выполнить git submodule sync для обновления локальной конфигурации.
+  extended_explanation: |-
+    Процедура обновления URL подмодуля:
+
+    1. **Изменить URL в .gitmodules**:
+       ```bash
+       # Открыть .gitmodules в редакторе
+       [submodule "vendor/awesome-lib"]
+           path = vendor/awesome-lib
+           url = https://github.com/new-owner/awesome-lib.git  # новый URL
+       ```
+
+    2. **Синхронизировать конфигурацию**:
+       ```bash
+       git submodule sync
+       ```
+       Эта команда копирует URL из .gitmodules в .git/config для указанного подмодуля.
+
+    3. **Обновить подмодуль**:
+       ```bash
+       git submodule update --init --recursive
+       ```
+
+    4. **Закоммитить изменения**:
+       ```bash
+       git add .gitmodules
+       git commit -m "Update submodule URL"
+       ```
+
+    ## Что делает git submodule sync
+    - Синхронизирует URL подмодуля в локальной конфигурации (.git/config) с тем, что указано в .gitmodules
+    - Применяется, если URL репозитория подмодуля изменился
+    - Не обновляет сам подмодуль до последнего коммита, только URL
+  recommendation: |-
+    Повторить команды для работы с подмодулями: sync, update, init.
+    Справка: https://git-scm.com/docs/git-submodule
+- id: q12
+  text: Ваша команда готовит крупный релиз v3.0.0. Руководство просит создать тег, который будет подписан вашим GPG-ключом для обеспечения целостности и проверки подлинности. Тег должен указывать на последний коммит в ветке main и быть доступен всем. Какая последовательность команд Git выполнит эти требования?
+  type: single
+  options:
+  - id: a
+    text: git commit -m 'Prepare for v3.0.0' && git tag -s v3.0.0 -m 'Major Release 3.0' && git push origin v3.0.0
+    correct: false
+    explanation: commit не требуется, тег можно создать на текущем коммите.
+  - id: b
+    text: git tag -a v3.0.0 -m 'Major Release 3.0' && git push origin v3.0.0
+    correct: false
+    explanation: "-a создает аннотированный, но не подписанный тег."
+  - id: c
+    text: git tag -s v3.0.0 -m 'Major Release 3.0' && git push --follow-tags
+    correct: false
+    explanation: "--follow-tags отправляет теги, связанные с отправляемыми коммитами, но может быть избыточно."
+  - id: d
+    text: git tag v3.0.0 HEAD && git push --tags
+    correct: false
+    explanation: Создает легковесный тег (без подписи).
+  - id: e
+    text: git tag -s v3.0.0 -m 'Major Release 3.0' && git push origin v3.0.0
+    correct: true
+    explanation: "-s создает подписанный GPG тег, push отправляет конкретный тег на удаленный репозиторий."
+  difficulty: medium
+  explanation: git tag -s создает подписанный GPG-ключом тег, git push origin v3.0.0 отправляет его на удаленный репозиторий.
+  extended_explanation: |-
+    ### Типы тегов в Git
+
+    | Тип тега | Команда | Особенности |
+    |----------|---------|-------------|
+    | Легковесный | `git tag v1.0` | Просто указатель на коммит, без метаданных |
+    | Аннотированный | `git tag -a v1.0 -m "message"` | Содержит метаданные (автор, дата, сообщение) |
+    | Подписанный | `git tag -s v1.0 -m "message"` | Аннотированный + подпись GPG |
+
+    ### Необходимые шаги
+    1. **Создать подписанный тег**:
+       ```bash
+       git tag -s v3.0.0 -m "Major Release 3.0"
+       ```
+       - `-s` — создает подписанный GPG-ключом тег
+       - `-m` — добавляет сообщение к тегу
+       - Тег создается на текущем коммите (HEAD)
+
+    2. **Отправить тег на удаленный репозиторий**:
+       ```bash
+       git push origin v3.0.0
+       ```
+       - Отправляет только конкретный тег
+       - Безопаснее, чем `git push --tags` (отправляет все теги)
+
+    ### Проверка подписи
+    ```bash
+    # Проверить подпись тега
+    git tag -v v3.0.0
+    ```
+  recommendation: |-
+    Повторить создание и управление тегами, разницу между легковесными и аннотированными тегами.
+    Справка: https://git-scm.com/docs/git-tag
+- id: q13
+  text: Вы активно используете git stash и накопили несколько записей. Вам нужно просмотреть список всех ваших стэшей, а затем удалить самую старую запись из этого списка, не применяя ее. Какая последовательность команд выполнит эти действия?
+  type: single
+  options:
+  - id: a
+    text: git stash apply && git stash clear
+    correct: false
+    explanation: apply применяет последний стэш, clear удаляет все.
+  - id: b
+    text: git stash list && git stash clear stash@{oldest}
+    correct: false
+    explanation: clear не принимает аргументы, удаляет все стэши.
+  - id: c
+    text: git stash list && git stash drop stash@{2}
+    correct: true
+    explanation: list показывает список, drop stash@{2} удаляет указанный стэш (самый старый, если 2 — последний индекс).
+  - id: d
+    text: git stash status && git stash pop --index stash@{0}
+    correct: false
+    explanation: нет команды stash status, pop применяет и удаляет стэш.
+  - id: e
+    text: git stash show && git stash drop stash@{last}
+    correct: false
+    explanation: show показывает изменения в стэше, last невалидный синтаксис.
+  difficulty: medium
+  explanation: git stash list показывает все стэши, git stash drop stash@{N} удаляет конкретный стэш без применения.
+  extended_explanation: |-
+    ### Работа со стэшами
+
+    **Просмотр списка стэшей:**
+    ```bash
+    git stash list
+    ```
+    Вывод:
+    ```
+    stash@{0}: On main: последние изменения
+    stash@{1}: On main: правки от вчера
+    stash@{2}: On main: старые эксперименты
+    ```
+    Стэши нумеруются от 0 (самый новый) до N (самый старый).
+
+    **Удаление самого старого стэша (stash@{2}):**
+    ```bash
+    git stash drop stash@{2}
+    ```
+
+    ### Другие полезные команды stash
+
+    | Команда | Действие |
+    |---------|----------|
+    | `git stash push -m "message"` | Сохранить изменения с сообщением |
+    | `git stash apply stash@{n}` | Применить стэш, но оставить в списке |
+    | `git stash pop stash@{n}` | Применить и удалить стэш |
+    | `git stash show stash@{n}` | Показать изменения в стэше |
+    | `git stash clear` | Удалить все стэши (осторожно!) |
+
+    ### Пример полного сценария
+    ```bash
+    # Посмотреть все стэши
+    git stash list
+
+    # Удалить самый старый (предположим, это stash@{2})
+    git stash drop stash@{2}
+
+    # Проверить, что стэш удален
+    git stash list
+    ```
+  recommendation: |-
+    Повторить команды для работы со стэшами: list, drop, pop, apply.
+    Справка: https://git-scm.com/docs/git-stash
+- id: q14
+  text: |-
+    Команда разработчиков протестировала новую подсистему логирования, включенную в проект в трех последовательных коммитах:
+
+    1. 9fcb1d3 (HEAD -> main) Added log rotation logic
+    2. a13be89 Integrated new structured logging format
+    3. 7a5c4f1 Introduced basic logging infrastructure
+
+    На проде выяснилось, что эта подсистема приводит к утечке памяти и блокировкам. Было принято решение полностью откатить все связанные изменения, сохранив остальные коммиты в истории. При этом:
+
+    - Коммиты логирования идут подряд.
+    - Другие команды уже создали feature-ветки от HEAD.
+    - Ветка main активно используется, и force-push нежелателен.
+    - Команда хочет сохранить историю изменений (а не переписать ее).
+
+    Какой способ подходит для этого случая?
+  type: single
+  options:
+  - id: a
+    text: Выполнить git revert 7a5c4f1...9fcb1d3 — создать обратные коммиты для всей группы
+    correct: true
+    explanation: revert создает новые коммиты, отменяющие изменения указанного диапазона, не переписывая историю.
+  - id: b
+    text: Создать новую ветку от 7a5c4f1, внести исправления вручную и сделать force-push в main
+    correct: false
+    explanation: force-push нежелателен, так как переписывает историю в общей ветке.
+  - id: c
+    text: Выполнить git rebase -i и удалить указанные коммиты — затем форсировать пуш
+    correct: false
+    explanation: rebase переписывает историю, потребуется force-push.
+  - id: d
+    text: Использовать git reset --hard 7a5c4f1 и заново закоммитить только нужные изменения
+    correct: false
+    explanation: reset --hard удалит коммиты из истории и потребует force-push.
+  - id: e
+    text: Выполнить git cherry-pick всех коммитов, кроме логирования в новую ветку, и заменить ею main
+    correct: false
+    explanation: Потребуется force-push для замены main.
+  difficulty: medium
+  explanation: git revert создает новые коммиты, отменяющие изменения указанных коммитов, не удаляя их из истории. Это безопасно для публичных веток.
+  extended_explanation: |-
+    ### Сравнение подходов
+
+    | Подход | Команда | Переписывает историю | Требует force-push | Безопасен для общих веток |
+    |--------|---------|---------------------|-------------------|--------------------------|
+    | Revert | `git revert` | Нет | Нет | ✅ Да |
+    | Reset | `git reset --hard` | Да | Да | ❌ Нет |
+    | Rebase | `git rebase -i` | Да | Да | ❌ Нет |
+
+    ### Как работает git revert для диапазона
+    ```bash
+    # Отменить коммиты от 7a5c4f1 до 9fcb1d3 включительно
+    git revert 7a5c4f1..9fcb1d3
+    ```
+
+    Эта команда создаст три новых коммита (по одному на каждый отменяемый коммит) в обратном порядке:
+    1. Revert "Added log rotation logic"
+    2. Revert "Integrated new structured logging format"
+    3. Revert "Introduced basic logging infrastructure"
+
+    ### Преимущества revert
+    - **Сохраняет историю**: все коммиты остаются в истории
+    - **Безопасен для совместной работы**: другие разработчики могут просто выполнить `git pull`
+    - **Не требует force-push**: обычный push работает
+    - **Сохраняет контекст**: видно, что изменения были, но потом отменены
+  recommendation: |-
+    Повторить разницу между revert и reset, когда какой инструмент применять.
+    Справка: https://git-scm.com/docs/git-revert
+- id: q15
+  text: Вы начали интерактивный rebase последних трех коммитов с помощью git rebase -i HEAD~3. Один коммит нужно объединить с предыдущим, чтобы история выглядела чище. Какой флаг нужно использовать в редакторе?
+  type: single
+  options:
+  - id: a
+    text: Заменить pick на reword для нужного коммита
+    correct: false
+    explanation: reword только изменяет сообщение коммита, не объединяет.
+  - id: b
+    text: Заменить pick на squash для нужного коммита
+    correct: true
+    explanation: squash объединяет коммит с предыдущим и позволяет отредактировать сообщение.
+  - id: c
+    text: Заменить pick на edit для нужного коммита
+    correct: false
+    explanation: edit останавливает rebase для внесения изменений, не объединяет.
+  - id: d
+    text: Заменить pick на drop для нужного коммита
+    correct: false
+    explanation: drop удаляет коммит, не объединяя.
+  - id: e
+    text: Заменить pick на merge для нужного коммита
+    correct: false
+    explanation: merge не является допустимой командой в интерактивном rebase.
+  difficulty: medium
+  explanation: squash объединяет коммит с предыдущим и предлагает отредактировать сообщение объединенного коммита.
+  extended_explanation: |-
+    ### Команды интерактивного rebase
+
+    При выполнении `git rebase -i HEAD~3` открывается редактор с таким содержимым:
+    ```
+    pick a1b2c3f Commit 3 (самый новый)
+    pick d4e5f6g Commit 2
+    pick h7i8j9k Commit 1 (самый старый)
+    ```
+
+    Доступные команды:
+
+    | Команда | Сокращение | Действие |
+    |---------|------------|----------|
+    | `pick` | `p` | Использовать коммит как есть |
+    | `reword` | `r` | Изменить сообщение коммита |
+    | `edit` | `e` | Остановиться для внесения изменений |
+    | `squash` | `s` | Объединить с предыдущим коммитом, объединить сообщения |
+    | `fixup` | `f` | Объединить с предыдущим, отбросить сообщение |
+    | `drop` | `d` | Удалить коммит |
+
+    ### Пример объединения
+    Чтобы объединить Commit 2 с Commit 1:
+    ```
+    pick a1b2c3f Commit 3
+    squash d4e5f6g Commit 2  # объединится с Commit 1
+    pick h7i8j9k Commit 1
+    ```
+
+    После сохранения Git предложит отредактировать объединенное сообщение коммита.
+
+    ### Разница между squash и fixup
+    - **squash**: объединяет коммиты и позволяет отредактировать сообщение
+    - **fixup**: объединяет коммиты, но использует сообщение первого коммита (отбрасывает сообщение второго)
+
+    ```bash
+    # Для быстрого объединения без редактирования сообщения
+    pick a1b2c3f Commit 3
+    fixup d4e5f6g Commit 2  # сообщение Commit 2 будет отброшено
+    pick h7i8j9k Commit 1
+    ```
+  recommendation: |-
+    Повторить команды интерактивного rebase: pick, reword, edit, squash, fixup, drop.
+    Справка: https://git-scm.com/docs/git-rebase#_interactive_mode

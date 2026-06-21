@@ -1,0 +1,612 @@
+---
+slug: sql-advanced-1
+title: SQL — продвинутый уровень
+description: 'Продвинутые вопросы по SQL: синтаксис, агрегации, JOIN, подзапросы.'
+tags:
+- sql
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: |-
+    Получите список имен и фамилий сотрудников, которые работают в отделе маркетинга, из таблицы Employees.
+
+    ```
+    Employees
+    | employee_id | Integer |
+    | first_name  | String  |
+    | last_name   | String  |
+    | department  | String  |
+    | job_title   | String  |
+    | salary      | Integer |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT first_name, last_name FROM Employees WHERE department = 'Marketing';
+    correct: true
+  - id: b
+    text: SELECT first_name, last_name WHERE department = 'Marketing' FROM Employees;
+    correct: false
+  - id: c
+    text: SELECT first_name, last_name WHERE department = 'Marketing';
+    correct: false
+  - id: d
+    text: FROM Employees SELECT first_name, last_name WHERE department = 'Marketing';
+    correct: false
+  - id: e
+    text: CHOOSE first_name, last_name FROM Employees HAVING department = 'Marketing';
+    correct: false
+  difficulty: medium
+  explanation: 'Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации. HAVING используется для фильтрации после GROUP BY.'
+  extended_explanation: |-
+    Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации. HAVING используется для фильтрации после GROUP BY.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: select, where, фильтрация.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить базовый синтаксис `SELECT ... FROM ... WHERE ...` и разницу между `WHERE` и `HAVING`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-select.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+- id: q2
+  text: Добавьте новый столбец email с типом данных VARCHAR(255) в существующую таблицу Clients.
+  type: single
+  options:
+  - id: a
+    text: ALTER TABLE Clients ADD email VARCHAR(255);
+    correct: true
+  - id: b
+    text: INTO TABLE Clients ADD email VARCHAR(255);
+    correct: false
+  - id: c
+    text: UPDATE TABLE Clients ADD email VARCHAR(255);
+    correct: false
+  - id: d
+    text: UPDATE TABLE Clients ALTER COLUMN email VARCHAR(255);
+    correct: false
+  - id: e
+    text: ALTER TABLE Clients ALTER COLUMN email VARCHAR(255);
+    correct: false
+  difficulty: medium
+  explanation: Для добавления нового столбца в существующую таблицу используется команда ALTER TABLE с операцией ADD. ALTER COLUMN используется для изменения существующего столбца.
+  extended_explanation: |-
+    Для добавления нового столбца в существующую таблицу используется команда ALTER TABLE с операцией ADD. ALTER COLUMN используется для изменения существующего столбца.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: alter table, add column, ddl.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить изменение структуры таблиц через `ALTER TABLE`, в частности добавление нового столбца.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-altertable.html
+- id: q3
+  text: |-
+    Каким будет результат выполнения следующего кода для таблицы Cars, если car_id — первичный ключ?
+
+    ```
+    INSERT INTO Cars
+    VALUES distributor_id = 5, car_model = 'BMW X5 M50d';
+
+    Cars
+    | car_id*| distributor_id*| car_model*          | number*|
+    |--------|----------------|---------------------|--------|
+    | 1      | 1              | BMW X5 M50d         | 10     |
+    | 2      | 2              | Mercedes-Benz C-Class | 7    |
+    | 3      | 3              | Lexus LX            | 7      |
+
+    * - обязательное поле
+    ```
+  type: single
+  options:
+  - id: a
+    text: Отобразится ошибка
+    correct: true
+  - id: b
+    text: Добавится новая запись (4, 5, 'BMW X5 M50d', Null)
+    correct: false
+  - id: c
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', Null)
+    correct: false
+  - id: d
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', 7)
+    correct: false
+  - id: e
+    text: Добавится новая запись (Null, 5, 'BMW X5 M50d', Null)
+    correct: false
+  difficulty: medium
+  explanation: По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
+  extended_explanation: |-
+    По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: insert, синтаксис sql, первичный ключ.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить корректный синтаксис `INSERT INTO ... VALUES (...)` и вставку строк в таблицы с ключами.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-insert.html
+- id: q4
+  text: |-
+    Вы хотите найти заработную плату отделов, у которых общая заработная плата не превышает 700 000 рублей, в таблице Salaries. Какая ошибка допущена в запросе?
+
+    ```
+    SELECT department_id, SUM(salary) AS total_salary FROM Salaries
+    HAVING total_salary <= 700000 GROUP BY department_id;
+
+    Salaries
+    | salary_id     | Integer |
+    | employee_id   | Integer |
+    | department_id | Integer |
+    | salary        | Double  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: Используется total_salary <= 700000 вместо SUM(salary) <= 700000
+    correct: false
+  - id: b
+    text: HAVING total_salary <= 700000 стоит перед GROUP BY, а не после него
+    correct: true
+  - id: c
+    text: Используется HAVING вместо WHERE
+    correct: false
+  - id: d
+    text: Не должно использоваться GROUP BY
+    correct: false
+  - id: e
+    text: Используется GROUP BY вместо GROUP
+    correct: false
+  difficulty: medium
+  explanation: 'Для всех SQL языков фильтрация по агрегированным значениям выполняется через `HAVING` после группировки, поэтому сначала нужно указать GROUP BY, потом HAVING. Дополнительно: в PostgreSQL ссылка на alias из списка `SELECT` в `HAVING`не допускается, поэтому там нужно явно писать `HAVING SUM(salary) <= 700000`.'
+  extended_explanation: |-
+    Для всех SQL языков фильтрация по агрегированным значениям выполняется через `HAVING` после группировки, поэтому сначала нужно указать GROUP BY, потом HAVING. Дополнительно: в PostgreSQL ссылка на alias из списка `SELECT` в `HAVING`не допускается, поэтому там нужно явно писать `HAVING SUM(salary) <= 700000`.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: group by, having, агрегатные функции.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить порядок `GROUP BY`/`HAVING`, использование агрегатных выражений и ограничения на alias в `HAVING`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-table-expressions.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q5
+  text: |-
+    Найдите данные, относящиеся только к левой таблице Orders, в таблицах Orders и Clients, учитывая, что общий столбец между ними — client_id.
+
+    ```
+    Orders
+    | order_id  | Integer |
+    | client_id | Integer |
+    | date      | Date    |
+
+    Clients
+    | client_id    | Integer |
+    | company_name | String  |
+    | email        | String  |
+    | phone        | Double  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NULL;
+    correct: true
+  - id: b
+    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NOT NULL;
+    correct: false
+  - id: c
+    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_client_id WHERE Clients.client_id IS NOT NULL;
+    correct: false
+  - id: d
+    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;
+    correct: false
+  - id: e
+    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;
+    correct: false
+  difficulty: medium
+  explanation: Чтобы найти записи, которые есть только в левой таблице (Orders) и отсутствуют в правой (Clients), нужно выполнить LEFT JOIN и проверить, что ключ из правой таблицы равен NULL.
+  extended_explanation: |-
+    Чтобы найти записи, которые есть только в левой таблице (Orders) и отсутствуют в правой (Clients), нужно выполнить LEFT JOIN и проверить, что ключ из правой таблицы равен NULL.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: join, left join, null.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как искать записи только из левой таблицы через `LEFT JOIN ... WHERE right_col IS NULL`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-join.html
+- id: q6
+  text: |-
+    Найдите имена сотрудников, зарплата которых ниже медианной зарплаты всех сотрудников в таблице Employees.
+
+    ```
+    Employees
+    | employee_id | Integer |
+    | first_name  | String  |
+    | last_name   | String  |
+    | department  | String  |
+    | job_title   | String  |
+    | salary      | Integer |
+    ```
+  type: single
+  options:
+  - id: a
+    text: SELECT first_name, last_name FROM Employees WHERE salary < (SELECT MEDIAN(salary) FROM employees);
+    correct: true
+  - id: b
+    text: SELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary < MEDIAN(salary);
+    correct: false
+  - id: c
+    text: SELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) < salary;
+    correct: false
+  - id: d
+    text: SELECT first_name, last_name FROM Employees WHERE MEDIAN(salary) < salary;
+    correct: false
+  - id: e
+    text: SELECT first_name, last_name FROM Employees WHERE salary < AVG(salary);
+    correct: false
+  difficulty: medium
+  explanation: 'Функция `MEDIAN` есть в Oracle, но так как тест по SQL вцелом, то правильно выбрать ответ с Median. В PostgreSQL встроенной функции `MEDIAN` нет; для медианы используют ordered-set aggregate `percentile_cont(0.5) WITHIN GROUP (ORDER BY salary)` в подзапросе. Пример: "SELECT first_name, last_name FROM Employees WHERE salary < (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM Employees);"'
+  extended_explanation: |-
+    Функция `MEDIAN` есть в Oracle, но так как тест по SQL вцелом, то правильно выбрать ответ с Median. В PostgreSQL встроенной функции `MEDIAN` нет; для медианы используют ordered-set aggregate `percentile_cont(0.5) WITHIN GROUP (ORDER BY salary)` в подзапросе. Пример: "SELECT first_name, last_name FROM Employees WHERE salary < (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM Employees);"
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: подзапросы, медиана, агрегатные функции.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить использование подзапросов с агрегатами и способы вычисления медианы в SQL/PostgreSQL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-aggregate.html
+- id: q7
+  text: |-
+    Вам нужно создать представление с именем PeopleView с данными из двух таблиц Respondents и Info, в котором будут содержаться возраст, телефоны и адреса респондентов. Какая ошибка допущена в запросе?
+
+    ```
+    CREATE VIEW PeopleView
+    AS SELECT age, phone_number, address
+    FROM Respondents, Info
+    WHERE Respondents.respondent_id = Info.respondent_id;
+
+    Respondents
+    | respondent_id | Integer |
+    | city          | String  |
+    | age           | Integer |
+    | phone_number  | String  |
+    | know_languages| Array   |
+
+    Info
+    | info_id       | Integer |
+    | respondent_id | Integer |
+    | phone_number  | String  |
+    | address       | String  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: Нужно указывать, из каких таблиц взяты данные, т. е. Respondents.age, Respondents.phone_number, Info.address
+    correct: true
+  - id: b
+    text: Нужно указывать, из каких таблиц взяты данные, т. е. age.Respondents, phone_number.Respondents, address.Info
+    correct: false
+  - id: c
+    text: Не нужно указывать обе таблицы в строке с FROM
+    correct: false
+  - id: d
+    text: Перед SELECT есть AS, который не нужен
+    correct: false
+  - id: e
+    text: Вместо CREATE VIEW PeopleView нужно написать CREATE PeopleView VIEW
+    correct: false
+  difficulty: medium
+  explanation: 'Поскольку столбец phone_number есть в обеих таблицах (Respondents и Info), возникает неоднозначность. Нужно явно указать, из какой таблицы брать phone_number: Respondents.phone_number или Info.phone_number.'
+  extended_explanation: |-
+    Поскольку столбец phone_number есть в обеих таблицах (Respondents и Info), возникает неоднозначность. Нужно явно указать, из какой таблицы брать phone_number: Respondents.phone_number или Info.phone_number.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: view, join, неоднозначные столбцы.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить создание представлений и необходимость квалификации столбцов, когда одинаковые имена есть в нескольких таблицах.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-createview.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-join.html
+- id: q8
+  text: |-
+    Вы создали некластеризованный индекс в таблице Products для столбца category. Какой шаг из перечисленных ниже не совершается при запуске следующего запроса?
+
+    ```
+    CREATE INDEX product_category_index
+    ON Products (category);
+
+    SELECT product_name, category, price
+    FROM Products
+    WHERE category = 'electronics';
+
+    Products
+    | product_id          | Integer |
+    | product_name        | String  |
+    | product_subcategory | String  |
+    | category            | String  |
+    | price               | Double  |
+    ```
+  type: single
+  options:
+  - id: a
+    text: Сохранение выбранных значений в дополнительной таблице
+    correct: true
+  - id: b
+    text: Переход по некластеризованному индексу (product_category_index)
+    correct: false
+  - id: c
+    text: Поиск искомой записи столбца (category = 'electronics') методом двоичного поиска
+    correct: false
+  - id: d
+    text: Поиск в основной таблице адреса соответствующей строки, в которой находится запись столбца, и переход к этой строке в основной таблице
+    correct: false
+  - id: e
+    text: Выбор других значений столбца в соответствии с требованиями запроса (product_name, price)
+    correct: false
+  difficulty: medium
+  explanation: Некластеризованный индекс содержит только ключевые значения и указатели на строки в таблице. При выполнении запроса происходит поиск по индексу, затем переход к основной таблице для получения остальных колонок. Никакого 'сохранения в дополнительной таблице' не происходит.
+  extended_explanation: |-
+    Некластеризованный индекс содержит только ключевые значения и указатели на строки в таблице. При выполнении запроса происходит поиск по индексу, затем переход к основной таблице для получения остальных колонок. Никакого 'сохранения в дополнительной таблице' не происходит.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: индексы, некластеризованный индекс, оптимизация запросов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как работает поиск по индексу и когда после индексного поиска нужен доступ к основной таблице.
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-intro.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/using-explain.html
+- id: q9
+  text: |-
+    Вы создали таблицу с составным первичным ключом. Выберите, какая команда должна быть первой в процедуре, работающей с ошибками и транзакциями.
+
+    ```
+    CREATE TABLE yourtable(
+      x int NOT NULL,
+      y int NOT NULL,
+      CONSTRAINT pk_yourtable PRIMARY KEY(x, y)
+    );
+    ```
+  type: single
+  options:
+  - id: a
+    text: BEGIN TRY <> END TRY
+    correct: true
+  - id: b
+    text: SET XACT_ABORT, NOCOUNT ON
+    correct: false
+  - id: c
+    text: BEGIN TRANSACTION <> COMMIT TRANSACTION
+    correct: false
+  - id: d
+    text: RAISERROR <> RETURN
+    correct: false
+  - id: e
+    text: BEGIN CATCH <> END CATCH
+    correct: false
+  difficulty: medium
+  explanation: В процедуре обработки ошибок сначала идет блок BEGIN TRY, внутри которого выполняются операции, а затем блок BEGIN CATCH для обработки ошибок. BEGIN CATCH не может быть первым.
+  extended_explanation: |-
+    В процедуре обработки ошибок сначала идет блок BEGIN TRY, внутри которого выполняются операции, а затем блок BEGIN CATCH для обработки ошибок. BEGIN CATCH не может быть первым.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: обработка ошибок, транзакции, sql server syntax.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить шаблон `TRY/CATCH` и порядок блоков в процедурах с обработкой ошибок и транзакциями.
+    Справка: https://learn.microsoft.com/ru-ru/sql/t-sql/language-elements/try-catch-transact-sql
+- id: q10
+  text: |-
+    У вас есть таблица Orders с миллионом строк и проиндексированным столбцом order_date. Каким образом вы будете оптимизировать производительность запроса, который извлекает информацию о последнем заказе для клиента из таблицы?
+
+    ```
+    CREATE INDEX order_index ON Orders(order_date);
+    ```
+  type: single
+  options:
+  - id: a
+    text: Используя подзапрос, чтобы получить последний order_date для клиента, а затем объединяю результаты с таблицей Orders, чтобы получить полную информацию о заказе
+    correct: true
+  - id: b
+    text: Создаем представление, которое извлекает последнюю информацию о заказах для всех клиентов по поиску в order_date, а затем запрашивает представление для конкретного клиента
+    correct: false
+  - id: c
+    text: Создаем хранимую процедуру с вложенным циклом, которая выполняет полное сканирование таблицы
+    correct: false
+  - id: d
+    text: Используя запрос SELECT * и отфильтрую результаты по order_date
+    correct: false
+  - id: e
+    text: Добавлю дополнительные индексы в другие столбцы в таблице Orders
+    correct: false
+  difficulty: medium
+  explanation: 'Оптимальный подход: сначала подзапросом найти максимальную дату (последний заказ) для конкретного клиента, затем JOIN с исходной таблицей для получения полных данных. Это эффективно использует индекс по order_date.'
+  extended_explanation: |-
+    Оптимальный подход: сначала подзапросом найти максимальную дату (последний заказ) для конкретного клиента, затем JOIN с исходной таблицей для получения полных данных. Это эффективно использует индекс по order_date.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: подзапросы, индексы, оптимизация запросов.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как получать последнюю запись через `MAX(...)`, подзапросы и соединение с исходной таблицей.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-subquery.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/indexes-intro.html
+- id: q11
+  text: Напишите SQL-запрос, который выберет все записи из таблицы Customers, у которых имя (name) начинается на букву 'A' или 'M', и возраст (age) больше 25 лет. Отсортируйте список в порядке убывания возраста.
+  type: single
+  options:
+  - id: a
+    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25 ORDER BY age DESC
+    correct: true
+  - id: b
+    text: SELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M') AND age > 25 ORDER BY age DESC
+    correct: false
+  - id: c
+    text: SELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M' AND age > 25) ORDER BY age DESC
+    correct: false
+  - id: d
+    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE '%M%') AND age > 25 ORDER BY age DESC
+    correct: false
+  - id: e
+    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25
+    correct: false
+  difficulty: medium
+  explanation: Для поиска строк, начинающихся с определенных букв, используется оператор LIKE с символом '%'. 'A%' означает строки, начинающиеся с A. Условия должны быть правильно сгруппированы, и нужна сортировка ORDER BY age DESC.
+  extended_explanation: |-
+    Для поиска строк, начинающихся с определенных букв, используется оператор LIKE с символом '%'. 'A%' означает строки, начинающиеся с A. Условия должны быть правильно сгруппированы, и нужна сортировка ORDER BY age DESC.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: like, where, order by.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить использование `LIKE`, группировку логических условий через скобки и сортировку `ORDER BY ... DESC`.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-matching.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-order.html
+- id: q12
+  text: Вы даете разрешение или запрет на выполнение определенных операций над объектами базы данных компании. Какие операторы вы используете в данном процессе?
+  type: single
+  options:
+  - id: a
+    text: GRANT, REVOKE
+    correct: true
+  - id: b
+    text: INSERT INTO, UPDATE
+    correct: false
+  - id: c
+    text: REPLACE, CALL
+    correct: false
+  - id: d
+    text: COMMIT, ROLLBACK
+    correct: false
+  - id: e
+    text: ALTER, DROP
+    correct: false
+  difficulty: medium
+  explanation: GRANT используется для предоставления прав доступа, REVOKE — для отзыва прав. Это основные операторы управления доступом (DCL — Data Control Language) в SQL.
+  extended_explanation: |-
+    GRANT используется для предоставления прав доступа, REVOKE — для отзыва прав. Это основные операторы управления доступом (DCL — Data Control Language) в SQL.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: права доступа.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить операторы DCL и базовое управление правами доступа в SQL.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-grant.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-revoke.html
+- id: q13
+  text: |-
+    Какую задачу решает следующий код?
+
+    ```
+    SELECT
+        product_name,
+        price,
+        CASE
+            WHEN price > 100 THEN 'expensive'
+            ELSE 'cheap'
+        END AS price_category
+    FROM Products
+    ORDER BY price DESC;
+    ```
+  type: single
+  options:
+  - id: a
+    text: Получение данных о дорогих и дешевых товарах, где дорогими считаются товары дороже 100 рублей. При этом отобразится таблица с названием товаров и указанием дорогой он или дешевый, отсортированная по убыванию цены.
+    correct: true
+  - id: b
+    text: Получение информации о цене товара. В результате цена будет отсортирована по убыванию, если цена выше 100, товар имеет метку expensive, если дешевле — cheap.
+    correct: false
+  - id: c
+    text: Получение информации о дорогих и дешевых товарах, где дорогими считаются товары дороже 100 рублей. При этом отобразится сначала список дорогих товаров, затем список дешевых.
+    correct: false
+  - id: d
+    text: Получение информации о дорогих и дешевых товарах, где отобразится название товара и его цена.
+    correct: false
+  - id: e
+    text: Получение информации о дорогих и дешевых товарах, где отобразится только список дорогих товаров.
+    correct: false
+  difficulty: medium
+  explanation: Запрос использует CASE для создания категории price_category ('expensive' для цены > 100, иначе 'cheap'), выбирает product_name, price, price_category и сортирует по убыванию цены.
+  extended_explanation: |-
+    Запрос использует CASE для создания категории price_category ('expensive' для цены > 100, иначе 'cheap'), выбирает product_name, price, price_category и сортирует по убыванию цены.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: case, select, order by.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить выражение `CASE` в `SELECT` и формирование вычисляемых колонок.
+    Справка: https://postgrespro.ru/docs/postgresql/current/functions-conditional.html
+    Справка: https://postgrespro.ru/docs/postgresql/current/queries-order.html
+- id: q14
+  text: Какой запрос вернет 10 уникальных фамилий из таблицы group_A, отсортированных по алфавиту?
+  type: single
+  options:
+  - id: a
+    text: SELECT DISTINCT surname FROM group_A ORDER BY surname LIMIT 10;
+    correct: true
+  - id: b
+    text: SELECT surname FROM group_A SORT BY surname DESC LIMIT 10;
+    correct: false
+  - id: c
+    text: SELECT surname FROM group_A ORDER BY surname LIMIT 10;
+    correct: false
+  - id: d
+    text: SELECT DISTINCT surname FROM group_A GROUP BY surname LIMIT 11;
+    correct: false
+  - id: e
+    text: SELECT surname FROM group_A ORDER BY surname LIMIT 10;
+    correct: false
+  difficulty: medium
+  explanation: DISTINCT убирает дубликаты, ORDER BY surname сортирует по возрастанию (по умолчанию ASC), LIMIT 10 ограничивает вывод десятью записями.
+  extended_explanation: |-
+    DISTINCT убирает дубликаты, ORDER BY surname сортирует по возрастанию (по умолчанию ASC), LIMIT 10 ограничивает вывод десятью записями.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: distinct, order by, limit.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить как комбинируются `DISTINCT`, `ORDER BY` и `LIMIT` в одном запросе.
+    Справка: https://postgrespro.ru/docs/postgresql/current/sql-select.html
+- id: q15
+  text: 'У вас есть две таблицы: workers и salary. Первая содержит уникальный id сотрудника, его фамилию (surname) и должность (position). Во второй таблице указано: id должности, сама должность и соответствующая ей зарплата. Вам нужно узнать, сколько зарабатывает каждый сотрудник. Какой вариант кода сможет решить данную задачу?'
+  type: single
+  options:
+  - id: a
+    text: SELECT * FROM workers w JOIN salary s ON w.position = s.position;
+    correct: true
+  - id: b
+    text: SELECT position FROM workers w LEFT JOIN salary s ON w.position = s.position;
+    correct: false
+  - id: c
+    text: SELECT * FROM workers w JOIN salary s ON w.position = s.position; ORDER BY surname LIMIT 10;
+    correct: false
+  - id: d
+    text: SELECT workers FROM workers JOIN salary s ON w.position = s.position;
+    correct: false
+  - id: e
+    text: SELECT * FROM workers w LEFT JOIN salary s ON w.position = s.position; GROUP BY position ORDER BY surname;
+    correct: false
+  difficulty: medium
+  explanation: INNER JOIN (или просто JOIN) workers с salary по полю position вернет все соответствия сотрудников и их зарплат. SELECT * покажет все поля, включая surname и salary.
+  extended_explanation: |-
+    INNER JOIN (или просто JOIN) workers с salary по полю position вернет все соответствия сотрудников и их зарплат. SELECT * покажет все поля, включая surname и salary.
+
+    ## Что здесь важно по теории
+    В подобных вопросах нужно проверять не только общий смысл ответа, но и точный синтаксис, типы данных, ограничения и особенности PostgreSQL.
+    - Ключевые темы вопроса: join, inner join, связи между таблицами.
+    - Неправильные варианты обычно нарушают либо синтаксис SQL, либо правила работы конкретной конструкции в PostgreSQL.
+  recommendation: |-
+    Повторить соединение таблиц по общему полю и выбор данных о сотрудниках вместе с их зарплатой.
+    Справка: https://postgrespro.ru/docs/postgresql/current/tutorial-join.html

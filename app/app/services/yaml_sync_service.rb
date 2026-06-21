@@ -54,11 +54,17 @@ class YamlSyncService
 
       Question.find_or_initialize_by(test_slug: slug, question_id: qid).tap do |rec|
         rec.assign_attributes(
-          text:        q["text"].to_s,
-          type_field:  q["type"].to_s.presence || "single",
-          options:     q["options"].to_a.map { |o| { "id" => o["id"].to_s, "text" => o["text"].to_s } },
-          correct_ids: correct_ids,
-          explanation: q["explanation"].to_s.presence
+          text:                 q["text"].to_s,
+          type_field:           q["type"].to_s.presence || "single",
+          options:              q["options"].to_a.map { |o|
+                                  opt = { "id" => o["id"].to_s, "text" => o["text"].to_s }
+                                  opt["explanation"] = o["explanation"].to_s if o["explanation"].present?
+                                  opt
+                                },
+          correct_ids:          correct_ids,
+          explanation:          q["explanation"].to_s.presence,
+          extended_explanation: q["extended_explanation"].to_s.presence,
+          recommendation:       q["recommendation"].to_s.presence
         )
         rec.save!
       end

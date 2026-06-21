@@ -86,7 +86,6 @@ const {
 
 <style scoped>
 .run-header {
-  max-width: 42rem;
   margin: 0 auto 1.5rem;
   display: flex;
   align-items: center;

@@ -1,0 +1,726 @@
+---
+slug: linux-advanced-1
+title: Linux System Administration — продвинутый уровень
+description: 'Продвинутые вопросы по администрированию Linux: процессы, сети, файловые системы.'
+tags:
+- linux
+- devops
+- hh
+difficulty: advanced
+estimated_time: 20
+questions:
+- id: q1
+  text: |-
+    Какой признак в логе systemd свидетельствует о проблемах с зависимостью при инициализации службы?
+
+    ```
+    Unit xyz.service entered failed state because a dependent unit failed to start
+    ```
+  type: single
+  options:
+  - id: a
+    text: Shutting down user manager for UID 1001
+    correct: false
+    explanation: Это сообщение о завершении пользовательского менеджера, не связано с зависимостями служб.
+  - id: b
+    text: Started Network Service successfully
+    correct: false
+    explanation: Сообщает об успешном запуске сетевой службы, а не о проблемах с зависимостями.
+  - id: c
+    text: Login session opened for user root
+    correct: false
+    explanation: Сообщает об открытии сессии root, не связано с зависимостями при инициализации.
+  - id: d
+    text: Unit xyz.service entered failed state because a dependent unit failed to start
+    correct: true
+    explanation: Прямо указывает, что служба не запустилась из-за сбоя в зависимой unit-единице.
+  difficulty: medium
+  explanation: Этот лог прямо указывает, что служба не запустилась из-за сбоя в зависимости (другая юнит-единица, от которой она зависит, не смогла запуститься).
+  extended_explanation: |-
+    В systemd зависимости между юнитами описываются директивами After, Requires, Wants.
+    Если зависимый юнит не может запуститься, основной юнит переходит в состояние failed с соответствующим сообщением.
+
+    ## Что здесь важно по теории
+    - `journalctl -u service-name` показывает логи конкретной службы
+    - Сообщение "dependent unit failed" указывает на необходимость проверить зависимый юнит
+    - Для диагностики используйте `systemctl list-dependencies service-name`
+  recommendation: |-
+    При анализе логов systemd обращайте внимание на сообщения о failed state и зависимостях.
+    Справка: https://www.freedesktop.org/software/systemd/man/latest/journalctl.html
+- id: q2
+  text: |-
+    Как посмотреть логи за сегодняшний день?
+
+    ```
+    journalctl --since today
+    ```
+  type: single
+  options:
+  - id: a
+    text: journalctl --since today
+    correct: true
+    explanation: "--since today — корректный синтаксис для просмотра логов с начала текущего дня."
+  - id: b
+    text: journalctl --d today
+    correct: false
+    explanation: "--d — несуществующая опция в journalctl."
+  - id: c
+    text: journalctl --s today
+    correct: false
+    explanation: "--s — несуществующая опция в journalctl."
+  - id: d
+    text: journalctl --today
+    correct: false
+    explanation: "--today — несуществующая опция в journalctl."
+  difficulty: medium
+  explanation: "`--since today` — корректный синтаксис для просмотра логов с начала текущего дня. Остальные варианты (`--d`, `--s`, `--today`) — несуществующие опции."
+  extended_explanation: |-
+    journalctl поддерживает гибкую фильтрацию по времени:
+    - `--since "2024-01-01 00:00:00"` — точная дата
+    - `--since yesterday` — с начала вчерашнего дня
+    - `--since today` — с начала сегодняшнего дня
+    - `--since "1 hour ago"` — за последний час
+
+    ## Что здесь важно по теории
+    - `journalctl --since today --until now` — за сегодняшний день
+    - Можно комбинировать с `-u service-name` для фильтрации по службе
+    - Для постоянного хранения логов нужно настроить `Storage=persistent` в `/etc/systemd/journald.conf`
+  recommendation: |-
+    Повторить синтаксис фильтрации по времени в journalctl.
+    Справка: man journalctl
+- id: q3
+  text: |-
+    Скрипт читает список имён файлов из текстового файла filelist.txt, в котором строки могут содержать пробелы. Как безопасно обойти этот список в цикле?
+
+    ```
+    while IFS= read -r line; do echo "$line"; done < filelist.txt
+    ```
+  type: single
+  options:
+  - id: a
+    text: for file in $(cat filelist.txt); do echo "$file"; done
+    correct: false
+    explanation: Word splitting разобьёт строки по пробелам.
+  - id: b
+    text: cat filelist.txt | while read line; do echo $line; done
+    correct: false
+    explanation: read без IFS= обрежет пробелы, echo без кавычек — тоже.
+  - id: c
+    text: xargs -n 1 echo < filelist.txt
+    correct: false
+    explanation: xargs разбивает на слова по пробелам и кавычкам.
+  - id: d
+    text: while read line; do echo "$line"; done < filelist.txt
+    correct: false
+    explanation: read без IFS= и -r обрезает пробелы и интерпретирует escape-последовательности.
+  - id: e
+    text: while IFS= read -r line; do echo "$line"; done < filelist.txt
+    correct: true
+    explanation: IFS= предотвращает обрезание пробелов, -r отключает интерпретацию escape.
+  difficulty: medium
+  explanation: IFS= предотвращает обрезание пробелов в начале и конце строки, -r отключает интерпретацию escape-последовательностей. Чтение из файла через перенаправление безопасно для строк с пробелами.
+  extended_explanation: |-
+    Безопасное чтение строк в bash требует:
+    1. `IFS=` — предотвращает удаление пробелов в начале/конце строки
+    2. `-r` — отключает обработку обратных слешей (например, `\n` читается как два символа)
+    3. `"$line"` в двойных кавычках — сохраняет пробелы внутри строки
+    4. Перенаправление `< filelist.txt` — без cat, который создаёт лишний процесс
+
+    ## Что здесь важно по теории
+    - Word splitting происходит при использовании некавыченных переменных и `$(cat)`
+    - `read` без `-r` интерпретирует обратные слеши как экранирование
+    - `IFS=` в начале команды действует только для неё
+  recommendation: |-
+    Повторить механизмы word splitting, IFS и безопасное чтение строк в bash.
+    Справка: man bash (разделы о IFS и read)
+- id: q4
+  text: |-
+    Какой блок конструкций в скрипте позволяет перехватывать неуспешное выполнение и перейти к обработке ошибок?
+
+    ```
+    trap ... ERR
+    ```
+  type: single
+  options:
+  - id: a
+    text: for ... do ... done
+    correct: false
+    explanation: for — цикл для перебора элементов, не перехватывает ошибки.
+  - id: b
+    text: trap ... ERR
+    correct: true
+    explanation: trap ... ERR — перехватывает ненулевой код возврата (ошибку) в bash.
+  - id: c
+    text: while ... do ... done
+    correct: false
+    explanation: while — цикл с условием, не предназначен для перехвата ошибок.
+  - id: d
+    text: if ... then ... fi
+    correct: false
+    explanation: if — условная конструкция, не является глобальным перехватчиком ошибок.
+  difficulty: medium
+  explanation: "`trap ... ERR` позволяет перехватывать ненулевой код возврата (ошибку) в bash-скрипте и выполнять указанные действия."
+  extended_explanation: |-
+    Пример использования:
+    ```bash
+    trap 'echo "Ошибка в строке $LINENO"' ERR
+    ```
+    Полезные комбинации:
+    - `set -e` — выход при любой ошибке
+    - `set -o pipefail` — учитывать ошибки в пайпах
+    - `trap 'cleanup' EXIT` — выполнить функцию при выходе
+
+    ## Что здесь важно по теории
+    - ERR срабатывает при возврате ненулевого кода (кроме условий и пайпов без pipefail)
+    - EXIT срабатывает при завершении скрипта
+    - INT, TERM, HUP — перехват сигналов
+  recommendation: |-
+    Повторить использование trap в bash для обработки сигналов и ошибок.
+    Справка: man bash (раздел о trap)
+- id: q5
+  text: |-
+    В конфигурации Nginx отсутствует директива deny all; в location-блоке для /.git. Почему это представляет угрозу?
+
+    ```
+    location /.git {
+        # отсутствует deny all;
+    }
+    ```
+  type: single
+  options:
+  - id: a
+    text: Позволяет выполнять Git-команды через HTTP напрямую
+    correct: false
+    explanation: Git через HTTP требует специальной настройки, сама по себе папка .git команды не выполняет.
+  - id: b
+    text: Блокирует работу cron-скриптов, размещённых в корне
+    correct: false
+    explanation: Cron-скрипты не связаны с доступом к .git через Nginx.
+  - id: c
+    text: Вызывает повторную инициализацию репозитория на каждый запрос
+    correct: false
+    explanation: Инициализация репозитория не происходит при HTTP-доступе.
+  - id: d
+    text: Приводит к тому, что сервер запрещает доступ к index.html
+    correct: false
+    explanation: Отсутствие deny all не запрещает доступ к другим файлам.
+  - id: e
+    text: Позволяет загрузить содержимое .git-каталога, включая историю коммитов и потенциальные секреты
+    correct: true
+    explanation: Каталог .git содержит всю историю и возможные секреты, закоммиченные по ошибке.
+  difficulty: medium
+  explanation: Каталог .git содержит всю историю репозитория, включая исходный код, комментарии, имена авторов, а также секреты, которые могли быть случайно закоммичены.
+  extended_explanation: |-
+    При отсутствии защиты:
+    - Злоумышленник может скачать файлы через `wget http://example.com/.git/config`
+    - Инструменты вроде `git-dumper` позволяют восстановить весь репозиторий
+    - В истории коммитов могут оказаться пароли, ключи API, внутренние IP-адреса
+
+    ## Что здесь важно по теории
+    - Правильная защита:
+      ```nginx
+      location ~ /\.git {
+          deny all;
+          return 404;
+      }
+      ```
+    - Также стоит блокировать `.env`, `.backup`, `.swp`, `config.php`
+  recommendation: |-
+    Всегда блокировать доступ к .git, .env, .config и другим служебным каталогам в веб-сервере.
+    Справка: https://nginx.org/ru/docs/http/ngx_http_core_module.html#deny
+- id: q6
+  text: |-
+    Какой параметр конфигурационного файла PostgreSQL позволяет разрешить подключение по сети?
+
+    ```
+    listen_addresses = '*'
+    ```
+  type: single
+  options:
+  - id: a
+    text: port
+    correct: false
+    explanation: port задаёт порт, но без настройки listen_addresses сервер может слушать только localhost.
+  - id: b
+    text: max_connections
+    correct: false
+    explanation: max_connections ограничивает количество подключений, не влияет на сетевую доступность.
+  - id: c
+    text: password_encryption
+    correct: false
+    explanation: password_encryption определяет способ шифрования паролей.
+  - id: d
+    text: listen_addresses
+    correct: true
+    explanation: listen_addresses определяет сетевые интерфейсы для ожидания подключений.
+  difficulty: medium
+  explanation: "`listen_addresses` определяет, на каких сетевых интерфейсах сервер PostgreSQL будет ожидать входящие подключения. Для разрешения подключений по сети нужно установить значение `'*'` или конкретный IP-адрес."
+  extended_explanation: |-
+    Настройка сети в PostgreSQL включает:
+    1. `listen_addresses = '*'` в `postgresql.conf`
+    2. Запись в `pg_hba.conf` для разрешения подключений:
+       ```
+       host    all    all    0.0.0.0/0    md5
+       ```
+    3. Перезапуск сервера: `systemctl restart postgresql`
+
+    ## Что здесь важно по теории
+    - По умолчанию PostgreSQL слушает только 127.0.0.1
+    - `listen_addresses = 'localhost,192.168.1.100'` — только конкретный интерфейс
+    - Без `pg_hba.conf` подключения будут отклонены даже с правильным listen_addresses
+  recommendation: |-
+    Для разрешения удалённых подключений нужно настроить listen_addresses и pg_hba.conf.
+    Справка: https://postgrespro.ru/docs/postgresql/current/runtime-config-connection.html
+- id: q7
+  text: |-
+    На сервере с 8 ядрами команда uptime показывает load average: 14.20 15.00 14.80. Как можно интерпретировать эти значения?
+
+    ```
+    uptime
+    load average: 14.20 15.00 14.80
+    ```
+  type: single
+  options:
+  - id: a
+    text: Такая нагрузка характерна для дисковых операций, а не CPU
+    correct: false
+    explanation: Хотя load учитывает uninterruptible sleep, значения выше числа ядер в первую очередь указывают на CPU-перегрузку.
+  - id: b
+    text: Низкий load average свидетельствует об ограничении по памяти
+    correct: false
+    explanation: 14.20 — не низкое значение, а ограничение по памяти load не отражает.
+  - id: c
+    text: Значения load average находятся в пределах нормы, загрузка сбалансирована
+    correct: false
+    explanation: Для 8 ядер нагрузка выше 8.0 считается перегрузкой.
+  - id: d
+    text: Значения не учитывают многопоточность, нагрузка не превышает порог
+    correct: false
+    explanation: Load average учитывает все потоки в состоянии running/uninterruptible.
+  - id: e
+    text: Средняя нагрузка превышает количество доступных ядер – CPU перегружены
+    correct: true
+    explanation: На 8-ядерной системе нагрузка > 8 указывает на перегрузку CPU.
+  difficulty: medium
+  explanation: На сервере с 8 ядрами значения 14.20, 15.00, 14.80 означают, что в среднем более 14 процессов ожидают процессорного времени одновременно, что указывает на серьёзную перегрузку CPU.
+  extended_explanation: |-
+    Load average:
+    - Показывает среднее количество процессов в состоянии running или uninterruptible sleep
+    - Первое число — за 1 минуту, второе — за 5, третье — за 15
+    - Для 8 ядер нормальная нагрузка — до 8.0
+    - Значения > 8.0 указывают на очередь процессов, ожидающих CPU
+
+    ## Что здесь важно по теории
+    - Load может быть вызван как CPU, так и I/O (uninterruptible sleep)
+    - Для диагностики используйте `mpstat -P ALL 1`, `iotop`, `pidstat`
+    - Если load высокий, а CPU idle — проблема в I/O
+  recommendation: |-
+    Load average интерпретируется относительно количества ядер CPU.
+    Справка: man uptime
+- id: q8
+  text: |-
+    Сервер начал потреблять до 100% CPU без явной активности со стороны прикладных процессов. Необходим инструмент, позволяющий в реальном времени отслеживать, какие функции ядра вызывают такую нагрузку. Что выбрать?
+
+    ```
+    perf top
+    ```
+  type: single
+  options:
+  - id: a
+    text: perf top
+    correct: true
+    explanation: perf top показывает в реальном времени, какие функции ядра и пользовательского пространства потребляют CPU.
+  - id: b
+    text: systemd-analyze blame
+    correct: false
+    explanation: Показывает время запуска служб при загрузке, не для мониторинга нагрузки.
+  - id: c
+    text: pidstat -u -p all
+    correct: false
+    explanation: Показывает CPU-нагрузку по процессам, но не детализирует функции ядра.
+  - id: d
+    text: vmstat -s
+    correct: false
+    explanation: Показывает статистику памяти и событий, не функции ядра.
+  - id: e
+    text: strace -f -tt
+    correct: false
+    explanation: Трассирует системные вызовы, создаёт огромную нагрузку, не для продакшена.
+  difficulty: medium
+  explanation: "`perf top` — это профилировщик, который в реальном времени показывает, какие функции ядра и пользовательского пространства потребляют больше всего процессорного времени. Идеально подходит для выявления нагрузки, вызванной ядром."
+  extended_explanation: |-
+    Альтернативные инструменты:
+    - `perf record -a -g -- sleep 10 && perf report` — сбор и анализ данных
+    - `bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'` — анализ стека ядра
+    - `top` → `1` (показать CPU per core), `H` (показать потоки)
+
+    ## Что здесь важно по теории
+    - perf работает с сэмплированием (настраиваемая частота)
+    - Для работы с ядром нужны права root или `perf_event_paranoid=0`
+    - strace не подходит для продакшена из-за огромной нагрузки
+  recommendation: |-
+    Для анализа CPU-нагрузки на уровне ядра используйте perf, bpftrace или eBPF-инструменты.
+    Справка: man perf-top
+- id: q9
+  text: |-
+    Какой результат даст запись в `crontab`: «0 0 1 * * root /usr/bin/script.sh», добавленная через `crontab -e` под обычным пользователем?
+
+    ```
+    0 0 1 * * root /usr/bin/script.sh
+    ```
+  type: single
+  options:
+  - id: a
+    text: Задание выполнится от текущего пользователя
+    correct: false
+    explanation: Поле 'root' будет воспринято как часть команды, а не как пользователь.
+  - id: b
+    text: Cron перезапустится с ошибкой
+    correct: false
+    explanation: Cron просто проигнорирует некорректную строку.
+  - id: c
+    text: Задание выполнится от имени root
+    correct: false
+    explanation: В пользовательском crontab поле пользователя не указывается.
+  - id: d
+    text: Задание проигнорируется из-за синтаксической ошибки
+    correct: true
+    explanation: 'В пользовательском crontab формат: минуты часы день месяц день_недели команда (без поля пользователя).'
+  difficulty: medium
+  explanation: В формате системного crontab (`/etc/crontab`) используется шестое поле — пользователь. В пользовательском crontab (редактируемом через `crontab -e`) поле пользователя не указывается. Запись будет интерпретирована с ошибкой и проигнорирована.
+  extended_explanation: |-
+    Правильные форматы:
+    - Пользовательский crontab (`crontab -e`):
+      ```
+      0 0 1 * * /usr/bin/script.sh
+      ```
+    - Системный crontab (`/etc/crontab`):
+      ```
+      0 0 1 * * root /usr/bin/script.sh
+      ```
+
+    ## Что здесь важно по теории
+    - `crontab -e` редактирует crontab текущего пользователя
+    - `/etc/crontab` и файлы в `/etc/cron.d/` требуют указания пользователя
+    - Проверка синтаксиса: `crontab -l` после редактирования
+  recommendation: |-
+    В пользовательском crontab (crontab -e) не указывается пользователь. В системном (/etc/crontab) — указывается.
+    Справка: man crontab
+- id: q10
+  text: |-
+    Вы настроили таймер на ежедневный запуск сервиса с типом oneshot и добавили в сервис RemainAfterExit=true. Какое поведение будет наблюдаться?
+
+    ```
+    [Service]
+    Type=oneshot
+    RemainAfterExit=true
+    ```
+  type: single
+  options:
+  - id: a
+    text: Таймер будет выполнять сервис только при наличии активного пользователя в системе
+    correct: false
+    explanation: Таймеры не зависят от наличия активного пользователя.
+  - id: b
+    text: systemctl будет считать, что сервис активен до следующего вызова, даже после его завершения
+    correct: true
+    explanation: RemainAfterExit=true указывает systemd считать сервис активным после завершения процесса.
+  - id: c
+    text: Флаг RemainAfterExit игнорируется при Type=oneshot
+    correct: false
+    explanation: RemainAfterExit обычно используется именно с Type=oneshot.
+  - id: d
+    text: Сервис будет автоматически перезапускать при истечении таймера
+    correct: false
+    explanation: За перезапуск отвечает Restart=, не RemainAfterExit.
+  - id: e
+    text: RemainAfterExit=true приведёт к тому, что таймер не завершится корректно
+    correct: false
+    explanation: Таймер работает корректно, RemainAfterExit влияет только на состояние сервиса.
+  difficulty: medium
+  explanation: "`Type=oneshot` означает, что сервис выполняет одноразовую задачу и завершается. `RemainAfterExit=true` указывает systemd, что даже после завершения основного процесса сервис должен считаться активным (active)."
+  extended_explanation: |-
+    Пример применения:
+    ```ini
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/local/bin/setup-network.sh
+    RemainAfterExit=true
+    ```
+    После выполнения скрипта systemd считает сервис активным. Это удобно для:
+    - Настройки сети
+    - Монтирования
+    - Инициализации оборудования
+
+    ## Что здесь важно по теории
+    - `systemctl is-active service` вернёт active после выполнения
+    - При повторном запуске таймера сервис выполнится снова
+    - Для остановки используется `ExecStop` с отдельной командой
+  recommendation: |-
+    Type=oneshot + RemainAfterExit=true используется для сервисов инициализации, которые должны считаться активными после выполнения.
+    Справка: man systemd.service
+- id: q11
+  text: |-
+    Какое действие systemd выполнит после успешной активации unit'a с типом service и параметром After=network.target?
+
+    ```
+    [Unit]
+    After=network.target
+    ```
+  type: single
+  options:
+  - id: a
+    text: Запустит сервис параллельно с network.target
+    correct: false
+    explanation: After означает 'после', не 'параллельно'.
+  - id: b
+    text: Запустит сервис немедленно, игнорируя зависимость
+    correct: false
+    explanation: After не игнорируется, сервис будет ждать.
+  - id: c
+    text: Перезапустит сервис при каждой смене статуса сети
+    correct: false
+    explanation: After не вызывает перезапуск, это разовая зависимость порядка.
+  - id: d
+    text: Запустит сервис только после завершения активации network.target
+    correct: true
+    explanation: 'After указывает порядок: сервис запускается после достижения network.target.'
+  difficulty: medium
+  explanation: "`After=network.target` указывает systemd, что данный сервис должен быть запущен после того, как `network.target` будет достигнут (активирован)."
+  extended_explanation: |-
+    Директивы зависимостей в systemd:
+    - `After` — определяет порядок, не требует успешного запуска
+    - `Requires` — если зависимый юнит не запустился, текущий не запускается
+    - `Wants` — мягкая зависимость (запустить, но не требовать успеха)
+    - `BindsTo` — более строгая связь, остановка зависимого останавливает текущий
+
+    ## Что здесь важно по теории
+    - `network.target` не гарантирует, что сеть уже настроена (только что сеть "загружена")
+    - Для гарантии готовности сети используют `network-online.target`
+  recommendation: |-
+    Различать After (порядок) и Requires (обязательную зависимость).
+    Справка: man systemd.unit
+- id: q12
+  text: |-
+    Какое действие корректно инициировать для перехода системы в rescue mode с помощью systemd?
+
+    ```
+    systemctl rescue
+    ```
+  type: single
+  options:
+  - id: a
+    text: systemctl rescue
+    correct: true
+    explanation: systemctl rescue — корректная команда для перехода в rescue mode.
+  - id: b
+    text: systemctl isolate multi-user.target
+    correct: false
+    explanation: Переводит в многопользовательский режим, не в rescue mode.
+  - id: c
+    text: shutdown -r now
+    correct: false
+    explanation: Выполняет перезагрузку системы.
+  - id: d
+    text: init 3
+    correct: false
+    explanation: Команда SysVinit для runlevel 3, в systemd работает через совместимость, но не для rescue.
+  difficulty: medium
+  explanation: "`systemctl rescue` — корректная команда для перевода системы в rescue mode (однопользовательский режим, минимальное окружение, только root-консоль)."
+  extended_explanation: |-
+    Режимы systemd:
+    - `rescue.target` — однопользовательский режим, основные файловые системы смонтированы, сеть недоступна
+    - `emergency.target` — ещё более минимальный, только root-файловая система в режиме ro
+    - `multi-user.target` — текстовый многопользовательский режим
+    - `graphical.target` — графический режим
+
+    Переключение:
+    ```bash
+    systemctl rescue          # запрос пароля root
+    systemctl emergency       # ещё более минимальный режим
+    systemctl reboot          # перезагрузка
+    systemctl poweroff        # выключение
+    ```
+  recommendation: |-
+    Для перехода в rescue mode используйте `systemctl rescue`, для emergency mode — `systemctl emergency`.
+    Справка: man systemctl
+- id: q13
+  text: |-
+    Каков потенциальный риск для Linux-системы при открытом на запись для всех каталоге /tmp?
+
+    ```
+    # Неправильные права: chmod 777 /tmp
+    # Правильные: chmod 1777 /tmp
+    ```
+  type: single
+  options:
+  - id: a
+    text: Утечка основных системных логов
+    correct: false
+    explanation: Логи обычно хранятся в /var/log, не в /tmp.
+  - id: b
+    text: Ошибки в cron-расписании
+    correct: false
+    explanation: Cron не зависит от прав /tmp.
+  - id: c
+    text: Несовместимость с systemd
+    correct: false
+    explanation: systemd корректно работает с любыми правами /tmp.
+  - id: d
+    text: Возможность эскалации привилегий через символические ссылки
+    correct: true
+    explanation: Без sticky-бита возможны symlink-атаки и гонки (race conditions).
+  difficulty: medium
+  explanation: Каталог `/tmp` должен иметь бит sticky (`chmod 1777`), чтобы пользователи могли создавать свои файлы, но не могли удалять или переименовывать чужие. Без sticky-бита злоумышленник может создавать символические ссылки на чувствительные файлы, что ведёт к эскалации привилегий.
+  extended_explanation: |-
+    Типичная атака:
+    1. Приложение создаёт файл в /tmp с предсказуемым именем
+    2. Злоумышленник создаёт символическую ссылку на /etc/passwd
+    3. Приложение пишет в файл, перезаписывая /etc/passwd
+
+    Защита:
+    ```bash
+    chmod 1777 /tmp
+    # Или с монтированием:
+    mount -o remount,noexec,nosuid,nodev /tmp
+    ```
+
+    ## Что здесь важно по теории
+    - Sticky-бит (1 в начале прав) разрешает удаление только владельцу файла или root
+    - /tmp часто монтируют с опциями noexec, nosuid для дополнительной безопасности
+    - Используйте `mktemp` для создания безопасных временных файлов
+  recommendation: |-
+    Всегда устанавливайте sticky-бит на /tmp: chmod 1777 /tmp.
+    Справка: man chmod
+- id: q14
+  text: |-
+    Какой вывод команды `netstat -tulpn` может говорить о незадокументированном сервисе, запущенном с root-привилегиями?
+
+    ```
+    tcp 0 0 0.0.0.0:6666 0.0.0.0:* LISTEN 1/unknown
+    ```
+  type: single
+  options:
+  - id: a
+    text: tcp 0 0 0.0.0.0:6666 0.0.0.0:* LISTEN 1/unknown
+    correct: true
+    explanation: PID 1 — обычно init/systemd, слушает нестандартный порт 6666 — подозрительно.
+  - id: b
+    text: tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN 1000/sshd
+    correct: false
+    explanation: 22/sshd — стандартный SSH-сервер, PID 1000 — непривилегированный пользователь.
+  - id: c
+    text: udp 0 127.0.0.1:123 0.0.0.0:* 103/chronyd
+    correct: false
+    explanation: 123/chronyd — стандартный NTP-клиент.
+  - id: d
+    text: tcp 0 0 127.0.0.1:5432 0.0.0.0:* LISTEN 109/postgres
+    correct: false
+    explanation: 5432/postgres — стандартный порт PostgreSQL.
+  difficulty: medium
+  explanation: PID 1 — это обычно init или systemd. Если процесс с PID 1 слушает нестандартный порт 6666 и обозначен как unknown, это является сильным индикатором компрометации или подозрительной активности.
+  extended_explanation: |-
+    Признаки подозрительных сервисов:
+    - Процесс с PID 1 (systemd) слушает нестандартный порт
+    - Имя процесса в скобках — "unknown", "kworker" без контекста
+    - Порты из динамического диапазона (49152–65535) или нестандартные
+    - Процесс запущен от root, но не является системным
+
+    Диагностика:
+    ```bash
+    ss -tulpn | grep -E "LISTEN.*1/"
+    lsof -i -P -n | grep LISTEN
+    systemctl status <pid>  # для PID 1
+    ```
+  recommendation: |-
+    Регулярно проверяйте открытые порты и процессы, особенно с PID 1, 0 и неизвестными именами.
+    Справка: man netstat
+- id: q15
+  text: |-
+    Запись в /etc/fstab следующая: /dev/sdc1 /mnt/opt ext4 defaults,nofail 0 0. Что будет происходить при загрузке, если диск отсутствует?
+
+    ```
+    /dev/sdc1 /mnt/opt ext4 defaults,nofail 0 0
+    ```
+  type: single
+  options:
+  - id: a
+    text: Процесс загрузки остановится до монтирования, ожидая устройство
+    correct: false
+    explanation: nofail предотвращает остановку загрузки.
+  - id: b
+    text: Система загрузится без ошибок, пропустив /mnt/opt, поскольку указан nofail и отключена проверка
+    correct: true
+    explanation: nofail пропускает ошибку монтирования, 0 в последнем поле отключает fsck.
+  - id: c
+    text: Файловая система будет проверена в любом случае, так как это ext4
+    correct: false
+    explanation: Последнее поле 0 отключает проверку fsck.
+  - id: d
+    text: Будет предпринята повторная попытка монтирования с опцией force
+    correct: false
+    explanation: nofail не вызывает повторных попыток с force.
+  - id: e
+    text: nofail применяется только к root, на другие точки не влияет
+    correct: false
+    explanation: nofail работает для любых точек монтирования.
+  difficulty: medium
+  explanation: Опция `nofail` указывает systemd, что если устройство отсутствует или возникает ошибка при монтировании, не следует прерывать загрузку. Последнее поле `0` отключает автоматическую проверку файловой системы при загрузке.
+  extended_explanation: |-
+    Поля /etc/fstab:
+    1. Устройство (UUID или /dev)
+    2. Точка монтирования
+    3. Тип ФС
+    4. Опции (defaults,nofail,noatime и др.)
+    5. Дамп (0 — не бэкапить)
+    6. Порядок fsck (0 — не проверять, 1 — root, 2 — остальные)
+
+    ## Что здесь важно по теории
+    - Без `nofail` отсутствие диска приведёт к emergency mode
+    - `nofail` полезен для съёмных носителей, сетевых ФС, дополнительных дисков
+    - Для корневого раздела `nofail` не имеет смысла — без него система не загрузится
+  recommendation: |-
+    Для некритичных дисков используйте опцию nofail и отключайте fsck (последнее поле 0).
+    Справка: man fstab
+- id: q16
+  text: |-
+    После добавления новой строки в /etc/fstab и перезагрузки сервер загрузился в emergency mode. Какова наиболее вероятная причина потери доступа к данным на разделе /mnt/data?
+
+    ```
+    # Пример проблемной записи
+    UUID=wrong-uuid /mnt/data ext4 defaults 0 2
+    ```
+  type: single
+  options:
+  - id: a
+    text: Отсутствие монтируемой директории
+    correct: false
+    explanation: systemd обычно создаёт директорию автоматически.
+  - id: b
+    text: Неправильный UUID в записи fstab
+    correct: true
+    explanation: Неверный UUID — частая причина ошибки монтирования и попадания в emergency mode.
+  - id: c
+    text: Несовместимая файловая система
+    correct: false
+    explanation: Тоже может вызвать ошибку, но UUID — вероятнее после добавления строки.
+  - id: d
+    text: Ошибочный режим монтирования (ro вместо rw или наоборот)
+    correct: false
+    explanation: Некорректный режим может вызвать проблемы, но неправильный UUID — самый частый сценарий при добавлении новой записи.
+  difficulty: medium
+  explanation: Если в `/etc/fstab` указан неверный UUID (или неверный путь к устройству), systemd не сможет смонтировать раздел при загрузке. Без опции `nofail` критическая ошибка монтирования приводит к падению в emergency mode.
+  extended_explanation: |-
+    Диагностика проблемы:
+    1. Проверить UUID: `blkid /dev/sdX`
+    2. Проверить fstab: `cat /etc/fstab | grep /mnt/data`
+    3. В emergency mode: `mount -o remount,rw /` (если корень в ro)
+    4. Исправить fstab и перезагрузиться
+
+    ## Что здесь важно по теории
+    - Emergency mode возникает при критической ошибке монтирования обязательных разделов
+    - Для некритичных разделов добавляйте опцию `nofail`
+    - Используйте `findmnt --verify` для проверки fstab
+  recommendation: |-
+    Всегда проверяйте UUID через `blkid` перед добавлением в fstab.
+    Справка: man fstab, blkid
