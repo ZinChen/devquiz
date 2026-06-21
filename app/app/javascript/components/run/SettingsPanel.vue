@@ -5,15 +5,15 @@
       <label class="settings-option">
         <input type="radio" :checked="mode === 'all'" @change="$emit('update:mode', 'all')" class="radio radio-sm" />
         <div>
-          <p class="settings-option__label">Все вопросы сразу</p>
-          <p class="settings-option__hint">Листай список и отвечай в любом порядке</p>
+          <p class="settings-option__label">Все вопросы списком</p>
+          <p class="settings-option__hint">Листай и решай</p>
         </div>
       </label>
       <label class="settings-option">
         <input type="radio" :checked="mode === 'one'" @change="$emit('update:mode', 'one')" class="radio radio-sm" />
         <div>
           <p class="settings-option__label">По одному вопросу</p>
-          <p class="settings-option__hint">Фокус на текущем вопросе</p>
+          <p class="settings-option__hint">Фокус на одном вопросе</p>
         </div>
       </label>
     </div>

@@ -77,6 +77,7 @@ const activeIndex   = ref(0)
 const focusedOptIdx = ref(0)
 
 function scrollTo(idx) {
+  programmaticScroll = true
   activeIndex.value = idx
   focusedOptIdx.value = 0
   const el = questionEls.value[idx]
@@ -151,8 +152,33 @@ function handleKeydown(e) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+let programmaticScroll = false
+let scrollEndTimer = null
+
+function handleScroll() {
+  if (programmaticScroll) {
+    clearTimeout(scrollEndTimer)
+    scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
+    return
+  }
+  const idx = questionEls.value.findIndex(el => {
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    return rect.top >= 0 && rect.bottom > 0
+  })
+  if (idx !== -1) activeIndex.value = idx
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('scroll', handleScroll)
+  clearTimeout(scrollEndTimer)
+})
 </script>
 
 <style scoped>

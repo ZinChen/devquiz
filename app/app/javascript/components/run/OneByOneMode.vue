@@ -241,6 +241,7 @@ onUnmounted(() => {
   color: #9CA3AF;
   border: none;
   cursor: pointer;
+  outline: none;
 }
 
 .question-nav__cell--active {
