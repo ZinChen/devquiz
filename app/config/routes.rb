@@ -7,7 +7,9 @@ Rails.application.routes.draw do
   delete "/logout",                  to: "sessions#destroy", as: :logout
 
   resources :tests, only: [:index, :show], param: :slug do
-    resource :run, only: [:new, :create, :show], controller: "runs"
+    resources :runs, only: [:show], controller: "runs"
+    resource :run, only: [:new, :create], controller: "runs"
+    resources :attempts, only: [:index], controller: "test_attempts"
   end
 
   post   "/bookmarks",     to: "bookmarks#create"

@@ -19,20 +19,27 @@
       <div class="test-card__meta">
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
-        <span v-if="test.attemptsCount > 0" class="badge badge-sm test-card__attempts">{{ test.attemptsCount }} попыток</span>
-        <span
+        <Link
           v-if="test.attemptsCount > 0"
+          :href="`/tests/${test.slug}/attempts`"
+          class="badge badge-sm test-card__attempts"
+          @click.stop
+        >{{ test.attemptsCount }} попыток</Link>
+        <Link
+          v-if="test.bestScore != null && test.bestAttemptId"
+          :href="`/tests/${test.slug}/runs/${test.bestAttemptId}`"
           class="badge badge-sm score-badge"
-          :class="test.avgScore >= 60 ? 'score--pass' : 'score--fail'"
+          :class="test.bestScore >= 60 ? 'score--pass' : 'score--fail'"
+          @click.stop
         >
-          <svg v-if="test.avgScore >= 60" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg v-if="test.bestScore >= 60" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="2,6 5,9 10,3"/>
           </svg>
           <svg v-else width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/>
           </svg>
-          {{ test.avgScore.toFixed(0) }}%
-        </span>
+          {{ test.bestScore.toFixed(0) }}%
+        </Link>
       </div>
     </Link>
   </div>

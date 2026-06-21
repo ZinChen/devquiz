@@ -30,9 +30,11 @@ class TestsController < ApplicationController
       difficulty:     t.difficulty,
       estimated_time: t.estimated_time,
       questions_count: t.questions_count,
-      attempts_count: t.attempts_count,
-      avg_score:      t.avg_score.to_f,
-      pass_rate:      t.pass_rate.to_f
+      attempts_count:  t.attempts_count,
+      avg_score:       t.avg_score.to_f,
+      pass_rate:       t.pass_rate.to_f,
+      best_score:      t.best_score&.to_f,
+      best_attempt_id: t.best_attempt_id
     }
   end
 end

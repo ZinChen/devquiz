@@ -50,13 +50,9 @@ class RunsController < ApplicationController
     score = @meta.questions_count > 0 ? (correct_count.to_f / @meta.questions_count * 100).round(2) : 0
 
     attempt.update!(correct_count: correct_count, score: score)
-    update_test_stats(@meta, score)
+    update_test_stats(@meta, score, attempt)
 
-    render inertia: "Run/Show", props: {
-      test:          test_props(@meta),
-      attempt:       attempt_props(attempt),
-      answers_detail: answers_detail(attempt, questions_map)
-    }
+    redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
 
   def show
@@ -127,16 +123,20 @@ class RunsController < ApplicationController
     end.compact
   end
 
-  def update_test_stats(meta, new_score)
+  def update_test_stats(meta, new_score, attempt)
     total     = meta.attempts_count.to_i + 1
     new_avg   = ((meta.avg_score.to_f * meta.attempts_count.to_i) + new_score) / total
     passing   = TestAttempt.where(test_slug: meta.slug).where("score >= 70").count
     pass_rate = (passing.to_f / total * 100).round(2)
 
+    is_best = meta.best_score.nil? || new_score > meta.best_score.to_f
+
     meta.update!(
       attempts_count: total,
       avg_score:      new_avg.round(2),
-      pass_rate:      pass_rate
+      pass_rate:      pass_rate,
+      best_score:     is_best ? new_score : meta.best_score,
+      best_attempt_id: is_best ? attempt.id : meta.best_attempt_id
     )
   end
 end

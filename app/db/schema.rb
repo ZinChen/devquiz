@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_100001) do
   create_table "test_metadata", force: :cascade do |t|
     t.integer "attempts_count", default: 0
     t.decimal "avg_score", precision: 5, scale: 2, default: "0.0"
+    t.integer "best_attempt_id"
+    t.decimal "best_score", precision: 5, scale: 2
     t.datetime "created_at", null: false
     t.text "description"
     t.string "difficulty"
