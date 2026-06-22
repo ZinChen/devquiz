@@ -6,9 +6,28 @@ on:
     branches: [main]
 
 jobs:
-  # Быстрые unit/request тесты — без браузера
+  rubocop:
+    name: Rubocop
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: app
+          bundler-cache: true
+
+      - name: Run Rubocop
+        run: bundle exec rubocop --format github
+
   rspec:
     name: RSpec (models, services, requests)
+    needs: rubocop
     runs-on: ubuntu-latest
 
     services:
@@ -54,9 +73,9 @@ jobs:
       - name: Run RSpec (unit + requests)
         run: bundle exec rspec spec/models spec/services spec/requests
 
-  # E2E тесты — с headless Chrome и сборкой фронта
   e2e:
     name: E2E (system tests)
+    needs: rubocop
     runs-on: ubuntu-latest
 
     services:
