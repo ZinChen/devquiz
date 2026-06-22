@@ -1,0 +1,26 @@
+name: Rubocop
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  rubocop:
+    name: Rubocop
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: app
+          bundler-cache: true
+
+      - name: Run Rubocop
+        run: bundle exec rubocop --format github

@@ -7,7 +7,7 @@ services:
     rootDir: app
     buildCommand: |
       bundle install
-      npm install
+      npm install --include=dev
       npm run build
       bundle exec rails db:migrate
     startCommand: bundle exec rails server -p $PORT -e production
