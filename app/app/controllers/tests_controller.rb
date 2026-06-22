@@ -10,7 +10,7 @@ class TestsController < ApplicationController
 
     render inertia: "Tests/Index", props: {
       tests:    tests_list.map { |t| test_props(t) },
-      all_tags: visible_tags,
+      all_tags: visible_tags
     }
   end
 

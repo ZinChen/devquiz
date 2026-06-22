@@ -6,10 +6,10 @@ Rails.application.routes.draw do
   post   "/auth/:provider/callback", to: "sessions#create"
   delete "/logout",                  to: "sessions#destroy", as: :logout
 
-  resources :tests, only: [:index, :show], param: :slug do
-    resources :runs, only: [:show], controller: "runs"
-    resource :run, only: [:new, :create], controller: "runs"
-    resources :attempts, only: [:index], controller: "test_attempts"
+  resources :tests, only: [ :index, :show ], param: :slug do
+    resources :runs, only: [ :show ], controller: "runs"
+    resource :run, only: [ :new, :create ], controller: "runs"
+    resources :attempts, only: [ :index ], controller: "test_attempts"
   end
 
   post   "/bookmarks",     to: "bookmarks#create"

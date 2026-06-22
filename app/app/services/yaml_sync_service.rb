@@ -15,14 +15,14 @@ class YamlSyncService
   def self.load_questions(slug)
     path = TESTS_DIR.join("#{slug}.yml")
     return [] unless File.exist?(path)
-    data = YAML.safe_load(File.read(path), permitted_classes: [Symbol])
+    data = YAML.safe_load(File.read(path), permitted_classes: [ Symbol ])
     data["questions"] || []
   end
 
   def self.sync_file(path)
     content  = File.read(path)
     checksum = Digest::MD5.hexdigest(content)
-    data     = YAML.safe_load(content, permitted_classes: [Symbol])
+    data     = YAML.safe_load(content, permitted_classes: [ Symbol ])
     slug     = data["slug"]
 
     return unless slug.present?

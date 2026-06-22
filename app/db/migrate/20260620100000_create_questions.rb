@@ -12,7 +12,7 @@ class CreateQuestions < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :questions, [:test_slug, :question_id], unique: true
+    add_index :questions, [ :test_slug, :question_id ], unique: true
     add_index :questions, :test_slug
   end
 end

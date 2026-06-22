@@ -8,7 +8,7 @@ class TestAttemptsController < ApplicationController
     render inertia: "Tests/Attempts", props: {
       test: {
         slug:  meta.slug,
-        title: meta.title,
+        title: meta.title
       },
       attempts: attempts.map { |a|
         {
