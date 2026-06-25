@@ -76,3 +76,36 @@ questions:
         correct: true
     explanation: "Объяснение правильного ответа."
 ```
+
+## Как устроена разработка
+
+Каждая новая возможность живёт в отдельной ветке и привязана к [GitHub Issue](https://github.com/ZinChen/devquiz/issues). Это позволяет работать над фичами по одной, не перемешивая изменения, и чётко видеть историю — что, зачем и когда появилось.
+
+### Взять фичу в работу
+
+Открываешь нужный issue на GitHub, смотришь описание и чеклист. Создаёшь ветку от `main` с номером issue в названии:
+
+```bash
+git checkout main && git pull
+git checkout -b feature/1-fill-blank-input
+```
+
+Разрабатываешь, коммитишь в обычном темпе. Когда готово — открываешь PR:
+
+```bash
+gh pr create --title "Fill-in-the-blank: ввод текста" --body "Closes #1" --base main
+```
+
+Фраза `Closes #N` в теле PR — главное. После merge в `main` GitHub автоматически закроет issue.
+
+### Версии
+
+Issues сгруппированы по [Milestones](https://github.com/ZinChen/devquiz/milestones) — каждый milestone соответствует версии приложения. Когда все issues milestone закрыты, выпускаем релиз:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+gh release create v0.2.0 --generate-notes
+```
+
+После этого GitHub Actions автоматически деплоит на Render.
