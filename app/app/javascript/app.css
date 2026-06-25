@@ -42,12 +42,22 @@ body {
   background: #EEF0FF;
   color: #4F63F5;
   border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tag-badge:hover {
+  background: #DDE0FF;
 }
 
 .tag-badge--active {
   background: #4F63F5;
   color: #fff;
   border: none;
+}
+
+.tag-badge--active:hover {
+  background: #3D50E0;
 }
 
 .tag-filter {

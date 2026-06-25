@@ -10,7 +10,7 @@ services:
       npm install --include=dev
       npm run build
       bundle exec rails db:migrate
-      bundle exec rails yaml_sync:sync_all
+      bundle exec rails yaml_sync:force_sync
     startCommand: bundle exec rails server -p $PORT -e production
     envVars:
       - key: RAILS_ENV
