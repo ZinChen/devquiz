@@ -1,6 +1,6 @@
 ---
 slug: sql-advanced-2
-title: PostgreSQL — продвинутый уровень
+title: SQL
 description: 'Продвинутые вопросы по SQL: синтаксис, агрегации, JOIN, подзапросы.'
 tags:
 - sql

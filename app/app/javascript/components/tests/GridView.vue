@@ -6,15 +6,20 @@
       class="test-card"
     >
       <div class="test-card__header">
-        <h2 class="test-card__title">{{ test.title }}</h2>
+        <h2 class="test-card__title">
+          {{ test.title }}
+          <span v-if="duplicateTitles.has(test.title)" class="test-card__slug">{{ test.slug }}</span>
+        </h2>
         <DifficultyBadge :difficulty="test.difficulty" class="test-card__badge" />
       </div>
       <p class="test-card__desc">{{ test.description }}</p>
       <div class="test-card__tags">
-        <span
+        <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-        >{{ tag }}</span>
+          :class="{ 'tag-badge--active': selectedTags.includes(tag) }"
+          @click.prevent.stop="$emit('toggle-tag', tag)"
+        >{{ tag }}</button>
       </div>
       <div class="test-card__meta">
         <span>{{ test.questionsCount }} вопросов</span>
@@ -48,12 +53,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 
-defineProps({ tests: Array })
-defineEmits(['clear-filters'])
+const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
+defineEmits(['clear-filters', 'toggle-tag'])
+
+const duplicateTitles = computed(() => {
+  const counts = {}
+  props.tests.forEach(t => { counts[t.title] = (counts[t.title] || 0) + 1 })
+  return new Set(Object.keys(counts).filter(title => counts[title] > 1))
+})
 </script>
 
 <style scoped>
@@ -68,7 +80,8 @@ defineEmits(['clear-filters'])
 }
 
 .test-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 1px solid #F3F4F6;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
@@ -91,6 +104,15 @@ defineEmits(['clear-filters'])
 .test-card__title {
   font-weight: 600;
   font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.test-card__slug {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #9CA3AF;
 }
 
 .test-card__badge {
@@ -121,6 +143,7 @@ defineEmits(['clear-filters'])
   gap: 1rem;
   font-size: 0.75rem;
   color: #9CA3AF;
+  margin-top: auto;
 }
 
 .test-card__attempts {

@@ -1,6 +1,6 @@
 class StatsController < ApplicationController
   def index
-    top_tests = TestMetadatum.order(attempts_count: :desc).limit(10)
+    top_tests = TestMetadatum.active.order(attempts_count: :desc).limit(10)
     recent    = TestAttempt.where.not(completed_at: nil)
                            .order(completed_at: :desc).limit(20)
 
@@ -8,7 +8,7 @@ class StatsController < ApplicationController
       global: {
         total_attempts: TestAttempt.where.not(completed_at: nil).count,
         total_users:    User.count,
-        total_tests:    TestMetadatum.count,
+        total_tests:    TestMetadatum.active.count,
         avg_score:      TestAttempt.where.not(completed_at: nil).average(:score).to_f.round(1)
       },
       top_tests: top_tests.map { |t|

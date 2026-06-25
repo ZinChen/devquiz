@@ -1,6 +1,6 @@
 ---
 slug: docker-advanced-1
-title: Docker — продвинутый уровень
+title: Docker
 description: 'Продвинутые вопросы по Docker: образы, контейнеры, сети, volumes и оркестрация.'
 tags:
 - docker

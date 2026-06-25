@@ -1,6 +1,6 @@
 class TestsController < ApplicationController
   def index
-    tests_list = TestMetadatum.order(attempts_count: :desc).to_a
+    tests_list = TestMetadatum.active.order(attempts_count: :desc).to_a
     total = tests_list.size
     tag_counts = tests_list.flat_map(&:tag_list).tally
     visible_tags = tag_counts

@@ -1,6 +1,6 @@
 ---
 slug: git-advanced-1
-title: Git — продвинутый уровень (первые 10 вопросов)
+title: Git
 description: 'Продвинутые вопросы по Git: rebase, merge, cherry-pick, хуки и история.'
 tags:
 - git

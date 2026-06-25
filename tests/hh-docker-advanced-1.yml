@@ -1,5 +1,5 @@
 slug: hh-docker-advanced-1
-title: "Docker — продвинутый уровень"
+title: Docker
 description: "Тест по продвинутым практикам работы с Docker: многоступенчатые сборки, сети, тома, безопасность и мониторинг контейнеров."
 tags: [docker, devops, hh]
 difficulty: advanced

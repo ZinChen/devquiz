@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <component :is="activeViewComponent" :tests="filteredTests" @clear-filters="clearFilters" />
+    <component :is="activeViewComponent" :tests="filteredTests" :selected-tags="selectedTags" @clear-filters="clearFilters" @toggle-tag="toggleTag" />
   </AppLayout>
 </template>
 

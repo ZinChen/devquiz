@@ -1,5 +1,5 @@
 slug: hh-docker-advanced-2
-title: "Docker — продвинутый уровень (часть 2)"
+title: Docker
 description: "Тест по продвинутым практикам Docker: оптимизация сборки, безопасность, мониторинг, оркестрация и управление конфигурацией."
 tags: [docker, devops, hh]
 difficulty: advanced

@@ -3,8 +3,18 @@ class TestMetadatum < ApplicationRecord
 
   has_many :test_attempts, foreign_key: :test_slug, primary_key: :slug
 
+  scope :active, -> { where(deleted_at: nil) }
+
   validates :slug, :title, presence: true
   validates :slug, uniqueness: true
+
+  def soft_delete!
+    update_column(:deleted_at, Time.current)
+  end
+
+  def deleted?
+    deleted_at.present?
+  end
 
   def tag_list
     tags.to_s.split(",").map(&:strip)

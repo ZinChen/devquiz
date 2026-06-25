@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_21_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_25_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,6 +27,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_190000) do
   create_table "questions", force: :cascade do |t|
     t.jsonb "correct_ids", default: [], null: false
     t.datetime "created_at", null: false
+    t.datetime "deleted_at"
     t.text "explanation"
     t.text "extended_explanation"
     t.jsonb "options", default: [], null: false
@@ -36,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_190000) do
     t.text "text", null: false
     t.string "type_field", default: "single", null: false
     t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_questions_on_deleted_at"
     t.index ["test_slug", "question_id"], name: "index_questions_on_test_slug_and_question_id", unique: true
     t.index ["test_slug"], name: "index_questions_on_test_slug"
   end
@@ -72,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_190000) do
     t.integer "best_attempt_id"
     t.decimal "best_score", precision: 5, scale: 2
     t.datetime "created_at", null: false
+    t.datetime "deleted_at"
     t.text "description"
     t.string "difficulty"
     t.integer "estimated_time"
@@ -84,6 +87,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_190000) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["attempts_count"], name: "index_test_metadata_on_attempts_count"
+    t.index ["deleted_at"], name: "index_test_metadata_on_deleted_at"
     t.index ["difficulty"], name: "index_test_metadata_on_difficulty"
     t.index ["slug"], name: "index_test_metadata_on_slug", unique: true
   end

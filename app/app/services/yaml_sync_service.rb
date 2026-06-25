@@ -5,11 +5,14 @@ class YamlSyncService
   TESTS_DIR = Rails.root.join("../tests").expand_path
 
   def self.sync_all
-    Dir.glob(TESTS_DIR.join("*.yml")).each do |path|
+    file_slugs = Dir.glob(TESTS_DIR.join("*.yml")).filter_map do |path|
       sync_file(path)
     rescue => e
       Rails.logger.error "YamlSyncService: failed to sync #{path}: #{e.message}"
+      nil
     end
+
+    soft_delete_missing(file_slugs.compact)
   end
 
   def self.load_questions(slug)
@@ -28,21 +31,33 @@ class YamlSyncService
     return unless slug.present?
 
     meta = TestMetadatum.find_or_initialize_by(slug: slug)
-    return if meta.persisted? && meta.file_checksum == checksum
 
-    meta.assign_attributes(
-      title:           data["title"],
-      description:     data["description"],
-      difficulty:      data["difficulty"],
-      estimated_time:  data["estimated_time"],
-      questions_count: Array(data["questions"]).size,
-      file_checksum:   checksum,
-      synced_at:       Time.current
-    )
-    meta.tag_list = Array(data["tags"])
-    meta.save!
+    unless meta.persisted? && meta.file_checksum == checksum
+      meta.assign_attributes(
+        title:           data["title"],
+        description:     data["description"],
+        difficulty:      data["difficulty"],
+        estimated_time:  data["estimated_time"],
+        questions_count: Array(data["questions"]).size,
+        file_checksum:   checksum,
+        deleted_at:      nil,
+        synced_at:       Time.current
+      )
+      meta.tag_list = Array(data["tags"])
+      meta.save!
 
-    sync_questions(slug, Array(data["questions"]))
+      sync_questions(slug, Array(data["questions"]))
+    end
+
+    slug
+  end
+
+  def self.soft_delete_missing(file_slugs)
+    TestMetadatum.where.not(slug: file_slugs).where(deleted_at: nil).find_each do |meta|
+      meta.soft_delete!
+      Question.where(test_slug: meta.slug).where(deleted_at: nil).update_all(deleted_at: Time.current)
+      Rails.logger.info "YamlSyncService: soft-deleted test #{meta.slug} (no yml file)"
+    end
   end
 
   def self.sync_questions(slug, questions_data)

@@ -1,6 +1,6 @@
 ---
 slug: pg-advanced-1
-title: PostgreSQL — продвинутый уровень
+title: PostgreSQL
 description: 'Продвинутые вопросы по PostgreSQL: запросы, индексы, транзакции, оптимизация.'
 tags:
 - postgresql

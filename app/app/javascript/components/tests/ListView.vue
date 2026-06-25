@@ -7,10 +7,21 @@
     >
       <div class="test-row__body">
         <div class="test-row__header">
-          <h2 class="test-row__title">{{ test.title }}</h2>
+          <h2 class="test-row__title">
+            {{ test.title }}
+            <span v-if="duplicateTitles.has(test.title)" class="test-row__slug">{{ test.slug }}</span>
+          </h2>
           <DifficultyBadge :difficulty="test.difficulty" class="test-row__badge" />
         </div>
         <p class="test-row__desc">{{ test.description }}</p>
+      </div>
+      <div class="test-row__tags">
+        <button
+          v-for="tag in test.tags" :key="tag"
+          class="badge badge-sm tag-badge"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag) }"
+          @click.prevent.stop="$emit('toggle-tag', tag)"
+        >{{ tag }}</button>
       </div>
       <div class="test-row__meta">
         <span>{{ test.questionsCount }} вопросов</span>
@@ -23,12 +34,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 
-defineProps({ tests: Array })
-defineEmits(['clear-filters'])
+const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
+defineEmits(['clear-filters', 'toggle-tag'])
+
+const duplicateTitles = computed(() => {
+  const counts = {}
+  props.tests.forEach(t => { counts[t.title] = (counts[t.title] || 0) + 1 })
+  return new Set(Object.keys(counts).filter(title => counts[title] > 1))
+})
 </script>
 
 <style scoped>
@@ -72,6 +90,16 @@ defineEmits(['clear-filters'])
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.test-row__slug {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #9CA3AF;
+  white-space: nowrap;
 }
 
 .test-row__badge {
@@ -84,6 +112,13 @@ defineEmits(['clear-filters'])
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.test-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .test-row__meta {
