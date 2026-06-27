@@ -34,6 +34,7 @@ questions:
     correct: false
     explanation: В SELECT указано salary без агрегации, но оно не включено в GROUP BY, что вызовет ошибку.
   difficulty: medium
+  topics: [queries]
   explanation: Сначала фильтруем активных (WHERE), затем группируем по отделам и считаем сумму.
   extended_explanation: |-
     В запросе нужно:
@@ -81,6 +82,7 @@ questions:
     correct: false
     explanation: HAVING корректно используется после GROUP BY.
   difficulty: medium
+  topics: [queries]
   explanation: HAVING фильтрует группы после группировки. Условие count(*) > 10 оставляет только группы с количеством клиентов больше 10.
   extended_explanation: |-
     Запрос:
@@ -120,6 +122,7 @@ questions:
     correct: true
     explanation: array_append добавляет элемент в конец массива, ANY проверяет наличие элемента, NOT исключает строки где элемент уже есть.
   difficulty: medium
+  topics: [queries]
   explanation: array_append добавляет элемент в конец массива. Условие WHERE not 'sports' = any(interests) проверяет отсутствие элемента.
   extended_explanation: |-
     Для безопасного добавления элемента в массив без создания дубликатов нужно:
@@ -165,6 +168,7 @@ questions:
     correct: false
     explanation: LIMIT не обязателен, проблема не в его отсутствии.
   difficulty: medium
+  topics: [queries]
   explanation: При JOIN один заказ может иметь несколько позиций, поэтому заказы будут подсчитаны несколько раз (по количеству позиций).
   extended_explanation: |-
     Проблема в том, что JOIN умножает строки:
@@ -210,6 +214,7 @@ questions:
     correct: false
     explanation: WHERE с IN — допустимая конструкция.
   difficulty: medium
+  topics: [queries, indexes]
   explanation: Если на customer_id в orders нет индекса или на id в blacklisted_customers нет индекса, запрос может выполняться медленно.
   extended_explanation: |-
     Медленная работа может быть вызвана:
@@ -250,6 +255,7 @@ questions:
     correct: false
     explanation: Уникальность обеспечивает только B-Tree.
   difficulty: medium
+  topics: [indexes]
   explanation: BRIN эффективен для очень больших таблиц, где данные физически отсортированы (например, по дате), и допустимо приблизительное сканирование.
   extended_explanation: |-
     BRIN (Block Range INdex) индексы:
@@ -296,6 +302,7 @@ questions:
     correct: false
     explanation: Добавление индекса не вызывает ошибок времени выполнения.
   difficulty: medium
+  topics: [indexes]
   explanation: Индекс на created_at позволит быстро находить записи за последний день, особенно при большом объеме данных.
   extended_explanation: |-
     Индекс на created_at:
@@ -351,6 +358,7 @@ questions:
     correct: true
     explanation: Serializable обнаруживает циклические зависимости и откатывает одну из транзакций.
   difficulty: medium
+  topics: [transactions]
   explanation: Serializable обнаруживает циклические зависимости (read-write conflicts) и не позволяет зафиксировать обе транзакции, откатывая одну из них.
   extended_explanation: |-
     При уровне SERIALIZABLE PostgreSQL отслеживает зависимости:
@@ -400,6 +408,7 @@ questions:
     correct: false
     explanation: INSERT блокируется CREATE INDEX.
   difficulty: medium
+  topics: [locking, indexes]
   explanation: CREATE INDEX (без CONCURRENTLY) блокирует запись, но не блокирует обычные SELECT.
   extended_explanation: |-
     CREATE INDEX без CONCURRENTLY:
@@ -447,6 +456,7 @@ questions:
     correct: false
     explanation: Запрос не связан с NULL-значениями.
   difficulty: medium
+  topics: [queries]
   explanation: HAVING count(*) > 1 оставляет только группы с количеством записей больше 1.
   extended_explanation: |-
     Запрос:
@@ -486,6 +496,7 @@ questions:
     correct: true
     explanation: explain (analyze, buffers) выполняет запрос, показывает реальное время и статистику буферов.
   difficulty: medium
+  topics: [performance]
   explanation: EXPLAIN (ANALYZE, BUFFERS) выполняет запрос и показывает реальное время и статистику использования буферов, что дает максимум информации.
   extended_explanation: |-
     EXPLAIN (ANALYZE, BUFFERS):
@@ -530,6 +541,7 @@ questions:
     correct: false
     explanation: Правила (RULE) могут перенаправлять INSERT, но это не поведение по умолчанию.
   difficulty: medium
+  topics: [schema]
   explanation: По умолчанию представления в PostgreSQL доступны только для чтения, если для них не созданы правила или триггеры INSTEAD OF.
   extended_explanation: |-
     В PostgreSQL:
@@ -586,6 +598,7 @@ questions:
     correct: true
     explanation: Триггер вставляет записи в salary_log, поэтому прямой SELECT покажет результат.
   difficulty: medium
+  topics: [schema]
   explanation: Триггер вставляет записи в salary_log, поэтому проверить его срабатывание можно прямым SELECT из этой таблицы.
   extended_explanation: |-
     Триггер:
@@ -630,6 +643,7 @@ questions:
     correct: false
     explanation: Индекс не создастся, поэтому не будет и использоваться.
   difficulty: medium
+  topics: [indexes]
   explanation: PostgreSQL проверяет права на чтение столбца при создании индекса. Если прав нет, создание индекса завершится ошибкой.
   extended_explanation: |-
     При создании индекса:
@@ -665,6 +679,7 @@ questions:
     correct: false
     explanation: Пул соединений управляет подключениями, не распределяет данные и не дает отказоустойчивости.
   difficulty: medium
+  topics: [replication]
   explanation: Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.
   extended_explanation: |-
     Для решения проблемы:

@@ -41,6 +41,7 @@ questions:
     correct: false
     explanation: Запрос вернёт количество записей (возможно 0, если все price = NULL).
   difficulty: medium
+  topics: [queries]
   explanation: COUNT(column) игнорирует NULL-значения, поэтому результат может быть меньше ожидаемого.
   extended_explanation: |-
     Функция COUNT(price) подсчитывает только те строки, где значение в колонке price **не равно NULL**. Если в таблице есть товары с неуказанной ценой (NULL), они не будут учтены, что может привести к заниженным результатам по сравнению с ожидаемыми.
@@ -82,6 +83,7 @@ questions:
     correct: false
     explanation: MAX отлично работает с датами.
   difficulty: medium
+  topics: [queries]
   explanation: Агрегатные функции (кроме COUNT(*)) игнорируют NULL. Если все значения NULL, результат будет NULL.
   extended_explanation: |-
     Агрегатная функция `MAX()` (как и другие агрегатные функции, кроме `COUNT(*)`) игнорирует NULL-значения. Если **все** значения в столбце `updated_at` равны NULL, то `MAX(updated_at)` вернет `NULL`, так как не нашлось ни одного не-NULL значения для обработки.
@@ -123,6 +125,7 @@ questions:
     correct: false
     explanation: Синтаксически запрос корректен.
   difficulty: medium
+  topics: [queries]
   explanation: INNER JOIN исключает строки с NULL в ключе соединения, поэтому условие WHERE B.id IS NULL никогда не сработает.
   extended_explanation: |-
     Запрос делает:
@@ -158,6 +161,7 @@ questions:
     correct: false
     explanation: Учитывает только category = 'A', игнорирует условие для 'B'.
   difficulty: medium
+  topics: [queries]
   explanation: CASE позволяет реализовать условную логику внутри агрегатной функции SUM.
   extended_explanation: |-
     Вариант корректно реализует требуемую логику:
@@ -217,6 +221,7 @@ questions:
     correct: true
     explanation: 'Верно: подзапрос в WHERE возвращает две колонки, у подзапроса в LEFT JOIN нет алиаса, в RIGHT JOIN обращение к old.id при отсутствии колонки id.'
   difficulty: medium
+  topics: [queries]
   explanation: 'В запросе три ошибки: подзапрос в WHERE возвращает две колонки, у подзапроса в LEFT JOIN нет алиаса, в RIGHT JOIN обращение к несуществующей колонке.'
   extended_explanation: |-
     ## Разбор ошибок в запросе:
@@ -251,6 +256,7 @@ questions:
     correct: false
     explanation: ALTER меняет свойства, но не запрос.
   difficulty: medium
+  topics: [schema]
   explanation: Чтобы изменить запрос материализованного представления, нужно удалить его и создать заново.
   extended_explanation: |-
     Материализованное представление (materialized view) — это объект базы данных, который хранит результат запроса физически. Чтобы изменить логику выборки данных, нужно изменить сам запрос, на котором основано представление. Это делается путем:
@@ -289,6 +295,7 @@ questions:
     correct: true
     explanation: 'Нужно: SELECT REPLACE(title, ''-'', '' '') FROM books;'
   difficulty: medium
+  topics: [queries]
   explanation: 'Для замены символов используется REPLACE с правильным порядком аргументов: REPLACE(строка, что_меняем, на_что_меняем).'
   extended_explanation: |-
     Ни один из предложенных вариантов не делает нужную замену. Правильный запрос:
@@ -341,6 +348,7 @@ questions:
     correct: false
     explanation: date_trunc работает, проблема в сравнении.
   difficulty: medium
+  topics: [queries]
   explanation: 'Две ошибки: regexp_replace может создать некорректное число (лишние точки), и сравнение date_trunc с ''2023'' некорректно.'
   extended_explanation: |-
     ## Разбор ошибок:
@@ -381,6 +389,7 @@ questions:
     correct: true
     explanation: 'Корректно: PARTITION BY user_id, ORDER BY trans_date, ROWS BETWEEN 2 PRECEDING AND CURRENT ROW.'
   difficulty: medium
+  topics: [queries]
   explanation: Для каждой транзакции нужно окно по пользователю (PARTITION BY), упорядоченное по времени (ORDER BY), с рамкой из текущей и двух предыдущих строк.
   extended_explanation: |-
     Правильная оконная функция:
@@ -422,6 +431,7 @@ questions:
     correct: false
     explanation: Отсутствует ALTER TABLE.
   difficulty: medium
+  topics: [schema]
   explanation: Для удаления колонки используется ALTER TABLE с DROP COLUMN.
   extended_explanation: |-
     Стандартный синтаксис удаления колонки в SQL:
@@ -469,6 +479,7 @@ questions:
     correct: false
     explanation: 'Менее эффективно: сначала диапазон, потом точное равенство.'
   difficulty: medium
+  topics: [indexes]
   explanation: Для условий с равенством и диапазоном эффективнее индекс, где первой идет колонка с равенством.
   extended_explanation: |-
     Запрос содержит:
@@ -508,6 +519,7 @@ questions:
     correct: false
     explanation: EXECUTE для функций/процедур, не для таблиц.
   difficulty: medium
+  topics: [security]
   explanation: Право на чтение в SQL дает команда GRANT SELECT.
   extended_explanation: |-
     Права на чтение в SQL означают возможность выполнять команду `SELECT`. Именно это дает `GRANT SELECT ON invoices TO reader`.
@@ -545,6 +557,7 @@ questions:
     correct: true
     explanation: Проверяет, что в эту же дату сумма больше всех других продаж.
   difficulty: medium
+  topics: [queries]
   explanation: Нужно проверить, что в какую-то дату продажи продукта были максимальными среди всех продуктов.
   extended_explanation: |-
     Требуется: продукт(ы), у которых **хотя бы в одну дату** объем продаж был **строго больше, чем все продажи любого другого продукта в эту же дату**.
@@ -582,6 +595,7 @@ questions:
     correct: false
     explanation: Это EXCEPT/MINUS.
   difficulty: medium
+  topics: [queries]
   explanation: INTERSECT возвращает только строки, присутствующие в обоих запросах.
   extended_explanation: |-
     `INTERSECT` — это оператор работы с множествами в SQL. Он возвращает **пересечение** двух запросов: только те строки, которые присутствуют **и в первом, и во втором** результате.
@@ -619,6 +633,7 @@ questions:
     correct: false
     explanation: SELECT — DQL, UPDATE — DML.
   difficulty: medium
+  topics: [schema]
   explanation: 'DDL (Data Definition Language) — операторы определения данных: CREATE, ALTER, DROP, RENAME, TRUNCATE.'
   extended_explanation: |-
     **DDL (Data Definition Language)** — операторы определения данных, работают со структурой объектов базы данных.

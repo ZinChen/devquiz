@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "Rails построен на паттерне MVC: Model управляет данными и логикой, View — представление, Controller — обработка запросов."
     difficulty: easy
+    topics: [mvc]
 
   - id: q2
     text: "Что делает команда `rails generate scaffold Post title:string body:text`?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "scaffold генерирует полный CRUD: модель, миграцию, контроллер с 7 actions, все вьюхи и маршрут resources в routes.rb."
     difficulty: easy
+    topics: [mvc]
 
   - id: q3
     text: "Что такое `Convention over Configuration` в Rails?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "CoC означает, что если файл называется user.rb и лежит в app/models, Rails сам знает, что это модель User, без явного указания."
     difficulty: easy
+    topics: [mvc]
 
   - id: q4
     text: "Какой файл отвечает за зависимости (gems) Rails-приложения?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "Gemfile управляется Bundler и содержит список всех gem-зависимостей проекта."
     difficulty: easy
+    topics: [mvc]
 
   - id: q5
     text: "Что возвращает `render json: @user` в контроллере?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "render json: сериализует объект в JSON и отправляет ответ с Content-Type: application/json."
     difficulty: easy
+    topics: [controllers]
 
   - id: q6
     text: "Что делает `before_action :authenticate_user!` в контроллере?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "before_action — это фильтр, который запускается до action. Удобно для проверки авторизации, установки переменных."
     difficulty: easy
+    topics: [controllers]
 
   - id: q7
     text: "Как Rails определяет, какой контроллер и action вызвать при запросе?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "routes.rb — центральное место маршрутизации. Команда `rails routes` показывает все маршруты."
     difficulty: easy
+    topics: [routing]
 
   - id: q8
     text: "Что такое `strong parameters` в Rails?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "Strong parameters (params.require(:user).permit(:name, :email)) защищает от mass assignment уязвимостей, разрешая только перечисленные поля."
     difficulty: medium
+    topics: [security, controllers]
 
   - id: q9
     text: "Какой HTTP-метод используется для `resources :posts` при обновлении записи?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "Rails использует PATCH для частичного обновления (update action) и PUT для полного. По умолчанию форма генерирует PATCH."
     difficulty: easy
+    topics: [routing]
 
   - id: q10
     text: "Что находится в директории `app/helpers/`?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "Helpers содержат методы для шаблонизации — форматирование дат, текста и т.д. Автоматически доступны в соответствующих вьюхах."
     difficulty: easy
+    topics: [mvc]
 
   - id: q11
     text: "Что делает `redirect_to @post` в контроллере?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "Rails вызывает url_for(@post) для генерации URL. Для модели Post и записи с id: 5 это будет /posts/5."
     difficulty: medium
+    topics: [controllers]
 
   - id: q12
     text: "Какой файл содержит все маршруты Rails-приложения?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "config/routes.rb — единственный файл маршрутизации. Команда `bin/rails routes` выводит список всех маршрутов."
     difficulty: easy
+    topics: [routing]
 
   - id: q13
     text: "Что такое `flash` в Rails?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "flash[:notice] и flash[:alert] хранятся в сессии и автоматически удаляются после следующего запроса. Используются для сообщений пользователю."
     difficulty: medium
+    topics: [controllers]
 
   - id: q14
     text: "Какая команда создаёт новое Rails-приложение с PostgreSQL?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "Флаг `-d postgresql` (или `--database=postgresql`) указывает Rails использовать PostgreSQL и добавляет gem 'pg' в Gemfile."
     difficulty: easy
+    topics: [mvc]
 
   - id: q15
     text: "Что такое `concerns` в Rails?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "Concerns — это Ruby-модули (обычно в app/models/concerns/ и app/controllers/concerns/), которые позволяют выносить повторяющийся код в переиспользуемые модули."
     difficulty: medium
+    topics: [architecture]
 
   - id: q16
     text: "Что произойдёт при вызове `User.find(999)`, если записи с id=999 нет?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "find всегда бросает RecordNotFound при отсутствии записи. Для получения nil используйте find_by(id: 999)."
     difficulty: medium
+    topics: [queries]
 
   - id: q17
     text: "Что такое `DRY` принцип в контексте Rails?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "DRY — основной принцип Rails. Избегайте дублирования кода: используйте before_action, concerns, partials и helpers."
     difficulty: easy
+    topics: [architecture]
 
   - id: q18
     text: "В какой директории Rails ищет модели по умолчанию?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "Rails автоматически загружает классы из app/ через Zeitwerk. Модели находятся в app/models/, контроллеры — в app/controllers/."
     difficulty: easy
+    topics: [mvc]
 
   - id: q19
     text: "Что делает `params` в контроллере Rails?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "params содержит все параметры запроса: из URL (?key=val), из тела формы (POST) и из пути маршрута (:id). Это ActionController::Parameters."
     difficulty: medium
+    topics: [controllers]
 
   - id: q20
     text: "Что такое `asset pipeline` в Rails?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "Asset pipeline (Sprockets или Propshaft) компилирует SCSS в CSS, CoffeeScript в JS, добавляет fingerprint к файлам и минифицирует их для продакшена."
     difficulty: medium
+    topics: [mvc]

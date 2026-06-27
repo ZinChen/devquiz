@@ -40,6 +40,7 @@ questions:
     text: SELECT first_name, last_name WHERE salary < 50000 FROM Employees;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: 'Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации.'
   extended_explanation: |-
     Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации.
@@ -71,6 +72,7 @@ questions:
     text: INTO TABLE Clients RENAME new_email TO email;
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: 'В PostgreSQL для переименования столбца используется команда ALTER TABLE с опцией RENAME COLUMN. Синтаксис: ALTER TABLE table_name RENAME COLUMN old_name TO new_name;'
   extended_explanation: |-
     В PostgreSQL для переименования столбца используется команда ALTER TABLE с опцией RENAME COLUMN. Синтаксис: ALTER TABLE table_name RENAME COLUMN old_name TO new_name;
@@ -115,6 +117,7 @@ questions:
     text: Отобразится ошибка
     correct: true
   difficulty: medium
+  topics: [queries]
   explanation: По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
   extended_explanation: |-
     По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
@@ -157,6 +160,7 @@ questions:
     text: SELECT * FROM Sales ORDER BY date, sale_amount;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: В ORDER BY сначала указывается первичная сортировка (date DESC — от поздних к ранним), затем вторичная (sale_amount ASC — по возрастанию суммы в рамках каждой даты).
   extended_explanation: |-
     В ORDER BY сначала указывается первичная сортировка (date DESC — от поздних к ранним), затем вторичная (sale_amount ASC — по возрастанию суммы в рамках каждой даты).
@@ -199,6 +203,7 @@ questions:
     text: SELECT ABS(MEDIAN(salary) - MAX(salary)) FROM Employees;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Для вычисления модуля разницы используется функция ABS(). AVG(salary) вычисляет среднюю зарплату, MAX(salary) — максимальную. Функции MEDIAN в PostgreSQL нет (есть PERCENTILE_CONT).
   extended_explanation: |-
     Для вычисления модуля разницы используется функция ABS(). AVG(salary) вычисляет среднюю зарплату, MAX(salary) — максимальную. Функции MEDIAN в PostgreSQL нет (есть PERCENTILE_CONT).
@@ -241,6 +246,7 @@ questions:
     text: SELECT SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Сначала фильтруем города по условию (WHERE city_name LIKE '%burg'), затем группируем по регионам (GROUP BY region_id) и суммируем население. HAVING используется для фильтрации после группировки.
   extended_explanation: |-
     Сначала фильтруем города по условию (WHERE city_name LIKE '%burg'), затем группируем по регионам (GROUP BY region_id) и суммируем население. HAVING используется для фильтрации после группировки.
@@ -273,6 +279,7 @@ questions:
     text: SELECT dep_name, (first_name + last_name) AS employees_list FROM Employees RIGHT JOIN Departments ON Employees.dep_id = Departments.dep_id;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Для объединения строк в PostgreSQL используется функция CONCAT() или оператор ||. INNER JOIN возвращает только те записи, где есть совпадение в обеих таблицах. В вопросе на скриншоте было 'second_name', но в схеме Employees есть 'last_name'.
   extended_explanation: |-
     Для объединения строк в PostgreSQL используется функция CONCAT() или оператор ||. INNER JOIN возвращает только те записи, где есть совпадение в обеих таблицах. В вопросе на скриншоте было 'second_name', но в схеме Employees есть 'last_name'.
@@ -316,6 +323,7 @@ questions:
     text: SELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) > salary;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Нельзя использовать агрегатные функции (AVG) непосредственно в WHERE. Нужен подзапрос, который вычисляет среднюю зарплату, а затем сравнивает с ней каждую запись. Вариант с SUM/COUNT тоже работает, но менее читаем.
   extended_explanation: |-
     Нельзя использовать агрегатные функции (AVG) непосредственно в WHERE. Нужен подзапрос, который вычисляет среднюю зарплату, а затем сравнивает с ней каждую запись. Вариант с SUM/COUNT тоже работает, но менее читаем.
@@ -369,6 +377,7 @@ questions:
     text: Перед SELECT есть AS, который не нужен.
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: 'Правильный синтаксис для создания или замены представления: CREATE OR REPLACE VIEW имя_представления AS запрос;. Порядок слов OR REPLACE фиксирован.'
   extended_explanation: |-
     Правильный синтаксис для создания или замены представления: CREATE OR REPLACE VIEW имя_представления AS запрос;. Порядок слов OR REPLACE фиксирован.
@@ -400,6 +409,7 @@ questions:
     text: Столбец с большим количеством значений Null
     correct: false
   difficulty: medium
+  topics: [indexes]
   explanation: Индексы наиболее эффективны для столбцов с высокой селективностью (большим количеством уникальных значений). Часто обновляемые столбцы индексировать невыгодно из-за накладных расходов на поддержание индекса. Столбцы с низкой кардинальностью (например, boolean) бесполезны для индексации.
   extended_explanation: |-
     Индексы наиболее эффективны для столбцов с высокой селективностью (большим количеством уникальных значений). Часто обновляемые столбцы индексировать невыгодно из-за накладных расходов на поддержание индекса. Столбцы с низкой кардинальностью (например, boolean) бесполезны для индексации.
@@ -432,6 +442,7 @@ questions:
     text: Фиксация транзакции обеспечивает сохранение изменений в базе данных, сделанных при выполнении этой транзакции
     correct: false
   difficulty: medium
+  topics: [transactions]
   explanation: В стандартном SQL (и в PostgreSQL) транзакции не могут быть вложенными. Хотя существуют точки сохранения (SAVEPOINT), они не создают полноценных вложенных транзакций. Остальные утверждения верны.
   extended_explanation: |-
     В стандартном SQL (и в PostgreSQL) транзакции не могут быть вложенными. Хотя существуют точки сохранения (SAVEPOINT), они не создают полноценных вложенных транзакций. Остальные утверждения верны.
@@ -471,6 +482,7 @@ questions:
     text: Типы данных соединяемых столбцов
     correct: false
   difficulty: medium
+  topics: [indexes, performance]
   explanation: Для эффективных соединений критически важно наличие индексов на соединяемых столбцах. Наличие первичного ключа автоматически создает индекс и гарантирует уникальность, что позволяет планировщику строить оптимальные планы выполнения. Порядок соединения важен, но он вторичен по отношению к наличию индексов.
   extended_explanation: |-
     Для эффективных соединений критически важно наличие индексов на соединяемых столбцах. Наличие первичного ключа автоматически создает индекс и гарантирует уникальность, что позволяет планировщику строить оптимальные планы выполнения. Порядок соединения важен, но он вторичен по отношению к наличию индексов.

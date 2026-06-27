@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "Конвенция Rails: belongs_to :user ищет колонку user_id в текущей таблице (posts). Имя = имя ассоциации + _id."
     difficulty: easy
+    topics: [associations]
 
   - id: q2
     text: "Что такое `has_many :through`?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "has_many :through позволяет иметь join-таблицу с атрибутами: User → Enrollment → Course. В отличие от has_and_belongs_to_many, Enrollment — полноценная модель."
     difficulty: medium
+    topics: [associations]
 
   - id: q3
     text: "Когда использовать `has_and_belongs_to_many` vs `has_many :through`?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "habtm — для чистой связи M:M без данных в join-таблице. Но has_many :through даёт больше гибкости (callbacks, validations на join-модели). Многие предпочитают always через :through."
     difficulty: medium
+    topics: [associations]
 
   - id: q4
     text: "Что делает `dependent: :destroy` в `has_many`?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "dependent: :destroy — N+1 DELETE запросов + callbacks. dependent: :delete_all — один DELETE SQL без callbacks. Для большого числа записей предпочтительнее :delete_all."
     difficulty: medium
+    topics: [associations, performance]
 
   - id: q5
     text: "Что такое полиморфные ассоциации (polymorphic)?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "Comment belongs_to :commentable, polymorphic: true — одна таблица comments с колонками commentable_type (имя класса) и commentable_id. Post и Video могут иметь комментарии."
     difficulty: hard
+    topics: [associations]
 
   - id: q6
     text: "Как Rails определяет таблицу и PK при `belongs_to :author, class_name: 'User'`?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "class_name: 'User' указывает Rails использовать модель User (таблица users). FK по умолчанию = имя_ассоциации_id = author_id. Полезно для псевдонимов (author, owner, etc.)."
     difficulty: medium
+    topics: [associations]
 
   - id: q7
     text: "Что такое STI (Single Table Inheritance) в Rails?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "class Employee < Person, class Manager < Person — обе в таблице people с колонкой type ('Employee', 'Manager'). Просто и быстро, но теряет гибкость при разных наборах атрибутов."
     difficulty: hard
+    topics: [associations, models]
 
   - id: q8
     text: "Как включить автоматическую загрузку ассоциации для избежания N+1?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "includes — умный выбор между preload (два запроса) и eager_load (JOIN); preload — всегда два запроса; eager_load — всегда JOIN. Используйте includes если не нужно фильтровать по ассоциации."
     difficulty: medium
+    topics: [performance, associations]
 
   - id: q9
     text: "Что делает `inverse_of` в ассоциации?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "Без inverse_of: post.comments.first.post — загружает post заново. С inverse_of: :post — возвращает тот же объект из памяти. Важно при сложных callback-цепочках."
     difficulty: hard
+    topics: [associations, performance]
 
   - id: q10
     text: "Можно ли добавить условие к has_many ассоциации?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "Proc (лямбда) в ассоциации задаёт условия. Это scopeed association. user.published_posts — готовый запрос с условием WHERE published = true."
     difficulty: medium
+    topics: [associations, queries]
 
   - id: q11
     text: "Что делает `touch: true` в `belongs_to :user, touch: true`?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "touch: true автоматически вызывает user.touch при изменении comment. Полезно для инвалидации кэша родительского объекта."
     difficulty: medium
+    topics: [associations]
 
   - id: q12
     text: "Как выглядит self-referential ассоциация (например, сотрудник-менеджер)?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "Самореферентные ассоциации: модель ссылается сама на себя. Нужен class_name и явный foreign_key. Используется для иерархий: категории, комментарии с ответами, оргструктуры."
     difficulty: hard
+    topics: [associations]
 
   - id: q13
     text: "Что вернёт `user.posts.build(title: 'Hello')`?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "build — аналог new, создаёт объект в памяти с автоматически установленным foreign key. Для сохранения используйте create или явный save."
     difficulty: medium
+    topics: [associations]
 
   - id: q14
     text: "Для чего нужна опция `counter_cache: true` в belongs_to?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "counter_cache обновляет posts_count в users при создании/удалении поста. user.posts.count → не делает SQL, читает posts_count. Требует колонку posts_count с default: 0."
     difficulty: medium
+    topics: [associations, performance]
 
   - id: q15
     text: "Что такое `has_one :through`?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "User has_one :profile, Profile has_one :avatar → User has_one :avatar, through: :profile. Навигация через промежуточную ассоциацию."
     difficulty: medium
+    topics: [associations]
 
   - id: q16
     text: "Что произойдёт при `has_many :posts, dependent: :restrict_with_error` и попытке удалить пользователя с постами?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "restrict_with_error добавляет ошибку и возвращает false из destroy. restrict_with_exception бросает DeleteRestrictionError. :nullify — ставит FK в NULL."
     difficulty: hard
+    topics: [associations]
 
   - id: q17
     text: "Как указать custom primary key для ассоциации?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "primary_key: позволяет использовать другую колонку (например, UUID) как PK в ассоциации. Пара к foreign_key: на другой стороне."
     difficulty: hard
+    topics: [associations, schema]
 
   - id: q18
     text: "Что делает `autosave: true` в ассоциации?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "autosave: true — изменения в ассоциированных объектах сохраняются когда сохраняется родитель. Полезно для nested attributes и form objects."
     difficulty: hard
+    topics: [associations]
 
   - id: q19
     text: "В чём разница между `destroy` и `delete` для ассоциаций?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "user.posts.destroy(post) → загружает объект, вызывает callbacks. user.posts.delete(post) → SQL DELETE без Ruby overhead. Для bulk-удаления без callbacks используйте delete_all."
     difficulty: medium
+    topics: [associations, performance]
 
   - id: q20
     text: "Что такое `strict_loading` в Rails 6.1+?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "strict_loading: true на модели или запросе бросает ActiveRecord::StrictLoadingViolationError при ленивой загрузке ассоциации. Помогает найти N+1 в development."
     difficulty: hard
+    topics: [performance, queries]

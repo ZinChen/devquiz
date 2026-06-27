@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "find бросает ActiveRecord::RecordNotFound если запись не найдена. find_by возвращает nil. Используйте find_by когда nil — допустимый результат."
     difficulty: easy
+    topics: [queries]
 
   - id: q2
     text: "Что делает `User.where(active: true).limit(10).order(:created_at)`?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "ActiveRecord использует lazy loading — запросы откладываются и строятся в цепочку. SQL выполняется только когда нужны данные (each, to_a, first и т.д.)."
     difficulty: medium
+    topics: [queries]
 
   - id: q3
     text: "Как выбрать всех пользователей, у которых нет ни одного поста?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "LEFT JOIN + WHERE posts.id IS NULL — стандартный способ. Вариант с includes и select работает, но загружает все данные в Ruby — неэффективно."
     difficulty: medium
+    topics: [queries, associations]
 
   - id: q4
     text: "Что делает `scope :published, -> { where(published: true) }` в модели?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "Scope определяет class-метод, возвращающий ActiveRecord::Relation. Удобно для повторно используемых условий, которые можно комбинировать."
     difficulty: medium
+    topics: [queries]
 
   - id: q5
     text: "Что такое N+1 проблема и как её решить в Rails?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "N+1: один запрос на коллекцию + N запросов для каждого объекта (например, posts.each { |p| p.author.name }). `includes(:author)` загружает всё за 2 запроса."
     difficulty: medium
+    topics: [performance, queries]
 
   - id: q6
     text: "Чем `includes` отличается от `joins` в ActiveRecord?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "includes генерирует SELECT * FROM associations и хранит в памяти (eager loading). joins добавляет JOIN в основной запрос для условий WHERE, но не загружает ассоциации."
     difficulty: hard
+    topics: [queries, performance]
 
   - id: q7
     text: "Что делает `User.select(:id, :email)`?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "select ограничивает колонки в SQL-запросе. Полезно при больших таблицах — не загружать ненужные данные."
     difficulty: medium
+    topics: [queries, performance]
 
   - id: q8
     text: "Как выполнить произвольный SQL-запрос в Rails?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "connection.execute возвращает PG::Result. find_by_sql возвращает объекты модели. Оба метода — крайний случай, когда ORM не справляется."
     difficulty: medium
+    topics: [queries]
 
   - id: q9
     text: "Что возвращает `User.count`?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "count выполняет SELECT COUNT(*) и возвращает Integer. Аналоги: sum, average, minimum, maximum — для агрегатных функций."
     difficulty: easy
+    topics: [queries]
 
   - id: q10
     text: "Что делает `update_all` vs `each { update }`?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "User.where(active: false).update_all(active: true) — один SQL. Быстрее, но пропускает callbacks и validations. Используйте осторожно."
     difficulty: hard
+    topics: [performance, queries]
 
   - id: q11
     text: "Что такое `pluck` в ActiveRecord?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "User.pluck(:email) → ['a@b.com', ...]. В отличие от map { email }, не создаёт объекты User — быстрее и меньше памяти потребляет."
     difficulty: medium
+    topics: [queries, performance]
 
   - id: q12
     text: "Как добавить default_scope к модели и какие риски это несёт?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "default_scope применяется к КАЖДОМУ запросу модели. Легко вызывает неожиданные результаты. Многие избегают его в пользу явных scope."
     difficulty: hard
+    topics: [queries, models]
 
   - id: q13
     text: "Что делает `Post.where(\"created_at > ?\", 1.week.ago)`?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "Плейсхолдер ? экранирует значение. НИКОГДА не интерполируйте переменные в строку WHERE — это SQL-инъекция. Используйте ? или хэш-форму."
     difficulty: medium
+    topics: [security, queries]
 
   - id: q14
     text: "Какой коллбэк вызывается ПОСЛЕ успешного сохранения новой записи?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "Порядок коллбэков при create: before_validation → after_validation → before_save → before_create → INSERT → after_create → after_save → after_commit."
     difficulty: medium
+    topics: [models]
 
   - id: q15
     text: "Что такое `optimistic locking` в ActiveRecord?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "При добавлении колонки lock_version Rails инкрементирует её при каждом UPDATE. Если версии не совпадают — бросается StaleObjectError. Подходит для конкурентного редактирования."
     difficulty: hard
+    topics: [concurrency, transactions]
 
   - id: q16
     text: "Как работает `transaction` в ActiveRecord?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "ActiveRecord::Base.transaction { ... } — атомарное выполнение. Если внутри блока возникает исключение — ROLLBACK. Иначе COMMIT."
     difficulty: medium
+    topics: [transactions]
 
   - id: q17
     text: "Что делает `distinct` в запросе `User.joins(:posts).distinct`?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "При joins один пользователь может появиться несколько раз (по числу постов). distinct добавляет SELECT DISTINCT — каждый пользователь только один раз."
     difficulty: medium
+    topics: [queries]
 
   - id: q18
     text: "Что произойдёт при вызове `user.save` если валидация не пройдена?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "save возвращает false при ошибках валидации. save! бросает RecordInvalid. Ошибки доступны через user.errors.full_messages."
     difficulty: easy
+    topics: [models]
 
   - id: q19
     text: "Для чего используется `group` в ActiveRecord?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "Post.group(:status).count → { 'draft' => 5, 'published' => 20 }. Комбинируется с count, sum, average для агрегатных отчётов."
     difficulty: medium
+    topics: [queries]
 
   - id: q20
     text: "Что такое `merge` в контексте ActiveRecord relations?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "User.joins(:posts).merge(Post.published) эквивалентно User.joins(:posts).where(posts: { published: true }). Позволяет переиспользовать scope другой модели."
     difficulty: hard
+    topics: [queries, associations]

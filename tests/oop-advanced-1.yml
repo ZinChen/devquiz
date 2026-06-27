@@ -33,6 +33,7 @@ questions:
     correct: false
     explanation: Неверно. Это описание композиции, а не наследования.
   difficulty: medium
+  topics: [oop]
   explanation: Наследование позволяет дочерним классам использовать код родителя (заимствование), изменять его поведение (переопределение) и добавлять новый (расширение).
   extended_explanation: |-
     Наследование решает три задачи:
@@ -74,6 +75,7 @@ questions:
     correct: false
     explanation: Нет инкапсуляции поведения, только данных.
   difficulty: medium
+  topics: [oop]
   explanation: Инкапсуляция — это не просто private поля, а контроль доступа к ним через методы, которые могут содержать логику.
   extended_explanation: |-
     В классе Account:
@@ -115,6 +117,7 @@ questions:
     correct: false
     explanation: Они работают между объектами разных классов и ослабляют связанность.
   difficulty: medium
+  topics: [oop]
   explanation: Поведенческие паттерны сосредоточены на алгоритмах и взаимодействии объектов, распределяя обязанности между ними.
   extended_explanation: |-
     Поведенческие паттерны (Chain of Responsibility, Command, Strategy, Observer и др.):
@@ -176,6 +179,7 @@ questions:
     correct: true
     explanation: Квадрат не может подменять прямоугольник, так как меняет поведение методов.
   difficulty: medium
+  topics: [oop]
   explanation: 'Классическое нарушение LSP: наследник (Квадрат) изменяет поведение родителя (Прямоугольник) так, что объекты наследника нельзя использовать вместо объектов родителя.'
   extended_explanation: |-
     Клиентский код, ожидающий Прямоугольник, может:
@@ -217,6 +221,7 @@ questions:
     correct: false
     explanation: Такого модификатора нет в C#.
   difficulty: medium
+  topics: [oop]
   explanation: Protected Internal обеспечивает доступ из класса-наследника (protected) и из любого места в текущей сборке (internal).
   extended_explanation: |-
     - **protected**: класс + наследники (даже в другой сборке)
@@ -256,6 +261,7 @@ questions:
     correct: true
     explanation: 'Правильно: один метод реализует оба интерфейса.'
   difficulty: medium
+  topics: [oop]
   explanation: Если методы в интерфейсах имеют одинаковую сигнатуру, то одна реализация в классе удовлетворяет требованиям всех интерфейсов.
   extended_explanation: |-
     Интерфейсы определяют только контракт (сигнатуру). Если два интерфейса требуют метод `void Print()`, то:
@@ -295,6 +301,7 @@ questions:
     correct: false
     explanation: Дублирование кода (нарушение DRY).
   difficulty: medium
+  topics: [oop]
   explanation: Расчет налога — отдельная ответственность, не связанная напрямую с управлением заказом. Лучше вынести в отдельный класс.
   extended_explanation: |-
     - Класс `Order` отвечает за состав заказа и общую стоимость
@@ -336,6 +343,7 @@ questions:
     correct: false
     explanation: Нарушает SRP и OCP.
   difficulty: medium
+  topics: [oop]
   explanation: Клиенты не должны зависеть от методов, которые они не используют. Email поддерживает вложения, а SMS и Push — нет.
   extended_explanation: |-
     - **Notifiable**: обязательный метод `отправить()` для всех
@@ -377,6 +385,7 @@ questions:
     correct: true
     explanation: Классический полиморфизм через наследование.
   difficulty: medium
+  topics: [oop]
   explanation: Полиморфизм позволяет работать с разными типами объектов через единый интерфейс (базовый класс).
   extended_explanation: |-
     1. Базовый класс `Payment` объявляет абстрактный метод `processPayment()`
@@ -417,6 +426,7 @@ questions:
     correct: false
     explanation: Паттерны ослабляют связанность.
   difficulty: medium
+  topics: [oop]
   explanation: Жесткое связывание (high coupling) возникает, когда классы знают детали реализации друг друга и напрямую зависят от конкретных классов.
   extended_explanation: |-
     Факторы, ухудшающие связанность:
@@ -458,6 +468,7 @@ questions:
     correct: false
     explanation: Сжатие необязательно, и не только строка.
   difficulty: medium
+  topics: [oop]
   explanation: Сериализация — преобразование объекта в формат для хранения или передачи с возможностью восстановления.
   extended_explanation: |-
     Сериализация нужна для:
@@ -500,6 +511,7 @@ questions:
     correct: false
     explanation: Это процедурное программирование.
   difficulty: medium
+  topics: [oop]
   explanation: Для ООП-языков характерны инкапсуляция, наследование (в т.ч. множественное через интерфейсы/миксины) и полиморфизм.
   extended_explanation: |-
     - **Python**: множественное наследование классов, миксины
@@ -542,6 +554,7 @@ questions:
     correct: false
     explanation: Это про композицию, не про абстрактное поведение.
   difficulty: medium
+  topics: [oop]
   explanation: Абстракция позволяет выделить общий интерфейс, а полиморфизм — работать с разными реализациями через этот интерфейс.
   extended_explanation: |-
     Описанная ситуация — классическое использование:
@@ -583,6 +596,7 @@ questions:
     correct: false
     explanation: Наследование — только один из принципов.
   difficulty: medium
+  topics: [oop]
   explanation: 'ООП — это подход, объединяющий данные и методы в объекты и базирующийся на четырех основных принципах: инкапсуляция, наследование, полиморфизм, абстракция.'
   extended_explanation: |-
     Полное определение ООП включает:
@@ -626,6 +640,7 @@ questions:
     correct: false
     explanation: 'Неверно: ООБД как раз ориентированы на сложные объекты и структуры.'
   difficulty: medium
+  topics: [oop]
   explanation: ООБД хранят объекты напрямую, в том же виде, что и в языке программирования, что устраняет необходимость в преобразовании объектно-реляционного отображения (ORM).
   extended_explanation: |-
     Объектно-ориентированные базы данных (ООБД) имеют следующие ключевые особенности:
