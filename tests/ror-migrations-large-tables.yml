@@ -1,0 +1,219 @@
+slug: ror-migrations-large-tables
+title: "Rails: Миграции на больших таблицах"
+description: "Безопасные миграции в продакшне: нулевое время простоя, DDL-локи, CONCURRENTLY, бэкфилл и PostgreSQL-специфика."
+tags: [rails, migrations, postgresql, locking, zero-downtime, advanced]
+difficulty: advanced
+estimated_time: 25
+
+questions:
+  - id: q1
+    type: code_challenge
+    difficulty: hard
+    topics: [migrations, locking]
+    text: "Миграция добавляет индекс на таблицу users (10 млн строк). Без одной строки она заблокирует таблицу на минуты. Что нужно вписать вместо ___?"
+    code: |
+      class AddIndexToUsersEmail < ActiveRecord::Migration[7.0]
+        ___
+
+        def change
+          add_index :users, :email, algorithm: :concurrently
+        end
+      end
+    answer: "disable_ddl_transaction!"
+    explanation: "CONCURRENTLY запрещён внутри транзакции. Rails по умолчанию оборачивает каждую миграцию в BEGIN/COMMIT. disable_ddl_transaction! отключает эту обёртку, позволяя PostgreSQL строить индекс без ACCESS EXCLUSIVE лока. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Migration.html"
+
+  - id: q2
+    type: code_challenge
+    difficulty: hard
+    topics: [indexes, locking]
+    text: "add_index без флага берёт ACCESS EXCLUSIVE лок и блокирует все запросы. Какой аргумент нужно добавить вместо ___, чтобы индекс создавался без блокировки?"
+    code: |
+      class AddIndexToOrdersUserId < ActiveRecord::Migration[7.0]
+        disable_ddl_transaction!
+
+        def change
+          add_index :orders, :user_id, ___
+        end
+      end
+    answer: "algorithm: :concurrently"
+    explanation: "algorithm: :concurrently — PostgreSQL-специфичный флаг. Индекс строится в фоне, таблица остаётся доступной для чтения и записи. Требует disable_ddl_transaction!. Если процесс прерывётся — останется INVALID-индекс, который нужно вручную удалить. Источник: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY"
+
+  - id: q3
+    type: code_challenge
+    difficulty: hard
+    topics: [locking, schema]
+    text: "Миграция делает ALTER TABLE и берёт DDL-лок. Если в это время есть долгие запросы, лок будет ждать, блокируя новые запросы. Что нужно вставить вместо ___, чтобы миграция упала с ошибкой через 2 секунды вместо бесконечного ожидания?"
+    code: |
+      class AddStatusToOrders < ActiveRecord::Migration[7.0]
+        def up
+          ___
+          add_column :orders, :status, :string, default: 'pending'
+        end
+      end
+    answer: "execute \"SET lock_timeout = '2s'\""
+    explanation: "lock_timeout прерывает попытку захвата лока, если она длится дольше указанного времени. Лучше упасть быстро и повторить попытку, чем блокировать все запросы на время ожидания. Устанавливать стоит в up, а не change, так как применяется только в текущей транзакции. Источник: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT"
+
+  - id: q4
+    type: code_challenge
+    difficulty: hard
+    topics: [schema, locking]
+    text: "Добавление NOT NULL-столбца в таблицу с 50 млн строк перезаписывает каждую строку и держит лок всё это время. Первый шаг безопасного способа — добавить столбец без NOT NULL, но с дефолтом. Вместо ___ вставь вызов add_column."
+    code: |
+      # Шаг 1 из 3: добавить столбец без NOT NULL
+      class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
+        def up
+          ___
+        end
+      end
+
+      # Шаг 2: бэкфилл in_batches
+      # Шаг 3: add_not_null_constraint / change_column_null
+    answer: "add_column :users, :verified, :boolean, default: false"
+    explanation: "Начиная с PostgreSQL 11 и Rails 6.1, добавление столбца с DEFAULT без NOT NULL безопасно: значение хранится в метаданных таблицы, строки не переписываются. Добавляйте NOT NULL отдельной миграцией после бэкфилла. Источник: https://www.postgresql.org/docs/11/sql-altertable.html"
+
+  - id: q5
+    type: code_challenge
+    difficulty: hard
+    topics: [migrations, performance]
+    text: "Нужно проставить значение нового столбца для 10 млн строк. UPDATE без батчинга блокирует таблицу и создаёт огромную транзакцию. Что нужно вписать вместо ___ для безопасного бэкфилла?"
+    code: |
+      class BackfillUserVerified < ActiveRecord::Migration[7.0]
+        disable_ddl_transaction!
+
+        def up
+          User.___(of: 1000) do |batch|
+            batch.update_all(verified: true)
+          end
+        end
+      end
+    answer: "in_batches"
+    explanation: "in_batches разбивает UPDATE на маленькие транзакции по N строк. Каждая партия держит лок только на своё время. disable_ddl_transaction! нужен чтобы Rails не обернул всё в одну транзакцию. find_each не подходит — он загружает объекты в память и делает UPDATE по одной записи. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-in_batches"
+
+  - id: q6
+    type: code_challenge
+    difficulty: hard
+    topics: [schema, locking]
+    text: "Добавление FK с валидацией сканирует всю таблицу с ShareRowExclusiveLock. На большой таблице — это долго. Какой параметр добавить вместо ___, чтобы FK добавился мгновенно без полного сканирования?"
+    code: |
+      class AddFkOrdersToUsers < ActiveRecord::Migration[7.0]
+        def change
+          add_foreign_key :orders, :users, ___
+        end
+      end
+    answer: "validate: false"
+    explanation: "validate: false добавляет FK-ограничение как NOT VALID: новые строки валидируются, но существующие — нет. Затем в отдельной миграции запускается validate_constraint с SHARE UPDATE EXCLUSIVE локом (не блокирует чтение/запись). Источник: https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-VALIDATE-CONSTRAINT"
+
+  - id: q7
+    type: code_challenge
+    difficulty: medium
+    topics: [schema, locking]
+    text: "Вторым шагом нужно провалидировать FK-ограничение. Это использует более мягкий лок, чем первоначальное ADD CONSTRAINT. Что нужно вписать вместо ___?"
+    code: |
+      # Шаг 1 (предыдущая миграция): add_foreign_key :orders, :users, validate: false
+      # Шаг 2: валидация существующих строк
+      class ValidateFkOrdersToUsers < ActiveRecord::Migration[7.0]
+        def change
+          ___
+        end
+      end
+    answer: "validate_foreign_key :orders, :users"
+    explanation: "validate_foreign_key выполняет ALTER TABLE ... VALIDATE CONSTRAINT. Это берёт SHARE UPDATE EXCLUSIVE лок, который не блокирует обычные SELECT/INSERT/UPDATE/DELETE. Можно запускать в продакшне без простоя. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-validate_foreign_key"
+
+  - id: q8
+    type: code_challenge
+    difficulty: hard
+    topics: [schema, migrations]
+    text: "change_column на большой таблице переписывает каждую строку и держит ACCESS EXCLUSIVE лок на всё это время. Если нужно только поменять DEFAULT у столбца — есть безопасная альтернатива. Что вписать вместо ___?"
+    code: |
+      # Опасно для больших таблиц:
+      # change_column :products, :status, :string, default: 'active'
+
+      # Безопасно — меняет только DEFAULT в метаданных:
+      class ChangeProductStatusDefault < ActiveRecord::Migration[7.0]
+        def change
+          ___ :products, :status, "active"
+        end
+      end
+    answer: "change_column_default"
+    explanation: "change_column_default выполняет ALTER TABLE ... ALTER COLUMN ... SET DEFAULT — моментальная операция, не трогающая строки. change_column же переписывает всю таблицу, потому что меняет тип или другие атрибуты. Для NULL→NOT NULL тоже нужен отдельный подход. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
+
+  - id: q9
+    type: code_challenge
+    difficulty: hard
+    topics: [indexes, locking]
+    text: "Удаление индекса тоже может блокировать таблицу. Какой аргумент добавить вместо ___, чтобы индекс удалился без ACCESS EXCLUSIVE лока?"
+    code: |
+      class RemoveOldIndexFromUsers < ActiveRecord::Migration[7.0]
+        disable_ddl_transaction!
+
+        def change
+          remove_index :users, :email, ___
+        end
+      end
+    answer: "algorithm: :concurrently"
+    explanation: "DROP INDEX CONCURRENTLY (PostgreSQL 9.2+) удаляет индекс без блокировки DML. Rails поддерживает это через algorithm: :concurrently в remove_index. Требует disable_ddl_transaction!. Не работает в транзакции и не поддерживает IF EXISTS одновременно. Источник: https://www.postgresql.org/docs/current/sql-dropindex.html"
+
+  - id: q10
+    type: code_challenge
+    difficulty: medium
+    topics: [migrations, schema]
+    text: "Миграция делает необратимое действие — удаляет столбец. Метод change не может автоматически это откатить. Какой метод нужно использовать вместо ___, чтобы корректно описать направление миграции?"
+    code: |
+      class RemoveOldTokenFromUsers < ActiveRecord::Migration[7.0]
+        def ___(dir)
+          dir.up   { remove_column :users, :legacy_token }
+          dir.down { add_column    :users, :legacy_token, :string }
+        end
+      end
+    answer: "reversible"
+    explanation: "reversible позволяет описать оба направления внутри change-метода. Альтернатива — отдельные up и down методы. Rails вызовет исключение ActiveRecord::IrreversibleMigration при попытке отката миграции, если не описать down. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-reversible"
+
+  - id: q11
+    type: code_challenge
+    difficulty: hard
+    topics: [schema, locking]
+    text: "NOT NULL-ограничение с CHECK NOT VALID позволяет добавить его мгновенно, а затем валидировать отдельно. Что нужно вписать вместо ___, чтобы добавить check-ограничение без немедленной валидации всей таблицы?"
+    code: |
+      class AddNotNullCheckToUsersEmail < ActiveRecord::Migration[7.0]
+        def up
+          add_check_constraint :users,
+            "email IS NOT NULL",
+            name: "users_email_not_null",
+            ___
+        end
+      end
+    answer: "validate: false"
+    explanation: "validate: false (Rails 6.1+) добавляет CHECK NOT VALID — мгновенная операция. Новые строки сразу валидируются, существующие — нет. Затем запускается validate_check_constraint в отдельной миграции. Это позволяет добавить NOT NULL на таблицу с миллионами строк без простоя. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_check_constraint"
+
+  - id: q12
+    type: code_challenge
+    difficulty: medium
+    topics: [migrations, performance]
+    text: "suppress_messages убирает вывод SQL в лог при выполнении миграций. Но есть другой метод, который позволяет запускать произвольный Ruby-код внутри миграции — например, для бэкфилла через модель. Что вписать вместо ___, чтобы вывести прогресс бэкфилла?"
+    code: |
+      class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+        def up
+          User.find_each.with_index do |user, i|
+            user.update_column(:slug, user.name.parameterize)
+            ___ "Processed #{i}" if (i % 1000).zero?
+          end
+        end
+      end
+    answer: "say"
+    explanation: "say — встроенный метод ActiveRecord::Migration для вывода сообщений в лог миграций. say_with_time замеряет и выводит время выполнения блока. announce выводит заголовок секции. Эти методы правильнее puts/Rails.logger в контексте миграций. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Migration.html#method-i-say"
+
+  - id: q13
+    type: code_challenge
+    difficulty: hard
+    topics: [migrations, locking]
+    text: "Таблица posts имеет 20 млн строк. Нужно добавить индекс без простоя. Напиши полное тело класса миграции — два метода или один с нужным объявлением (вместо ___)."
+    code: |
+      class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
+        ___
+
+        def change
+          add_index :posts, :published_at, algorithm: :concurrently
+        end
+      end
+    answer: "disable_ddl_transaction!"
+    explanation: "Финальная проверка: CONCURRENTLY всегда требует disable_ddl_transaction!. Без него Rails бросит ошибку 'index cannot be created concurrently within a transaction'. Паттерн disable_ddl_transaction! + algorithm: :concurrently — стандарт для zero-downtime индексов в Rails. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-the-disable-ddl-transaction-method"

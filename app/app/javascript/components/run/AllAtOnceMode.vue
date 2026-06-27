@@ -29,7 +29,13 @@
         </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
 
+        <CodeChallengeQuestion
+          v-if="q.type === 'code_challenge'"
+          :question="q"
+          :answers="answers"
+        />
         <QuestionOptions
+          v-else
           :question="q"
           :answers="answers"
           :optionStyle="optionStyle"
@@ -56,6 +62,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
+import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 
 const props = defineProps({

@@ -30,7 +30,9 @@ export function useQuizSession(test, questionsSource) {
 
   onMounted(() => {
     questions.value.forEach(q => {
-      answers.value[q.id] = q.type === 'multiple' ? [] : null
+      if (q.type === 'multiple') answers.value[q.id] = []
+      else if (q.type === 'code_challenge') answers.value[q.id] = ''
+      else answers.value[q.id] = null
     })
 
     try {
@@ -82,7 +84,9 @@ export function useQuizSession(test, questionsSource) {
 
   function isAnswered(q) {
     const a = answers.value[q.id]
-    return q.type === 'multiple' ? a?.length > 0 : a !== null
+    if (q.type === 'multiple')      return a?.length > 0
+    if (q.type === 'code_challenge') return typeof a === 'string' && a.trim().length > 0
+    return a !== null
   }
 
   const timeDisplay = computed(() => {
@@ -99,7 +103,9 @@ export function useQuizSession(test, questionsSource) {
     const normalized = {}
     questions.value.forEach(q => {
       const a = answers.value[q.id]
-      normalized[q.id] = q.type === 'multiple' ? (a || []) : (a ? [a] : [])
+      if (q.type === 'multiple')       normalized[q.id] = a || []
+      else if (q.type === 'code_challenge') normalized[q.id] = [a || '']
+      else                             normalized[q.id] = a ? [a] : []
     })
     localStorage.removeItem(STORAGE_KEY)
     router.post(`/tests/${test.slug}/run`, {

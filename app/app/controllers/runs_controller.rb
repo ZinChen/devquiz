@@ -35,8 +35,12 @@ class RunsController < ApplicationController
       next unless question
 
       selected_arr = Array(selected)
-      correct_ids  = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
-      is_correct   = selected_arr.sort == correct_ids.sort
+      is_correct   = if question["type"] == "code_challenge"
+        selected_arr.first.to_s.strip.downcase == question["answer"].to_s.strip.downcase
+      else
+        correct_ids = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
+        selected_arr.sort == correct_ids.sort
+      end
 
       correct_count += 1 if is_correct
 
@@ -111,17 +115,30 @@ class RunsController < ApplicationController
     attempt.test_attempt_answers.map do |ans|
       q = questions_map[ans.question_id]
       next unless q
-      {
+
+      base = {
         question_id:          ans.question_id,
         question_text:        q["text"],
-        options:              q["options"].map { |o| o.slice("id", "text", "explanation") },
-        correct_ids:          q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
-        selected_options:     ans.selected_options,
+        type:                 q["type"].presence || "single",
         correct:              ans.correct,
         explanation:          q["explanation"],
         extended_explanation: q["extended_explanation"].presence,
         recommendation:       q["recommendation"].presence
       }
+
+      if q["type"] == "code_challenge"
+        base.merge(
+          code:            q["code"],
+          correct_answer:  q["answer"],
+          selected_answer: ans.selected_options.first.to_s
+        )
+      else
+        base.merge(
+          options:          q["options"].map { |o| o.slice("id", "text", "explanation") },
+          correct_ids:      q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
+          selected_options: ans.selected_options
+        )
+      end
     end.compact
   end
 

@@ -36,7 +36,20 @@
           <p class="result-item__question" v-html="formatText(item.questionText)"></p>
         </div>
 
-        <div class="result-item__options">
+        <div v-if="item.type === 'code_challenge'" class="result-code-challenge">
+          <pre class="result-code-block"><code>{{ item.code }}</code></pre>
+          <div class="result-code-answers">
+            <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
+              <span class="result-code-answer__label">Ваш ответ:</span>
+              <code class="result-code-answer__value">{{ item.selectedAnswer || '(пусто)' }}</code>
+            </div>
+            <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
+              <span class="result-code-answer__label">Правильный ответ:</span>
+              <code class="result-code-answer__value">{{ item.correctAnswer }}</code>
+            </div>
+          </div>
+        </div>
+        <div v-else class="result-item__options">
           <div
             v-for="(opt, oi) in item.options" :key="opt.id"
             class="result-option"
@@ -374,5 +387,61 @@ function optionLetterStyle(item, optId) {
   color: #4F63F5;
   word-break: break-all;
   text-decoration: underline;
+}
+
+.result-code-challenge {
+  margin-bottom: 0.75rem;
+}
+
+.result-code-block {
+  background: #1E1E2E;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  margin: 0 0 0.5rem;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #CDD6F4;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.result-code-block code {
+  font-family: inherit;
+}
+
+.result-code-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.result-code-answer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.result-code-answer--correct {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.result-code-answer--wrong {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.result-code-answer__label {
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.result-code-answer__value {
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.875rem;
 }
 </style>

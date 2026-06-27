@@ -27,7 +27,14 @@
           <p class="question-card__counter">Вопрос {{ currentIndex + 1 }} из {{ questions.length }}</p>
           <p class="question-card__text" v-html="formatText(currentQuestion.text)"></p>
 
+          <CodeChallengeQuestion
+            v-if="currentQuestion.type === 'code_challenge'"
+            :question="currentQuestion"
+            :answers="answers"
+            @submit-enter="isAnswered(currentQuestion) && currentIndex < questions.length - 1 ? goTo(currentIndex + 1) : null"
+          />
           <QuestionOptions
+            v-else
             :question="currentQuestion"
             :answers="answers"
             :optionStyle="optionStyle"
@@ -70,6 +77,7 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
+import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 
 const props = defineProps({
   questions:         Array,
