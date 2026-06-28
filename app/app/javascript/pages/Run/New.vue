@@ -11,6 +11,7 @@
           <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
         </div>
         <button
+          type="button"
           @click="settingsOpen = !settingsOpen"
           class="run-header__settings-btn"
           title="Настройки"
@@ -29,6 +30,7 @@
         v-model:mode="mode"
         v-model:challengeMode="challengeMode"
         :hasCodeChallenge="hasCodeChallenge"
+        :locked="sessionStarted"
       />
     </div>
 
@@ -75,6 +77,7 @@ const {
   answers,
   challengeMode,
   savedIndex,
+  sessionStarted,
   answeredCount,
   timeDisplay,
   timerWarning,

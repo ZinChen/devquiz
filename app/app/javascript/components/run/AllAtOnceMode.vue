@@ -165,7 +165,7 @@ let programmaticScroll = false
 let scrollEndTimer = null
 
 function handleScroll() {
-  if (programmaticScroll) {
+if (programmaticScroll) {
     clearTimeout(scrollEndTimer)
     scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
     return

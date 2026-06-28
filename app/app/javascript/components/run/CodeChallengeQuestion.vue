@@ -4,7 +4,7 @@
     <!-- ── highlight mode ─────────────────────────────────────────── -->
     <template v-if="mode === 'highlight'">
       <p class="code-challenge__hint">{{ modeData.hint || 'Кликни на проблемную строку' }}</p>
-      <div class="code-block-wrap code-block-wrap--lines">
+      <div class="code-block-inner-wrap code-block-inner-wrap--lines">
         <div
           v-for="(line, i) in highlightLines"
           :key="i"
@@ -17,8 +17,8 @@
 
     <!-- ── fill mode ──────────────────────────────────────────────── -->
     <template v-else-if="mode === 'fill'">
-      <div class="code-block-wrap">
-        <pre class="code-block"><code><template
+      <div class="code-block-inner-wrap">
+        <pre class="code-block-inner"><code><template
             v-for="(part, i) in fillParts"
             :key="i"
           ><template v-if="part.type === 'text'">{{ part.value }}</template><span
@@ -40,7 +40,7 @@
     <!-- ── fix mode ───────────────────────────────────────────────── -->
     <template v-else-if="mode === 'fix'">
       <p class="code-challenge__hint">Исправь код ниже</p>
-      <div class="code-block-wrap code-block-wrap--fix">
+      <div class="code-block-inner-wrap code-block-inner-wrap--fix">
         <textarea
           ref="fixTextareaEl"
           v-model="fixAnswer"
@@ -124,9 +124,9 @@ function focusActive() {
   nextTick(() => {
     if (props.mode === 'fill') {
       const el = Array.isArray(fillInputEl.value) ? fillInputEl.value[0] : fillInputEl.value
-      el?.focus()
+      el?.focus({ preventScroll: true })
     } else if (props.mode === 'fix') {
-      fixTextareaEl.value?.focus()
+      fixTextareaEl.value?.focus({ preventScroll: true })
     }
   })
 }
@@ -146,29 +146,29 @@ watch(() => props.mode, focusActive)
   margin-bottom: 0.375rem;
 }
 
-.code-block-wrap {
-  background: #1E1E2E;
+.code-block-inner-wrap {
+  background: #F3F4F6;
   border-radius: 0.75rem;
   overflow: hidden;
 }
 
-.code-block {
+.code-block-inner {
   margin: 0;
   padding: 1rem 1.25rem;
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.8125rem;
   line-height: 1.7;
-  color: #CDD6F4;
+  color: #374151;
   overflow-x: auto;
   white-space: pre;
 }
 
-.code-block code {
+.code-block-inner code {
   font-family: inherit;
 }
 
 /* highlight mode */
-.code-block-wrap--lines {
+.code-block-inner-wrap--lines {
   padding: 0.5rem 0;
 }
 
@@ -183,7 +183,7 @@ watch(() => props.mode, focusActive)
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.8125rem;
   line-height: 1.7;
-  color: #CDD6F4;
+  color: #374151;
   white-space: pre;
 }
 
@@ -195,13 +195,13 @@ watch(() => props.mode, focusActive)
 }
 
 .code-line:hover {
-  background: rgba(137, 180, 250, 0.08);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .code-line--selected {
-  background: rgba(249, 226, 175, 0.15);
-  border-left-color: #F9E2AF;
-  color: #F9E2AF;
+  background: rgba(239, 68, 68, 0.08);
+  border-left-color: #EF4444;
+  color: #B91C1C;
 }
 
 /* fill mode */
@@ -210,10 +210,10 @@ watch(() => props.mode, focusActive)
 }
 
 .code-blank {
-  background: #313244;
-  border: 1px solid #89B4FA;
+  background: #fff;
+  border: 1px solid #D1D5DB;
   border-radius: 4px;
-  color: #89DCEB;
+  color: #374151;
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
@@ -222,21 +222,20 @@ watch(() => props.mode, focusActive)
   width: max(8ch, calc(v-bind('fillAnswer.length') * 1ch + 2ch));
   outline: none;
   vertical-align: baseline;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .code-blank:focus {
-  border-color: #89DCEB;
-  background: #1E2030;
-  box-shadow: 0 0 0 2px rgba(137, 220, 235, 0.15);
+  border-color: #6366F1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
 .code-blank::placeholder {
-  color: #6C7086;
+  color: #9CA3AF;
 }
 
 /* fix mode */
-.code-block-wrap--fix {
+.code-block-inner-wrap--fix {
   padding: 0;
 }
 
@@ -244,8 +243,8 @@ watch(() => props.mode, focusActive)
   display: block;
   width: 100%;
   min-height: 14rem;
-  background: #1E1E2E;
-  color: #CDD6F4;
+  background: #F3F4F6;
+  color: #374151;
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.8125rem;
   line-height: 1.7;
@@ -257,6 +256,6 @@ watch(() => props.mode, focusActive)
   white-space: pre;
   overflow-wrap: normal;
   overflow-x: auto;
-  caret-color: #89DCEB;
+  caret-color: #6366F1;
 }
 </style>

@@ -27,6 +27,7 @@ export function useQuizSession(test, questionsSource) {
   const startedAt      = ref(new Date().toISOString())
   const elapsed        = ref(0)
   const savedIndex     = ref(resolveSavedIndex())
+  const sessionStarted = ref(false)
   let timer
   let saveTimer
 
@@ -92,6 +93,10 @@ export function useQuizSession(test, questionsSource) {
   }
 
   function updateIndex(idx) {
+    if (!sessionStarted.value && idx !== savedIndex.value) {
+      const prevQ = questions.value[savedIndex.value]
+      if (prevQ && isAnswered(prevQ)) sessionStarted.value = true
+    }
     savedIndex.value = idx
     saveSession()
   }
@@ -179,6 +184,7 @@ export function useQuizSession(test, questionsSource) {
     answers,
     challengeMode,
     savedIndex,
+    sessionStarted,
     answeredCount,
     timeDisplay,
     timerWarning,

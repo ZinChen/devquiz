@@ -54,7 +54,7 @@ questions:
           end
     explanation: "Для неблокирующего индекса нужны оба условия: algorithm: :concurrently (PostgreSQL строит индекс в фоне без ACCESS EXCLUSIVE лока) и disable_ddl_transaction! (CONCURRENTLY нельзя запускать внутри транзакции, которую Rails добавляет по умолчанию). Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://api.rubyonrails.org/classes/ActiveRecord/Migration.html"
 
-  - id: q3
+  - id: q2
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -95,7 +95,7 @@ questions:
           end
     explanation: "lock_timeout прерывает попытку захвата лока если она длится дольше указанного времени. Лучше упасть быстро и повторить, чем блокировать все запросы. Источник: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT"
 
-  - id: q4
+  - id: q3
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -137,7 +137,7 @@ questions:
           end
     explanation: "До PG 11: добавление DEFAULT + NOT NULL переписывало всю таблицу. PG 11+ хранит DEFAULT в метаданных. Безопасный путь: добавить без NOT NULL → бэкфилл → добавить NOT NULL отдельно. Источник: https://www.postgresql.org/docs/11/sql-altertable.html"
 
-  - id: q5
+  - id: q4
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -188,7 +188,7 @@ questions:
           end
     explanation: "in_batches разбивает UPDATE на транзакции по N строк. Каждая партия держит лок только на своё время. find_each не подходит — загружает объекты в память и делает UPDATE по одной. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-in_batches"
 
-  - id: q6
+  - id: q5
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -227,7 +227,7 @@ questions:
           end
     explanation: "validate: false добавляет FK как NOT VALID: новые строки валидируются, существующие — нет. Затем validate_foreign_key с мягким локом. Источник: https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-VALIDATE-CONSTRAINT"
 
-  - id: q7
+  - id: q6
     type: code_challenge
     default_mode: highlight
     difficulty: medium
@@ -266,7 +266,7 @@ questions:
           end
     explanation: "validate_foreign_key выполняет VALIDATE CONSTRAINT с SHARE UPDATE EXCLUSIVE локом — не блокирует чтение и запись. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-validate_foreign_key"
 
-  - id: q8
+  - id: q7
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -305,7 +305,7 @@ questions:
           end
     explanation: "change_column_default выполняет ALTER COLUMN SET DEFAULT — моментально, без перезаписи строк. change_column переписывает всю таблицу. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
 
-  - id: q9
+  - id: q8
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -352,7 +352,7 @@ questions:
           end
     explanation: "DROP INDEX CONCURRENTLY удаляет индекс без блокировки DML. Rails поддерживает через algorithm: :concurrently в remove_index. Требует disable_ddl_transaction!. Источник: https://www.postgresql.org/docs/current/sql-dropindex.html"
 
-  - id: q10
+  - id: q9
     type: code_challenge
     default_mode: highlight
     difficulty: medium
@@ -393,7 +393,7 @@ questions:
           end
     explanation: "reversible позволяет описать оба направления. Rails бросит ActiveRecord::IrreversibleMigration при откате если не описать down. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-reversible"
 
-  - id: q11
+  - id: q10
     type: code_challenge
     default_mode: highlight
     difficulty: hard
@@ -442,7 +442,7 @@ questions:
           end
     explanation: "validate: false (Rails 6.1+) добавляет CHECK NOT VALID мгновенно. Затем validate_check_constraint с SHARE UPDATE EXCLUSIVE локом. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_check_constraint"
 
-  - id: q12
+  - id: q11
     type: code_challenge
     default_mode: highlight
     difficulty: medium
@@ -493,7 +493,7 @@ questions:
           end
     explanation: "say — встроенный метод ActiveRecord::Migration для вывода в лог миграций. say_with_time замеряет время блока. puts работает, но обходит стандартный формат лога миграций. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Migration.html#method-i-say"
 
-  - id: q13
+  - id: q12
     type: code_challenge
     default_mode: highlight
     difficulty: hard
