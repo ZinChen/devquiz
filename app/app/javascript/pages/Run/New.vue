@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="run-header">
       <nav class="run-breadcrumbs">
-        <Link href="/" class="run-breadcrumbs__link">← Все тесты</Link>
+        <Link href="/" class="run-breadcrumbs__link">Все тесты</Link>
         <Link :href="`/tests/${test.slug}`" class="run-breadcrumbs__link">← {{ test.title }}</Link>
       </nav>
       <div class="run-header__right">
@@ -23,10 +23,12 @@
       </div>
     </div>
 
-    <div class="run-header run-settings-wrap">
+    <div class="run-settings-wrap">
       <SettingsPanel
         v-if="settingsOpen"
         v-model:mode="mode"
+        v-model:challengeMode="challengeMode"
+        :hasCodeChallenge="hasCodeChallenge"
       />
     </div>
 
@@ -42,6 +44,7 @@
       :optionLetter="optionLetter"
       :formatText="formatText"
       :savedIndex="savedIndex"
+      :challengeMode="challengeMode"
       @submit="submit"
       @index-change="updateIndex"
     />
@@ -70,6 +73,7 @@ const activeMode = computed(() => modeComponents[mode.value])
 const {
   questions,
   answers,
+  challengeMode,
   savedIndex,
   answeredCount,
   timeDisplay,
@@ -82,6 +86,10 @@ const {
   updateIndex,
   submit,
 } = useQuizSession(props.test, props.questions)
+
+const hasCodeChallenge = computed(() =>
+  props.questions.some(q => q.type === 'code_challenge')
+)
 </script>
 
 <style scoped>
@@ -93,7 +101,6 @@ const {
 }
 
 .run-settings-wrap {
-  display: block;
   margin-bottom: 0;
 }
 

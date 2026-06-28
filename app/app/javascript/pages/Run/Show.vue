@@ -37,17 +37,36 @@
         </div>
 
         <div v-if="item.type === 'code_challenge'" class="result-code-challenge">
-          <pre class="result-code-block"><code>{{ item.code }}</code></pre>
-          <div class="result-code-answers">
-            <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
-              <span class="result-code-answer__label">Ваш ответ:</span>
-              <code class="result-code-answer__value">{{ item.selectedAnswer || '(пусто)' }}</code>
+          <!-- highlight: show code with highlighted correct/selected lines -->
+          <template v-if="item.challengeMode === 'highlight'">
+            <pre class="result-code-block result-code-block--lines"><code><div
+                v-for="(line, i) in (item.code ?? '').trimEnd().split('\n')"
+                :key="i"
+                class="result-code-line"
+                :class="{
+                  'result-code-line--correct':  isCorrectLine(item, i + 1),
+                  'result-code-line--selected': isSelectedLine(item, i + 1) && !isCorrectLine(item, i + 1),
+                }"
+              >{{ line || ' ' }}</div></code></pre>
+            <div class="result-code-legend">
+              <span class="result-code-legend__item result-code-legend__item--correct">верная строка</span>
+              <span v-if="!item.correct" class="result-code-legend__item result-code-legend__item--wrong">ваш выбор</span>
             </div>
-            <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
-              <span class="result-code-answer__label">Правильный ответ:</span>
-              <code class="result-code-answer__value">{{ item.correctAnswer }}</code>
+          </template>
+          <!-- fill / fix: show typed answer vs correct -->
+          <template v-else>
+            <pre v-if="item.challengeMode === 'fix'" class="result-code-block"><code>{{ item.code }}</code></pre>
+            <div class="result-code-answers">
+              <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
+                <span class="result-code-answer__label">Ваш ответ:</span>
+                <code class="result-code-answer__value">{{ item.selectedAnswer || '(пусто)' }}</code>
+              </div>
+              <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
+                <span class="result-code-answer__label">Правильный ответ:</span>
+                <code class="result-code-answer__value">{{ item.correctAnswer }}</code>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
         <div v-else class="result-item__options">
           <div
@@ -156,6 +175,14 @@ function optionStyle(item, optId) {
   if (isCorrect)  return { background: '#D1FAE5', color: '#065F46' }
   if (isSelected) return { background: '#FEE2E2', color: '#991B1B' }
   return { background: '#F7F8FA', color: '#374151' }
+}
+
+function isCorrectLine(item, lineNum) {
+  return item.correctAnswer?.split(',').map(n => parseInt(n)).includes(lineNum)
+}
+
+function isSelectedLine(item, lineNum) {
+  return item.selectedAnswer?.split(',').map(n => parseInt(n)).includes(lineNum)
 }
 
 function optionLetterStyle(item, optId) {
@@ -409,6 +436,62 @@ function optionLetterStyle(item, optId) {
 .result-code-block code {
   font-family: inherit;
 }
+
+.result-code-block--lines {
+  padding: 0;
+}
+
+.result-code-block--lines code {
+  display: block;
+}
+
+.result-code-line {
+  display: block;
+  padding: 0 1rem;
+  min-height: 1.6em;
+  border-left: 3px solid transparent;
+}
+
+.result-code-line--correct {
+  background: rgba(166, 227, 161, 0.15);
+  border-left-color: #A6E3A1;
+  color: #A6E3A1;
+}
+
+.result-code-line--selected {
+  background: rgba(243, 139, 168, 0.12);
+  border-left-color: #F38BA8;
+  color: #F38BA8;
+}
+
+.result-code-legend {
+  display: flex;
+  gap: 1rem;
+  padding: 0.375rem 1rem;
+  background: #1E1E2E;
+  border-radius: 0 0 0.5rem 0.5rem;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-code-legend__item {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.result-code-legend__item::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.result-code-legend__item--correct::before { background: #A6E3A1; }
+.result-code-legend__item--wrong::before   { background: #F38BA8; }
 
 .result-code-answers {
   display: flex;

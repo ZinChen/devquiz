@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3'
 
 export function useQuizSession(test, questionsSource) {
   const STORAGE_KEY = `devquiz_session_${test.slug}`
+  const DEFAULT_CHALLENGE_MODE = test.defaultChallengeMode || 'highlight'
 
   function resolveQuestions() {
     try {
@@ -20,20 +21,37 @@ export function useQuizSession(test, questionsSource) {
     return 0
   }
 
-  const questions    = ref(resolveQuestions())
-  const answers      = ref({})
-  const startedAt    = ref(new Date().toISOString())
-  const elapsed      = ref(0)
-  const savedIndex   = ref(resolveSavedIndex())
+  const questions      = ref(resolveQuestions())
+  const answers        = ref({})
+  const challengeMode  = ref(DEFAULT_CHALLENGE_MODE)
+  const startedAt      = ref(new Date().toISOString())
+  const elapsed        = ref(0)
+  const savedIndex     = ref(resolveSavedIndex())
   let timer
   let saveTimer
 
-  onMounted(() => {
+  function initAnswers() {
     questions.value.forEach(q => {
       if (q.type === 'multiple') answers.value[q.id] = []
-      else if (q.type === 'code_challenge') answers.value[q.id] = ''
+      else if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
       else answers.value[q.id] = null
     })
+  }
+
+  function initCodeAnswer(q) {
+    if (challengeMode.value === 'highlight') return []
+    if (challengeMode.value === 'fix') return q.modes?.fix?.code ?? ''
+    return ''
+  }
+
+  watch(challengeMode, () => {
+    questions.value.forEach(q => {
+      if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
+    })
+  })
+
+  onMounted(() => {
+    initAnswers()
 
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
@@ -84,8 +102,15 @@ export function useQuizSession(test, questionsSource) {
 
   function isAnswered(q) {
     const a = answers.value[q.id]
-    if (q.type === 'multiple')      return a?.length > 0
-    if (q.type === 'code_challenge') return typeof a === 'string' && a.trim().length > 0
+    if (q.type === 'multiple') return a?.length > 0
+    if (q.type === 'code_challenge') {
+      if (challengeMode.value === 'highlight') return Array.isArray(a) && a.length > 0
+      if (challengeMode.value === 'fix') {
+        const original = q.modes?.fix?.code ?? ''
+        return typeof a === 'string' && a.trim() !== original.trim()
+      }
+      return typeof a === 'string' && a.trim().length > 0
+    }
     return a !== null
   }
 
@@ -103,15 +128,20 @@ export function useQuizSession(test, questionsSource) {
     const normalized = {}
     questions.value.forEach(q => {
       const a = answers.value[q.id]
-      if (q.type === 'multiple')       normalized[q.id] = a || []
-      else if (q.type === 'code_challenge') normalized[q.id] = [a || '']
-      else                             normalized[q.id] = a ? [a] : []
+      if (q.type === 'multiple') {
+        normalized[q.id] = a || []
+      } else if (q.type === 'code_challenge') {
+        normalized[q.id] = Array.isArray(a) ? [a.join(',')] : [a || '']
+      } else {
+        normalized[q.id] = a ? [a] : []
+      }
     })
     localStorage.removeItem(STORAGE_KEY)
     router.post(`/tests/${test.slug}/run`, {
-      answers:    normalized,
-      started_at: startedAt.value,
-      time_spent: elapsed.value,
+      answers:        normalized,
+      started_at:     startedAt.value,
+      time_spent:     elapsed.value,
+      challenge_mode: challengeMode.value,
     })
   }
 
@@ -147,6 +177,7 @@ export function useQuizSession(test, questionsSource) {
   return {
     questions,
     answers,
+    challengeMode,
     savedIndex,
     answeredCount,
     timeDisplay,

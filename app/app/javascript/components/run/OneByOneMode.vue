@@ -31,6 +31,7 @@
             v-if="currentQuestion.type === 'code_challenge'"
             :question="currentQuestion"
             :answers="answers"
+            :mode="challengeMode"
             @submit-enter="isAnswered(currentQuestion) && currentIndex < questions.length - 1 ? goTo(currentIndex + 1) : null"
           />
           <QuestionOptions
@@ -89,6 +90,7 @@ const props = defineProps({
   optionLetter:      Function,
   formatText:        Function,
   savedIndex:        { type: Number, default: 0 },
+  challengeMode:     { type: String, default: 'highlight' },
 })
 
 const emit = defineEmits(['submit', 'index-change'])

@@ -33,6 +33,7 @@
           v-if="q.type === 'code_challenge'"
           :question="q"
           :answers="answers"
+          :mode="challengeMode"
         />
         <QuestionOptions
           v-else
@@ -75,6 +76,7 @@ const props = defineProps({
   optionLetterStyle: Function,
   optionLetter:      Function,
   formatText:        Function,
+  challengeMode:     { type: String, default: 'highlight' },
 })
 
 defineEmits(['submit'])

@@ -24,11 +24,13 @@ class RunsController < ApplicationController
       total_questions: @meta.questions_count,
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
-      time_spent:      params[:time_spent].to_i
+      time_spent:      params[:time_spent].to_i,
+      challenge_mode:  challenge_mode
     )
 
-    questions_map = load_questions.index_by { |q| q["id"] }
-    correct_count = 0
+    questions_map   = load_questions.index_by { |q| q["id"] }
+    challenge_mode  = params[:challenge_mode].presence || "fill"
+    correct_count   = 0
 
     answers_data.each do |question_id, selected|
       question     = questions_map[question_id]
@@ -36,7 +38,7 @@ class RunsController < ApplicationController
 
       selected_arr = Array(selected)
       is_correct   = if question["type"] == "code_challenge"
-        selected_arr.first.to_s.strip.downcase == question["answer"].to_s.strip.downcase
+        grade_code_challenge(question, selected_arr, challenge_mode)
       else
         correct_ids = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
         selected_arr.sort == correct_ids.sort
@@ -89,14 +91,19 @@ class RunsController < ApplicationController
   end
 
   def test_props(t)
+    meta_yaml = YAML.safe_load(
+      File.read(YamlSyncService::TESTS_DIR.join("#{t.slug}.yml")),
+      permitted_classes: [ Symbol ]
+    ) rescue {}
     {
-      slug:            t.slug,
-      title:           t.title,
-      description:     t.description,
-      tags:            t.tag_list,
-      difficulty:      t.difficulty,
-      estimated_time:  t.estimated_time,
-      questions_count: t.questions_count
+      slug:                  t.slug,
+      title:                 t.title,
+      description:           t.description,
+      tags:                  t.tag_list,
+      difficulty:            t.difficulty,
+      estimated_time:        t.estimated_time,
+      questions_count:       t.questions_count,
+      default_challenge_mode: meta_yaml["default_challenge_mode"]
     }
   end
 
@@ -112,6 +119,7 @@ class RunsController < ApplicationController
   end
 
   def answers_detail(attempt, questions_map)
+    challenge_mode = attempt.challenge_mode.presence || "fill"
     attempt.test_attempt_answers.map do |ans|
       q = questions_map[ans.question_id]
       next unless q
@@ -127,9 +135,11 @@ class RunsController < ApplicationController
       }
 
       if q["type"] == "code_challenge"
+        mode_data = q.dig("modes", challenge_mode) || {}
         base.merge(
-          code:            q["code"],
-          correct_answer:  q["answer"],
+          challenge_mode:  challenge_mode,
+          code:            mode_data["code"],
+          correct_answer:  mode_data["answer"] || mode_data["correct_lines"]&.join(","),
           selected_answer: ans.selected_options.first.to_s
         )
       else
@@ -140,6 +150,21 @@ class RunsController < ApplicationController
         )
       end
     end.compact
+  end
+
+  def grade_code_challenge(question, selected_arr, mode)
+    mode_data = question.dig("modes", mode) || {}
+    case mode
+    when "highlight"
+      correct = Array(mode_data["correct_lines"]).map(&:to_s).sort
+      selected = selected_arr.first.to_s.split(",").map(&:strip).sort
+      selected == correct
+    when "fix"
+      normalize = ->(s) { s.to_s.lines.map(&:rstrip).reject(&:empty?).join("\n").strip }
+      normalize.(selected_arr.first) == normalize.(mode_data["answer"])
+    else
+      selected_arr.first.to_s.strip.downcase == mode_data["answer"].to_s.strip.downcase
+    end
   end
 
   def update_test_stats(meta, new_score, attempt)
