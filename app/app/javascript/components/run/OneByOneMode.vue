@@ -32,7 +32,9 @@
             :question="currentQuestion"
             :answers="answers"
             :mode="challengeMode"
+            :hint-shown="isHintShown?.(currentQuestion.id) ?? false"
             @submit-enter="isAnswered(currentQuestion) && currentIndex < questions.length - 1 ? goTo(currentIndex + 1) : null"
+            @hint-used="markHintUsed?.($event)"
           />
           <QuestionOptions
             v-else
@@ -85,6 +87,8 @@ const props = defineProps({
   answers:           Object,
   answeredCount:     Number,
   isAnswered:        Function,
+  isHintShown:       Function,
+  markHintUsed:      Function,
   optionStyle:       Function,
   optionLetterStyle: Function,
   optionLetter:      Function,

@@ -24,13 +24,4 @@ class TestMetadatum < ApplicationRecord
     self.tags = Array(arr).join(",")
   end
 
-  def completed_challenge_mode_list
-    completed_challenge_modes.to_s.split(",").map(&:strip).reject(&:empty?)
-  end
-
-  def add_completed_challenge_mode!(mode)
-    current = completed_challenge_mode_list
-    return if current.include?(mode)
-    update_column(:completed_challenge_modes, (current + [mode]).join(","))
-  end
 end

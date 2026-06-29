@@ -3,7 +3,6 @@
 
     <!-- ── highlight mode ─────────────────────────────────────────── -->
     <template v-if="mode === 'highlight'">
-      <p class="code-challenge__hint">{{ modeData.hint || 'Кликни на проблемную строку' }}</p>
       <div class="code-block-inner-wrap code-block-inner-wrap--lines">
         <div
           v-for="(line, i) in highlightLines"
@@ -11,45 +10,58 @@
           class="code-line"
           :class="{ 'code-line--selected': selectedLines.includes(i + 1) }"
           @click="toggleLine(i + 1)"
-        ><code>{{ line || ' ' }}</code></div>
+        >
+          <code>
+            <template v-if="tokenizedHighlight">
+              <span
+                v-for="(tok, ti) in (tokenizedHighlight[i] || [])"
+                :key="ti"
+                :style="tok.color ? { color: tok.color } : {}"
+              >{{ tok.content }}</span>
+            </template>
+            <template v-else>{{ line || ' ' }}</template>
+          </code>
+        </div>
       </div>
+      <p v-if="hintVisible" class="code-challenge__hint">{{ modeData.hint || 'Кликни на проблемную строку' }}</p>
+      <button v-else class="code-challenge__hint-btn" @click="showHint">Показать подсказку</button>
     </template>
 
     <!-- ── fill mode ──────────────────────────────────────────────── -->
     <template v-else-if="mode === 'fill'">
       <div class="code-block-inner-wrap">
         <pre class="code-block-inner"><code><template
-            v-for="(part, i) in fillParts"
-            :key="i"
-          ><template v-if="part.type === 'text'">{{ part.value }}</template><span
-              v-else
-              class="code-blank-wrap"
-            ><input
-                ref="fillInputEl"
-                v-model="fillAnswer"
-                type="text"
-                class="code-blank"
-                placeholder="___"
-                spellcheck="false"
-                autocomplete="off"
-                @keydown.enter.prevent="$emit('submit-enter')"
-              /></span></template></code></pre>
+            v-for="(line, li) in fillTokenLines"
+            :key="li"
+          ><template v-if="li > 0">{{ '\n' }}</template><template
+              v-for="(tok, ti) in line"
+              :key="ti"
+            ><span
+                v-if="tok.type === 'blank'"
+                class="code-blank-wrap"
+              ><input
+                  ref="fillInputEl"
+                  v-model="fillAnswer"
+                  type="text"
+                  class="code-blank"
+                  placeholder="___"
+                  spellcheck="false"
+                  autocomplete="off"
+                  @keydown.enter.prevent="$emit('submit-enter')"
+                /></span><span
+                v-else
+                :style="tok.color ? { color: tok.color } : {}"
+              >{{ tok.content }}</span></template></template></code></pre>
       </div>
     </template>
 
     <!-- ── fix mode ───────────────────────────────────────────────── -->
     <template v-else-if="mode === 'fix'">
       <p class="code-challenge__hint">Исправь код ниже</p>
-      <div class="code-block-inner-wrap code-block-inner-wrap--fix">
-        <textarea
-          ref="fixTextareaEl"
-          v-model="fixAnswer"
-          class="code-textarea"
-          spellcheck="false"
-          autocomplete="off"
-          autocorrect="off"
-        />
-      </div>
+      <CodeMirrorEditor
+        v-model="fixAnswer"
+        :lang="lang"
+      />
     </template>
 
   </div>
@@ -57,21 +69,44 @@
 
 <script setup>
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { useShiki } from '@/composables/useShiki.js'
+import CodeMirrorEditor from '@/components/run/CodeMirrorEditor.vue'
 
 const props = defineProps({
-  question: Object,
-  answers:  Object,
-  mode:     { type: String, default: 'highlight' },
+  question:  Object,
+  answers:   Object,
+  mode:      { type: String, default: 'highlight' },
+  hintShown: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['submit-enter'])
+const emit = defineEmits(['submit-enter', 'hint-used'])
+
+const hintVisible = ref(props.hintShown)
+
+watch(() => props.hintShown, val => { hintVisible.value = val })
+watch(() => props.question?.id, () => { hintVisible.value = props.hintShown })
+
+function showHint() {
+  hintVisible.value = true
+  emit('hint-used', props.question.id)
+}
+
+const { ready, init, tokenize } = useShiki()
 
 const modeData = computed(() => props.question.modes?.[props.mode] ?? {})
+const lang     = computed(() => props.question.language || 'ruby')
+
+onMounted(() => init())
 
 // ── highlight ────────────────────────────────────────────────────────
 const highlightLines = computed(() =>
   (modeData.value.code ?? '').trimEnd().split('\n')
 )
+
+const tokenizedHighlight = computed(() => {
+  if (!ready.value) return null
+  return tokenize(modeData.value.code ?? '', lang.value)
+})
 
 const selectedLines = computed(() => {
   const val = props.answers[props.question.id]
@@ -99,19 +134,46 @@ const fillAnswer = computed({
   set: val => { props.answers[props.question.id] = val },
 })
 
-const fillParts = computed(() => {
+const fillTokenLines = computed(() => {
   const code = modeData.value.code ?? ''
-  const parts = []
-  code.split('___').forEach((seg, i, arr) => {
-    if (seg) parts.push({ type: 'text', value: seg })
-    if (i < arr.length - 1) parts.push({ type: 'blank' })
+  const tokens = ready.value ? tokenize(code, lang.value) : null
+
+  if (!tokens) {
+    // fallback без подсветки
+    const lines = code.split('\n')
+    return lines.map(line => {
+      const parts = line.split('___')
+      const result = []
+      parts.forEach((seg, i, arr) => {
+        if (seg) result.push({ type: 'text', content: seg })
+        if (i < arr.length - 1) result.push({ type: 'blank' })
+      })
+      return result
+    })
+  }
+
+  // разбиваем токены по ___ на каждой строке
+  return tokens.map(lineTokens => {
+    const result = []
+    for (const tok of lineTokens) {
+      if (tok.content === '___') {
+        result.push({ type: 'blank' })
+      } else if (tok.content.includes('___')) {
+        // ___ внутри токена (редко, но возможно)
+        const parts = tok.content.split('___')
+        parts.forEach((seg, i, arr) => {
+          if (seg) result.push({ type: 'text', content: seg, color: tok.color })
+          if (i < arr.length - 1) result.push({ type: 'blank' })
+        })
+      } else {
+        result.push({ type: 'text', content: tok.content, color: tok.color })
+      }
+    }
+    return result
   })
-  return parts
 })
 
 // ── fix ──────────────────────────────────────────────────────────────
-const fixTextareaEl = ref(null)
-
 const fixAnswer = computed({
   get: () => typeof props.answers[props.question.id] === 'string'
     ? props.answers[props.question.id]
@@ -125,8 +187,6 @@ function focusActive() {
     if (props.mode === 'fill') {
       const el = Array.isArray(fillInputEl.value) ? fillInputEl.value[0] : fillInputEl.value
       el?.focus({ preventScroll: true })
-    } else if (props.mode === 'fix') {
-      fixTextareaEl.value?.focus({ preventScroll: true })
     }
   })
 }
@@ -143,7 +203,23 @@ watch(() => props.mode, focusActive)
 .code-challenge__hint {
   font-size: 0.75rem;
   color: #9CA3AF;
-  margin-bottom: 0.375rem;
+  margin: 0.375rem 0 0;
+}
+
+.code-challenge__hint-btn {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.code-challenge__hint-btn:hover {
+  color: #6B7280;
 }
 
 .code-block-inner-wrap {
@@ -201,7 +277,10 @@ watch(() => props.mode, focusActive)
 .code-line--selected {
   background: rgba(239, 68, 68, 0.08);
   border-left-color: #EF4444;
-  color: #B91C1C;
+}
+
+.code-line--selected code span {
+  color: #B91C1C !important;
 }
 
 /* fill mode */
@@ -234,28 +313,5 @@ watch(() => props.mode, focusActive)
   color: #9CA3AF;
 }
 
-/* fix mode */
-.code-block-inner-wrap--fix {
-  padding: 0;
-}
 
-.code-textarea {
-  display: block;
-  width: 100%;
-  min-height: 14rem;
-  background: #F3F4F6;
-  color: #374151;
-  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
-  font-size: 0.8125rem;
-  line-height: 1.7;
-  padding: 1rem 1.25rem;
-  border: none;
-  outline: none;
-  resize: vertical;
-  border-radius: 0.75rem;
-  white-space: pre;
-  overflow-wrap: normal;
-  overflow-x: auto;
-  caret-color: #6366F1;
-}
 </style>

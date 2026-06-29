@@ -5,6 +5,7 @@ tags: [rails, migrations, postgresql, locking, zero-downtime, advanced, claude-g
 difficulty: advanced
 estimated_time: 25
 default_challenge_mode: highlight
+language: ruby
 
 questions:
   - id: q1
@@ -34,7 +35,7 @@ questions:
             end
           end
         correct_lines: [4]
-        hint: "Строка про таймаут лока выглядит полезной, но она не решает главное ограничение PostgreSQL для concurrent index."
+        hint: "Посмотри на объявление класса — чего не хватает на уровне миграции, чтобы CONCURRENTLY вообще мог запуститься?"
 
       fill:
         code: |
@@ -121,7 +122,7 @@ questions:
             end
           end
         correct_lines: [3]
-        hint: "Эта настройка ограничивает длительность выполнения запроса, но проблема здесь в ожидании DDL-лока перед ALTER TABLE."
+        hint: "Два разных timeout-параметра в PostgreSQL — они про разные фазы выполнения запроса. Какой именно момент нужно ограничить здесь?"
 
       fill:
         code: |
@@ -183,7 +184,7 @@ questions:
             end
           end
         correct_lines: [6]
-        hint: "Кликни на параметр, который превращает добавление столбца в обязательную проверку всех существующих строк."
+        hint: "Посмотри на параметры add_column — один из них добавляет дополнительное требование к существующим строкам таблицы."
 
       fill:
         code: |
@@ -237,7 +238,7 @@ questions:
             end
           end
         correct_lines: [5]
-        hint: "Метод выглядит батчевым, но он итерирует ActiveRecord-объекты. Для SQL-бэкфилла лучше обновлять relation батчами."
+        hint: "Как этот метод отдаёт данные в блок — по одной записи или целым набором?"
 
       fill:
         code: |
@@ -298,7 +299,7 @@ questions:
             end
           end
         correct_lines: [10]
-        hint: "Таймаут лока помогает не ждать бесконечно, но не отменяет сканирование существующих строк при добавлении FK."
+        hint: "Посмотри на параметры add_foreign_key — один из них управляет тем, что происходит с уже существующими строками при добавлении ограничения."
 
       fill:
         code: |
@@ -363,7 +364,7 @@ questions:
             end
           end
         correct_lines: [5]
-        hint: "Имя constraint выглядит как FK, но выбран метод для другого типа ограничения."
+        hint: "Rails различает типы constraints. Какой именно тип ограничения мы валидируем в этом контексте?"
 
       fill:
         code: |
@@ -416,7 +417,7 @@ questions:
             end
           end
         correct_lines: [7]
-        hint: "Если меняется только значение по умолчанию, не нужно заново описывать тип столбца."
+        hint: "В Rails есть методы под конкретные операции. Нужен ли здесь полный change_column, или есть более точный?"
 
       fill:
         code: |
@@ -450,7 +451,7 @@ questions:
             end
           end
 
-    explanation: "`change_column` предназначен для изменения определения столбца и может привести к более тяжёлому `ALTER TABLE`, чем нужно. Если задача — только поменять DEFAULT, лучше использовать `change_column_default`: Rails сгенерирует изменение default-значения без переопределения типа столбца. В этом примере проблемный вызов — `change_column :subscriptions, :billing_state, :string, default: "active"`. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
+    explanation: "`change_column` предназначен для изменения определения столбца и может привести к более тяжёлому `ALTER TABLE`, чем нужно. Если задача — только поменять DEFAULT, лучше использовать `change_column_default`: Rails сгенерирует изменение default-значения без переопределения типа столбца. В этом примере проблемный вызов — `change_column :subscriptions, :billing_state, :string, default: 'active'`. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
 
   - id: q8
     type: code_challenge
@@ -473,7 +474,7 @@ questions:
             end
           end
         correct_lines: [7]
-        hint: "Транзакция отключена и lock_timeout задан, но само удаление индекса всё ещё выполняется обычным способом."
+        hint: "disable_ddl_transaction! и lock_timeout есть. Чего не хватает в самом вызове remove_index?"
 
       fill:
         code: |
@@ -537,7 +538,7 @@ questions:
             end
           end
         correct_lines: [5]
-        hint: "Rails может обратить удаление столбца только если знает его тип и опции."
+        hint: "Что нужно знать Rails, чтобы при db:rollback восстановить удалённый столбец?"
 
       fill:
         code: |
@@ -589,7 +590,7 @@ questions:
             end
           end
         correct_lines: [7]
-        hint: "Параметр выглядит безопасно рядом с if_not_exists, но именно он заставляет сразу проверить существующие строки."
+        hint: "Посмотри на параметры — один из них управляет тем, когда именно PostgreSQL проверит существующие строки."
 
       fill:
         code: |
@@ -649,7 +650,7 @@ questions:
             end
           end
         correct_lines: [8]
-        hint: "Логгер приложения работает, но миграции имеют свой стандартный способ вывода сообщений."
+        hint: "Где должно появиться это сообщение — в логе приложения или в выводе rails db:migrate?"
 
       fill:
         code: |
@@ -711,7 +712,7 @@ questions:
             end
           end
         correct_lines: [3]
-        hint: "Таймаут выполнения запроса не отменяет то, что concurrent index нельзя запускать внутри транзакции миграции."
+        hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает рядом с def up?"
 
       fill:
         code: |

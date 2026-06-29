@@ -41,6 +41,8 @@
       :answeredCount="answeredCount"
       :bookmarkedIds="bookmarkedIds"
       :isAnswered="isAnswered"
+      :isHintShown="isHintShown"
+      :markHintUsed="markHintUsed"
       :optionStyle="optionStyle"
       :optionLetterStyle="optionLetterStyle"
       :optionLetter="optionLetter"
@@ -82,6 +84,8 @@ const {
   timeDisplay,
   timerWarning,
   isAnswered,
+  isHintShown,
+  markHintUsed,
   optionStyle,
   optionLetterStyle,
   optionLetter,

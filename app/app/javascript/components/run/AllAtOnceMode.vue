@@ -34,6 +34,8 @@
           :question="q"
           :answers="answers"
           :mode="challengeMode"
+          :hint-shown="isHintShown?.(q.id) ?? false"
+          @hint-used="markHintUsed?.($event)"
         />
         <QuestionOptions
           v-else
@@ -72,6 +74,8 @@ const props = defineProps({
   answeredCount:     Number,
   bookmarkedIds:     { type: Array, default: () => [] },
   isAnswered:        Function,
+  isHintShown:       Function,
+  markHintUsed:      Function,
   optionStyle:       Function,
   optionLetterStyle: Function,
   optionLetter:      Function,

@@ -17,6 +17,7 @@ class RunsController < ApplicationController
 
   def create
     answers_data = params[:answers].to_unsafe_h
+    used_hint_ids = Array(params[:used_hints]).map(&:to_s).to_set
 
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
@@ -49,14 +50,15 @@ class RunsController < ApplicationController
       attempt.test_attempt_answers.create!(
         question_id:      question_id,
         selected_options: selected_arr,
-        correct:          is_correct
+        correct:          is_correct,
+        used_hint:        used_hint_ids.include?(question_id)
       )
     end
 
     score = @meta.questions_count > 0 ? (correct_count.to_f / @meta.questions_count * 100).round(2) : 0
 
     attempt.update!(correct_count: correct_count, score: score)
-    update_test_stats(@meta, score, attempt, challenge_mode)
+    update_test_stats(@meta, score, attempt)
 
     redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
@@ -82,28 +84,37 @@ class RunsController < ApplicationController
     @questions ||= YamlSyncService.load_questions(@meta.slug)
   end
 
+  def meta_yaml(slug = @meta.slug)
+    @meta_yaml ||= YAML.safe_load(
+      File.read(YamlSyncService::TESTS_DIR.join("#{slug}.yml")),
+      permitted_classes: [ Symbol ]
+    ) rescue {}
+  end
+
   def questions_with_db_ids
-    db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+    db_map        = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+    test_language = meta_yaml["language"] || "ruby"
     load_questions.map do |q|
       db_rec = db_map[q["id"].to_s]
-      q.merge("db_id" => db_rec&.id)
+      q.merge("db_id" => db_rec&.id, "language" => q["language"] || test_language)
     end
   end
 
   def test_props(t)
-    meta_yaml = YAML.safe_load(
+    yaml = t.slug == @meta&.slug ? meta_yaml : (YAML.safe_load(
       File.read(YamlSyncService::TESTS_DIR.join("#{t.slug}.yml")),
       permitted_classes: [ Symbol ]
-    ) rescue {}
+    ) rescue {})
     {
-      slug:                  t.slug,
-      title:                 t.title,
-      description:           t.description,
-      tags:                  t.tag_list,
-      difficulty:            t.difficulty,
-      estimated_time:        t.estimated_time,
-      questions_count:       t.questions_count,
-      default_challenge_mode: meta_yaml["default_challenge_mode"]
+      slug:                   t.slug,
+      title:                  t.title,
+      description:            t.description,
+      tags:                   t.tag_list,
+      difficulty:             t.difficulty,
+      estimated_time:         t.estimated_time,
+      questions_count:        t.questions_count,
+      default_challenge_mode: yaml["default_challenge_mode"],
+      language:               yaml["language"] || "ruby"
     }
   end
 
@@ -167,7 +178,7 @@ class RunsController < ApplicationController
     end
   end
 
-  def update_test_stats(meta, new_score, attempt, completed_mode = nil)
+  def update_test_stats(meta, new_score, attempt)
     total     = meta.attempts_count.to_i + 1
     new_avg   = ((meta.avg_score.to_f * meta.attempts_count.to_i) + new_score) / total
     passing   = TestAttempt.where(test_slug: meta.slug).where("score >= 70").count
@@ -182,7 +193,5 @@ class RunsController < ApplicationController
       best_score:     is_best ? new_score : meta.best_score,
       best_attempt_id: is_best ? attempt.id : meta.best_attempt_id
     )
-
-    meta.add_completed_challenge_mode!(completed_mode) if completed_mode.present?
   end
 end

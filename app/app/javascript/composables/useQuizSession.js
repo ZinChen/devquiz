@@ -6,10 +6,6 @@ export function useQuizSession(test, questionsSource) {
   const DEFAULT_CHALLENGE_MODE = test.defaultChallengeMode || 'highlight'
 
   function resolveQuestions() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      if (saved?.questions?.length) return saved.questions
-    } catch {}
     return questionsSource.map(q => ({ ...q }))
   }
 
@@ -23,6 +19,7 @@ export function useQuizSession(test, questionsSource) {
 
   const questions      = ref(resolveQuestions())
   const answers        = ref({})
+  const usedHints      = ref(new Set())
   const challengeMode  = ref(DEFAULT_CHALLENGE_MODE)
   const startedAt      = ref(new Date().toISOString())
   const elapsed        = ref(0)
@@ -30,6 +27,14 @@ export function useQuizSession(test, questionsSource) {
   const sessionStarted = ref(false)
   let timer
   let saveTimer
+
+  function markHintUsed(questionId) {
+    usedHints.value = new Set([...usedHints.value, questionId])
+  }
+
+  function isHintShown(questionId) {
+    return usedHints.value.has(questionId)
+  }
 
   function initAnswers() {
     questions.value.forEach(q => {
@@ -83,7 +88,6 @@ export function useQuizSession(test, questionsSource) {
 
   function saveSession(extra = {}) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      questions:    questions.value,
       answers:      answers.value,
       startedAt:    startedAt.value,
       elapsed:      elapsed.value,
@@ -149,6 +153,7 @@ export function useQuizSession(test, questionsSource) {
       started_at:     startedAt.value,
       time_spent:     elapsed.value,
       challenge_mode: challengeMode.value,
+      used_hints:     [...usedHints.value],
     })
   }
 
@@ -184,6 +189,7 @@ export function useQuizSession(test, questionsSource) {
   return {
     questions,
     answers,
+    usedHints,
     challengeMode,
     savedIndex,
     sessionStarted,
@@ -191,6 +197,8 @@ export function useQuizSession(test, questionsSource) {
     timeDisplay,
     timerWarning,
     isAnswered,
+    isHintShown,
+    markHintUsed,
     optionStyle,
     optionLetterStyle,
     optionLetter,
