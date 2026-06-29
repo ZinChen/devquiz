@@ -223,50 +223,58 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, performance]
-    text: "Бэкфилл 10 млн строк одним UPDATE заблокирует таблицу. Найди строку с неправильным методом."
+    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Найди строку с неправильным методом."
     modes:
       highlight:
         code: |
-          class BackfillUserVerified < ActiveRecord::Migration[7.0]
+          class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
             def up
-              User.update_all(verified: true)
+              User.where(notification_channel: nil).find_each(batch_size: 1000) do |user|
+                user.update!(notification_channel: "email")
+              end
             end
           end
         correct_lines: [5]
-        hint: "Кликни на строку, которая создаст одну огромную транзакцию"
+        hint: "Метод выглядит батчевым, но он итерирует ActiveRecord-объекты. Для SQL-бэкфилла лучше обновлять relation батчами."
+
       fill:
         code: |
-          class BackfillUserVerified < ActiveRecord::Migration[7.0]
+          class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
             def up
-              User.___(of: 1000) do |batch|
-                batch.update_all(verified: true)
+              User.where(notification_channel: nil).___(of: 1000) do |batch|
+                batch.update_all(notification_channel: "email")
               end
             end
           end
         answer: "in_batches"
+
       fix:
         code: |
-          class BackfillUserVerified < ActiveRecord::Migration[7.0]
+          class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
             def up
-              User.update_all(verified: true)
-            end
-          end
-        answer: |
-          class BackfillUserVerified < ActiveRecord::Migration[7.0]
-            disable_ddl_transaction!
-
-            def up
-              User.in_batches(of: 1000) do |batch|
-                batch.update_all(verified: true)
+              User.where(notification_channel: nil).find_each(batch_size: 1000) do |user|
+                user.update!(notification_channel: "email")
               end
             end
           end
+        answer: |
+          class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
+            def up
+              User.where(notification_channel: nil).in_batches(of: 1000) do |batch|
+                batch.update_all(notification_channel: "email")
+              end
+            end
+          end
+
+    explanation: "`find_each` действительно читает записи батчами, но отдаёт отдельные ActiveRecord-объекты. В бэкфилле на миллионах строк это приведёт к загрузке моделей, колбэкам/валидациям при `update!` и множеству отдельных `UPDATE`. Для такого бэкфилла лучше использовать `in_batches`: он отдаёт relation на партию строк, после чего можно выполнить один `update_all` на каждую партию. Так работа делится на небольшие SQL-операции, а не превращается в один огромный `UPDATE` или миллионы обновлений по одной записи."
     explanation: "in_batches разбивает UPDATE на транзакции по N строк. Каждая партия держит лок только на своё время. find_each не подходит — загружает объекты в память и делает UPDATE по одной. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-in_batches"
 
   - id: q5
