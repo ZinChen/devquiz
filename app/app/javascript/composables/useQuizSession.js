@@ -95,7 +95,9 @@ export function useQuizSession(test, questionsSource) {
   function updateIndex(idx) {
     if (!sessionStarted.value && idx !== savedIndex.value) {
       const prevQ = questions.value[savedIndex.value]
-      if (prevQ && isAnswered(prevQ)) sessionStarted.value = true
+      if (prevQ && isAnswered(prevQ)) {
+        sessionStarted.value = true
+      }
     }
     savedIndex.value = idx
     saveSession()

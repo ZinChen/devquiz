@@ -79,7 +79,7 @@ const props = defineProps({
   challengeMode:     { type: String, default: 'highlight' },
 })
 
-defineEmits(['submit'])
+const emit = defineEmits(['submit', 'index-change'])
 
 const questionEls   = ref([])
 const activeIndex   = ref(0)
@@ -87,6 +87,7 @@ const focusedOptIdx = ref(0)
 
 function scrollTo(idx) {
   programmaticScroll = true
+  emit('index-change', idx)
   activeIndex.value = idx
   focusedOptIdx.value = 0
   const el = questionEls.value[idx]
@@ -175,7 +176,10 @@ if (programmaticScroll) {
     const rect = el.getBoundingClientRect()
     return rect.top >= 0 && rect.bottom > 0
   })
-  if (idx !== -1) activeIndex.value = idx
+  if (idx !== -1 && idx !== activeIndex.value) {
+    emit('index-change', idx)
+    activeIndex.value = idx
+  }
 }
 
 onMounted(() => {

@@ -45,6 +45,18 @@
           </svg>
           {{ test.bestScore.toFixed(0) }}%
         </Link>
+        <div
+          v-if="test.hasCodeChallenge"
+          class="challenge-modes-indicator"
+          title="Режимы кодовых задач"
+        >
+          <span
+            v-for="mode in CHALLENGE_MODES" :key="mode"
+            class="challenge-mode-dot"
+            :class="{ 'challenge-mode-dot--done': test.completedChallengeModes?.includes(mode) }"
+            :title="MODE_LABELS[mode]"
+          ></span>
+        </div>
       </div>
     </Link>
   </div>
@@ -60,6 +72,9 @@ import EmptyState from '@/components/tests/EmptyState.vue'
 
 const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
 defineEmits(['clear-filters', 'toggle-tag'])
+
+const CHALLENGE_MODES = ['highlight', 'fill', 'fix']
+const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', fix: 'Fix' }
 
 const duplicateTitles = computed(() => {
   const counts = {}
@@ -172,5 +187,25 @@ const duplicateTitles = computed(() => {
   color: #EF4444;
   border: none;
   font-weight: 500;
+}
+
+.challenge-modes-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.challenge-mode-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #E5E7EB;
+  transition: background 0.15s;
+}
+
+.challenge-mode-dot--done {
+  background: #4F63F5;
 }
 </style>

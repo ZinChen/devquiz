@@ -33,15 +33,17 @@ class YamlSyncService
     meta = TestMetadatum.find_or_initialize_by(slug: slug)
 
     unless meta.persisted? && meta.file_checksum == checksum
+      has_code = Array(data["questions"]).any? { |q| q["type"] == "code_challenge" }
       meta.assign_attributes(
-        title:           data["title"],
-        description:     data["description"],
-        difficulty:      data["difficulty"],
-        estimated_time:  data["estimated_time"],
-        questions_count: Array(data["questions"]).size,
-        file_checksum:   checksum,
-        deleted_at:      nil,
-        synced_at:       Time.current
+        title:             data["title"],
+        description:       data["description"],
+        difficulty:        data["difficulty"],
+        estimated_time:    data["estimated_time"],
+        questions_count:   Array(data["questions"]).size,
+        has_code_challenge: has_code,
+        file_checksum:     checksum,
+        deleted_at:        nil,
+        synced_at:         Time.current
       )
       meta.tag_list = Array(data["tags"])
       meta.save!

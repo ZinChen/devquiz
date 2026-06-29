@@ -56,7 +56,7 @@ class RunsController < ApplicationController
     score = @meta.questions_count > 0 ? (correct_count.to_f / @meta.questions_count * 100).round(2) : 0
 
     attempt.update!(correct_count: correct_count, score: score)
-    update_test_stats(@meta, score, attempt)
+    update_test_stats(@meta, score, attempt, challenge_mode)
 
     redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
@@ -167,7 +167,7 @@ class RunsController < ApplicationController
     end
   end
 
-  def update_test_stats(meta, new_score, attempt)
+  def update_test_stats(meta, new_score, attempt, completed_mode = nil)
     total     = meta.attempts_count.to_i + 1
     new_avg   = ((meta.avg_score.to_f * meta.attempts_count.to_i) + new_score) / total
     passing   = TestAttempt.where(test_slug: meta.slug).where("score >= 70").count
@@ -182,5 +182,7 @@ class RunsController < ApplicationController
       best_score:     is_best ? new_score : meta.best_score,
       best_attempt_id: is_best ? attempt.id : meta.best_attempt_id
     )
+
+    meta.add_completed_challenge_mode!(completed_mode) if completed_mode.present?
   end
 end

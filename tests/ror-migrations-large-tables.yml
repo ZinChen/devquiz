@@ -1,7 +1,7 @@
 slug: ror-migrations-large-tables
 title: "Rails: Миграции на больших таблицах"
 description: "Безопасные миграции в продакшне: нулевое время простоя, DDL-локи, CONCURRENTLY, бэкфилл и PostgreSQL-специфика."
-tags: [rails, migrations, postgresql, locking, zero-downtime, advanced]
+tags: [rails, migrations, postgresql, locking, zero-downtime, advanced, claude-gen]
 difficulty: advanced
 estimated_time: 25
 default_challenge_mode: highlight
@@ -274,344 +274,464 @@ questions:
             end
           end
 
-    explanation: "`find_each` действительно читает записи батчами, но отдаёт отдельные ActiveRecord-объекты. В бэкфилле на миллионах строк это приведёт к загрузке моделей, колбэкам/валидациям при `update!` и множеству отдельных `UPDATE`. Для такого бэкфилла лучше использовать `in_batches`: он отдаёт relation на партию строк, после чего можно выполнить один `update_all` на каждую партию. Так работа делится на небольшие SQL-операции, а не превращается в один огромный `UPDATE` или миллионы обновлений по одной записи."
-    explanation: "in_batches разбивает UPDATE на транзакции по N строк. Каждая партия держит лок только на своё время. find_each не подходит — загружает объекты в память и делает UPDATE по одной. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-in_batches"
+    explanation: "`find_each` действительно читает записи батчами, но отдаёт отдельные ActiveRecord-объекты. В бэкфилле на миллионах строк это приведёт к загрузке моделей, колбэкам/валидациям при `update!` и множеству отдельных `UPDATE`. Для такого бэкфилла лучше использовать `in_batches`: он отдаёт relation на партию строк, после чего можно выполнить один `update_all` на каждую партию. Так работа делится на небольшие SQL-операции, а не превращается в один огромный `UPDATE` или миллионы обновлений по одной записи. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-in_batches"
 
   - id: q5
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление FK сканирует всю таблицу. Найди строку без нужного параметра."
+    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Найди параметр, который делает миграцию опасной."
     modes:
       highlight:
         code: |
-          class AddFkOrdersToUsers < ActiveRecord::Migration[7.0]
-            def change
-              add_foreign_key :orders, :users
+          class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              add_foreign_key :invoices, :customers,
+                column: :customer_id,
+                primary_key: :id,
+                name: "fk_invoices_customer_id",
+                on_delete: :restrict,
+                validate: true
             end
           end
-        correct_lines: [3]
-        hint: "Кликни на строку, которая заблокирует таблицу на время сканирования всех строк"
+        correct_lines: [10]
+        hint: "Таймаут лока помогает не ждать бесконечно, но не отменяет сканирование существующих строк при добавлении FK."
+
       fill:
         code: |
-          class AddFkOrdersToUsers < ActiveRecord::Migration[7.0]
-            def change
-              add_foreign_key :orders, :users, ___
+          class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              add_foreign_key :invoices, :customers,
+                column: :customer_id,
+                primary_key: :id,
+                name: "fk_invoices_customer_id",
+                on_delete: :restrict,
+                ___
             end
           end
         answer: "validate: false"
+
       fix:
         code: |
-          class AddFkOrdersToUsers < ActiveRecord::Migration[7.0]
-            def change
-              add_foreign_key :orders, :users
+          class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              add_foreign_key :invoices, :customers,
+                column: :customer_id,
+                primary_key: :id,
+                name: "fk_invoices_customer_id",
+                on_delete: :restrict,
+                validate: true
             end
           end
         answer: |
-          class AddFkOrdersToUsers < ActiveRecord::Migration[7.0]
-            def change
-              add_foreign_key :orders, :users, validate: false
+          class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              add_foreign_key :invoices, :customers,
+                column: :customer_id,
+                primary_key: :id,
+                name: "fk_invoices_customer_id",
+                on_delete: :restrict,
+                validate: false
             end
           end
-    explanation: "validate: false добавляет FK как NOT VALID: новые строки валидируются, существующие — нет. Затем validate_foreign_key с мягким локом. Источник: https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-VALIDATE-CONSTRAINT"
+
+    explanation: "Для большой таблицы FK лучше добавлять в два шага. `validate: false` создаёт constraint как `NOT VALID`: новые строки уже проверяются, но существующие строки не сканируются сразу во время добавления ограничения. Затем отдельной миграцией выполняют `validate_foreign_key`. В этом примере опасный параметр — `validate: true`, потому что он заставляет PostgreSQL сразу валидировать существующие строки. Источники: https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-NOT-VALID, https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_foreign_key"
 
   - id: q6
     type: code_challenge
     default_mode: highlight
     difficulty: medium
     topics: [schema, locking]
-    text: "Второй шаг добавления FK — валидация существующих строк. Найди неправильный метод."
+    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Найди строку с неправильным методом."
     modes:
       highlight:
         code: |
-          class ValidateFkOrdersToUsers < ActiveRecord::Migration[7.0]
+          class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
             def change
-              add_foreign_key :orders, :users
+              say "Validating invoices.customer_id foreign key"
+
+              validate_check_constraint :invoices, name: "fk_invoices_customer_id"
             end
           end
-        correct_lines: [3]
-        hint: "Кликни на строку, которая добавит FK заново вместо валидации существующего"
+        correct_lines: [5]
+        hint: "Имя constraint выглядит как FK, но выбран метод для другого типа ограничения."
+
       fill:
         code: |
-          class ValidateFkOrdersToUsers < ActiveRecord::Migration[7.0]
+          class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
             def change
+              say "Validating invoices.customer_id foreign key"
+
               ___
             end
           end
-        answer: "validate_foreign_key :orders, :users"
+        answer: "validate_foreign_key :invoices, :customers"
+
       fix:
         code: |
-          class ValidateFkOrdersToUsers < ActiveRecord::Migration[7.0]
+          class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
             def change
-              add_foreign_key :orders, :users
+              say "Validating invoices.customer_id foreign key"
+
+              validate_check_constraint :invoices, name: "fk_invoices_customer_id"
             end
           end
         answer: |
-          class ValidateFkOrdersToUsers < ActiveRecord::Migration[7.0]
+          class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
             def change
-              validate_foreign_key :orders, :users
+              say "Validating invoices.customer_id foreign key"
+
+              validate_foreign_key :invoices, :customers
             end
           end
-    explanation: "validate_foreign_key выполняет VALIDATE CONSTRAINT с SHARE UPDATE EXCLUSIVE локом — не блокирует чтение и запись. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-validate_foreign_key"
+
+    explanation: "После добавления FK с `validate: false` нужно валидировать именно foreign key, а не check constraint. Для этого Rails даёт `validate_foreign_key`, который выполняет валидацию уже существующего FK. В PostgreSQL `VALIDATE CONSTRAINT` не блокирует обычные чтения и записи так же жёстко, как немедленное добавление полностью валидируемого ограничения. Источники: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-validate_foreign_key, https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-VALIDATE-CONSTRAINT"
 
   - id: q7
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [schema, migrations]
-    text: "change_column переписывает все строки таблицы. Найди опасный вызов."
+    text: "Нужно поменять только DEFAULT у столбца. Найди строку, где выбран слишком тяжёлый метод."
     modes:
       highlight:
         code: |
-          class ChangeProductStatusDefault < ActiveRecord::Migration[7.0]
+          class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
             def change
-              change_column :products, :status, :string, default: 'active'
+              change_column_comment :subscriptions, :billing_state,
+                from: nil,
+                to: "Current billing lifecycle state"
+
+              change_column :subscriptions, :billing_state, :string,
+                default: "active"
             end
           end
-        correct_lines: [3]
-        hint: "Кликни на строку, которая заблокирует таблицу при изменении только DEFAULT"
+        correct_lines: [7]
+        hint: "Если меняется только значение по умолчанию, не нужно заново описывать тип столбца."
+
       fill:
         code: |
-          class ChangeProductStatusDefault < ActiveRecord::Migration[7.0]
+          class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
             def change
-              ___ :products, :status, "active"
+              ___ :subscriptions, :billing_state, "active"
             end
           end
         answer: "change_column_default"
+
       fix:
         code: |
-          class ChangeProductStatusDefault < ActiveRecord::Migration[7.0]
+          class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
             def change
-              change_column :products, :status, :string, default: 'active'
+              change_column_comment :subscriptions, :billing_state,
+                from: nil,
+                to: "Current billing lifecycle state"
+
+              change_column :subscriptions, :billing_state, :string,
+                default: "active"
             end
           end
         answer: |
-          class ChangeProductStatusDefault < ActiveRecord::Migration[7.0]
+          class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
             def change
-              change_column_default :products, :status, "active"
+              change_column_comment :subscriptions, :billing_state,
+                from: nil,
+                to: "Current billing lifecycle state"
+
+              change_column_default :subscriptions, :billing_state, "active"
             end
           end
-    explanation: "change_column_default выполняет ALTER COLUMN SET DEFAULT — моментально, без перезаписи строк. change_column переписывает всю таблицу. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
+
+    explanation: "`change_column` предназначен для изменения определения столбца и может привести к более тяжёлому `ALTER TABLE`, чем нужно. Если задача — только поменять DEFAULT, лучше использовать `change_column_default`: Rails сгенерирует изменение default-значения без переопределения типа столбца. В этом примере проблемный вызов — `change_column :subscriptions, :billing_state, :string, default: "active"`. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_default"
 
   - id: q8
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [indexes, locking]
-    text: "Удаление индекса тоже берёт лок. Найди строку без нужного флага."
+    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Найди строку без нужного флага."
     modes:
       highlight:
         code: |
-          class RemoveOldIndexFromUsers < ActiveRecord::Migration[7.0]
+          class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
-              remove_index :users, :email
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              remove_index :accounts,
+                name: "index_accounts_on_legacy_external_id",
+                if_exists: true
             end
           end
-        correct_lines: [5]
-        hint: "Кликни на строку, которая заблокирует таблицу при удалении индекса"
+        correct_lines: [7]
+        hint: "Транзакция отключена и lock_timeout задан, но само удаление индекса всё ещё выполняется обычным способом."
+
       fill:
         code: |
-          class RemoveOldIndexFromUsers < ActiveRecord::Migration[7.0]
+          class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
-              remove_index :users, :email, ___
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              remove_index :accounts,
+                name: "index_accounts_on_legacy_external_id",
+                if_exists: true,
+                ___
             end
           end
         answer: "algorithm: :concurrently"
+
       fix:
         code: |
-          class RemoveOldIndexFromUsers < ActiveRecord::Migration[7.0]
+          class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
-              remove_index :users, :email
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              remove_index :accounts,
+                name: "index_accounts_on_legacy_external_id",
+                if_exists: true
             end
           end
         answer: |
-          class RemoveOldIndexFromUsers < ActiveRecord::Migration[7.0]
+          class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
-              remove_index :users, :email, algorithm: :concurrently
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              remove_index :accounts,
+                name: "index_accounts_on_legacy_external_id",
+                if_exists: true,
+                algorithm: :concurrently
             end
           end
-    explanation: "DROP INDEX CONCURRENTLY удаляет индекс без блокировки DML. Rails поддерживает через algorithm: :concurrently в remove_index. Требует disable_ddl_transaction!. Источник: https://www.postgresql.org/docs/current/sql-dropindex.html"
+
+    explanation: "В PostgreSQL для удаления индекса без жёсткой блокировки DML используется `DROP INDEX CONCURRENTLY`. В Rails это задаётся через `algorithm: :concurrently` у `remove_index`. Как и при создании concurrent index, такая операция не должна выполняться внутри транзакции миграции, поэтому `disable_ddl_transaction!` здесь тоже нужен. Источники: https://www.postgresql.org/docs/current/sql-dropindex.html, https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_index"
 
   - id: q9
     type: code_challenge
     default_mode: highlight
     difficulty: medium
     topics: [migrations, schema]
-    text: "Миграция делает необратимое действие — удаляет столбец. Найди неправильный метод."
+    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Найди строку, где не хватает информации для rollback."
     modes:
       highlight:
         code: |
-          class RemoveOldTokenFromUsers < ActiveRecord::Migration[7.0]
+          class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
             def change
+              remove_index :users, :legacy_token, if_exists: true
+
               remove_column :users, :legacy_token
             end
           end
-        correct_lines: [2]
-        hint: "Кликни на метод, который не позволит откатить миграцию корректно"
+        correct_lines: [5]
+        hint: "Rails может обратить удаление столбца только если знает его тип и опции."
+
       fill:
         code: |
-          class RemoveOldTokenFromUsers < ActiveRecord::Migration[7.0]
-            def ___(dir)
-              dir.up   { remove_column :users, :legacy_token }
-              dir.down { add_column    :users, :legacy_token, :string }
+          class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
+            def change
+              remove_index :users, :legacy_token, if_exists: true
+
+              remove_column :users, :legacy_token, ___
             end
           end
-        answer: "reversible"
+        answer: ":string"
+
       fix:
         code: |
-          class RemoveOldTokenFromUsers < ActiveRecord::Migration[7.0]
+          class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
             def change
+              remove_index :users, :legacy_token, if_exists: true
+
               remove_column :users, :legacy_token
             end
           end
         answer: |
-          class RemoveOldTokenFromUsers < ActiveRecord::Migration[7.0]
-            def reversible(dir)
-              dir.up   { remove_column :users, :legacy_token }
-              dir.down { add_column    :users, :legacy_token, :string }
+          class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
+            def change
+              remove_index :users, :legacy_token, if_exists: true
+
+              remove_column :users, :legacy_token, :string
             end
           end
-    explanation: "reversible позволяет описать оба направления. Rails бросит ActiveRecord::IrreversibleMigration при откате если не описать down. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-reversible"
+
+    explanation: "`remove_column` внутри `change` становится обратимым только если Rails знает, какой столбец нужно восстановить при rollback. Поэтому при удалении столбца стоит передавать тип и важные опции столбца, например `remove_column :users, :legacy_token, :string`. Без этой информации откат может закончиться `ActiveRecord::IrreversibleMigration`. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-the-change-method"
 
   - id: q10
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "CHECK NOT VALID добавляет ограничение без полного сканирования таблицы. Найди пропущенный параметр."
+    text: "CHECK constraint на большой таблице нужно добавлять без немедленной проверки всех строк. Найди опасный параметр."
     modes:
       highlight:
         code: |
-          class AddNotNullCheckToUsersEmail < ActiveRecord::Migration[7.0]
+          class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
             def up
               add_check_constraint :users,
                 "email IS NOT NULL",
-                name: "users_email_not_null"
+                name: "users_email_present",
+                if_not_exists: true,
+                validate: true
             end
           end
-        correct_lines: [5]
-        hint: "Кликни на строку после которой нужен параметр, отключающий немедленную валидацию"
+        correct_lines: [7]
+        hint: "Параметр выглядит безопасно рядом с if_not_exists, но именно он заставляет сразу проверить существующие строки."
+
       fill:
         code: |
-          class AddNotNullCheckToUsersEmail < ActiveRecord::Migration[7.0]
+          class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
             def up
               add_check_constraint :users,
                 "email IS NOT NULL",
-                name: "users_email_not_null",
+                name: "users_email_present",
+                if_not_exists: true,
                 ___
             end
           end
         answer: "validate: false"
+
       fix:
         code: |
-          class AddNotNullCheckToUsersEmail < ActiveRecord::Migration[7.0]
+          class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
             def up
               add_check_constraint :users,
                 "email IS NOT NULL",
-                name: "users_email_not_null"
+                name: "users_email_present",
+                if_not_exists: true,
+                validate: true
             end
           end
         answer: |
-          class AddNotNullCheckToUsersEmail < ActiveRecord::Migration[7.0]
+          class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
             def up
               add_check_constraint :users,
                 "email IS NOT NULL",
-                name: "users_email_not_null",
+                name: "users_email_present",
+                if_not_exists: true,
                 validate: false
             end
           end
-    explanation: "validate: false (Rails 6.1+) добавляет CHECK NOT VALID мгновенно. Затем validate_check_constraint с SHARE UPDATE EXCLUSIVE локом. Источник: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_check_constraint"
+
+    explanation: "`validate: false` добавляет CHECK constraint как `NOT VALID`: новые и изменяемые строки уже должны соответствовать constraint, но существующие строки не проверяются сразу во время `ALTER TABLE`. Потом constraint валидируют отдельным шагом через `validate_check_constraint`. В этом примере опасный параметр — `validate: true`, потому что он включает немедленную проверку существующих строк. Источники: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_check_constraint, https://www.postgresql.org/docs/current/sql-altertable.html#SQL-ALTERTABLE-DESC-NOT-VALID"
 
   - id: q11
     type: code_challenge
     default_mode: highlight
     difficulty: medium
     topics: [migrations, performance]
-    text: "В бэкфилле нужно вывести прогресс. Найди строку с неправильным методом вывода."
+    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Найди строку с неподходящим методом вывода."
     modes:
       highlight:
         code: |
           class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
             def up
-              User.find_each.with_index do |user, i|
-                user.update_column(:slug, user.name.parameterize)
-                puts "Processed #{i}" if (i % 1000).zero?
+              User.where(slug: nil).in_batches(of: 1000) do |batch|
+                batch.update_all("slug = lower(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'))")
+
+                Rails.logger.info "Processed slug batch"
               end
             end
           end
-        correct_lines: [5]
-        hint: "Кликни на строку с методом вывода, который не предназначен для контекста миграций"
+        correct_lines: [8]
+        hint: "Логгер приложения работает, но миграции имеют свой стандартный способ вывода сообщений."
+
       fill:
         code: |
           class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
             def up
-              User.find_each.with_index do |user, i|
-                user.update_column(:slug, user.name.parameterize)
-                ___ "Processed #{i}" if (i % 1000).zero?
+              User.where(slug: nil).in_batches(of: 1000) do |batch|
+                batch.update_all("slug = lower(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'))")
+
+                ___ "Processed slug batch"
               end
             end
           end
         answer: "say"
+
       fix:
         code: |
           class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
             def up
-              User.find_each.with_index do |user, i|
-                user.update_column(:slug, user.name.parameterize)
-                puts "Processed #{i}" if (i % 1000).zero?
+              User.where(slug: nil).in_batches(of: 1000) do |batch|
+                batch.update_all("slug = lower(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'))")
+
+                Rails.logger.info "Processed slug batch"
               end
             end
           end
         answer: |
           class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
             def up
-              User.find_each.with_index do |user, i|
-                user.update_column(:slug, user.name.parameterize)
-                say "Processed #{i}" if (i % 1000).zero?
+              User.where(slug: nil).in_batches(of: 1000) do |batch|
+                batch.update_all("slug = lower(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'))")
+
+                say "Processed slug batch"
               end
             end
           end
-    explanation: "say — встроенный метод ActiveRecord::Migration для вывода в лог миграций. say_with_time замеряет время блока. puts работает, но обходит стандартный формат лога миграций. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Migration.html#method-i-say"
+
+    explanation: "`Rails.logger.info` может что-то записать в лог приложения, но для сообщений внутри миграций Rails предоставляет специальный метод `say`. Он выводит сообщение в стандартном формате миграций и лучше подходит для прогресса или пояснений во время `rails db:migrate`. Для замера времени блока можно использовать `say_with_time`. Источник: https://api.rubyonrails.org/classes/ActiveRecord/Migration.html#method-i-say"
 
   - id: q12
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [migrations, locking]
-    text: "Финальная проверка: добавление индекса на таблицу с 20 млн строк без простоя. Найди пропущенную строку."
+    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Найди строку, которая выглядит как защита, но не решает главное ограничение."
     modes:
       highlight:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
-            def change
+            def up
+              execute "SET statement_timeout = '10min'"
+
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
-        correct_lines: [1]
-        hint: "Кликни на строку после которой нужно объявление, без которого миграция упадёт с ошибкой"
+        correct_lines: [3]
+        hint: "Таймаут выполнения запроса не отменяет то, что concurrent index нельзя запускать внутри транзакции миграции."
+
       fill:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
             ___
 
-            def change
+            def up
+              execute "SET statement_timeout = '10min'"
+
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
         answer: "disable_ddl_transaction!"
+
       fix:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
-            def change
+            def up
+              execute "SET statement_timeout = '10min'"
+
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
@@ -619,8 +739,11 @@ questions:
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
+            def up
+              execute "SET statement_timeout = '10min'"
+
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
-    explanation: "CONCURRENTLY всегда требует disable_ddl_transaction!. Без него Rails бросит ошибку 'index cannot be created concurrently within a transaction'. Источник: https://guides.rubyonrails.org/active_record_migrations.html#using-the-disable-ddl-transaction-method"
+
+    explanation: "`algorithm: :concurrently` заставляет Rails использовать `CREATE INDEX CONCURRENTLY`, но PostgreSQL запрещает выполнять такую команду внутри транзакционного блока. Rails по умолчанию оборачивает миграции в транзакцию, поэтому рядом с concurrent index нужен `disable_ddl_transaction!`. `statement_timeout` ограничивает время выполнения запроса, но не отключает транзакцию миграции. Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://guides.rubyonrails.org/active_record_migrations.html#using-the-disable-ddl-transaction-method"

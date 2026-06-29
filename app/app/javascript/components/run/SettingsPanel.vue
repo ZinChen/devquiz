@@ -45,7 +45,7 @@
           ></button>
         </div>
       </div>
-      <p v-if="locked" class="challenge-toggle__locked-hint">Режим зафиксирован</p>
+      <p v-if="locked" class="challenge-toggle__locked-hint">Тест уже начат</p>
     </template>
   </div>
 </template>
