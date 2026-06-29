@@ -170,41 +170,53 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление NOT NULL столбца на 50 млн строк перезапишет каждую строку. Найди проблемный параметр."
+    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Найди проблемный параметр."
     modes:
       highlight:
         code: |
-          class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
+          class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
             def change
-              add_column :users, :verified, :boolean,
-                         default: false, null: false
+              add_column :accounts, :risk_review_state, :string,
+                        default: "not_required",
+                        comment: "Current AML/KYC review state",
+                        null: false
             end
           end
-        correct_lines: [4]
-        hint: "Кликни на параметр, который вызовет полную перезапись таблицы в старых версиях PG"
+        correct_lines: [6]
+        hint: "Кликни на параметр, который превращает добавление столбца в обязательную проверку всех существующих строк."
+
       fill:
         code: |
-          # Шаг 1: добавить без NOT NULL
-          class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
+          # Шаг 1: добавить столбец со значением по умолчанию "not_required"
+          class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
             def up
-              add_column :users, :verified, :boolean, ___
+              add_column :accounts, :risk_review_state, :string,
+                        ___,
+                        comment: "Current AML/KYC review state"
             end
           end
-        answer: "default: false"
+        answer: "default: \"not_required\""
+
       fix:
         code: |
-          class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
+          class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
             def change
-              add_column :users, :verified, :boolean, default: false, null: false
+              add_column :accounts, :risk_review_state, :string,
+                        default: "not_required",
+                        comment: "Current AML/KYC review state",
+                        null: false
             end
           end
         answer: |
-          class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
+          class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
             def up
-              add_column :users, :verified, :boolean, default: false
+              add_column :accounts, :risk_review_state, :string,
+                        default: "not_required",
+                        comment: "Current AML/KYC review state"
             end
           end
-    explanation: "До PG 11: добавление DEFAULT + NOT NULL переписывало всю таблицу. PG 11+ хранит DEFAULT в метаданных. Безопасный путь: добавить без NOT NULL → бэкфилл → добавить NOT NULL отдельно. Источник: https://www.postgresql.org/docs/11/sql-altertable.html"
+
+    explanation: "В старых версиях PostgreSQL добавление столбца с `DEFAULT` и `NOT NULL` на большой таблице могло приводить к тяжёлой операции: базе нужно было заполнить или проверить существующие строки, пока таблица находится под DDL-локом. Более безопасный путь — сначала добавить столбец с `default`, но без `null: false`, затем отдельно сделать бэкфилл существующих строк и только после этого добавить `NOT NULL` отдельной миграцией. В этом примере проблемный параметр — `null: false`. Источник: https://www.postgresql.org/docs/11/sql-altertable.html"
 
   - id: q4
     type: code_challenge
