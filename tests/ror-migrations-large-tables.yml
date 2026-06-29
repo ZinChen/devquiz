@@ -16,84 +16,154 @@ questions:
     modes:
       highlight:
         code: |
-          class AddIndexToOrdersUserId < ActiveRecord::Migration[7.0]
-            disable_ddl_transaction!
+          class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
+            def up
+              safety_assured do
+                execute "SET lock_timeout = '5s'"
 
-            def change
-              add_index :orders, :user_id
+                add_index :orders, :created_at, algorithm: :concurrently
+                add_index :orders, [:account_id, :status], algorithm: :concurrently
+                add_index :orders, :user_id, algorithm: :concurrently
+              end
+            end
+
+            def down
+              remove_index :orders, :user_id, if_exists: true
+              remove_index :orders, [:account_id, :status], if_exists: true
+              remove_index :orders, :created_at, if_exists: true
             end
           end
-        correct_lines: [5]
-        hint: "disable_ddl_transaction! есть, но этого недостаточно — кликни на строку, которая всё равно заблокирует таблицу"
+        correct_lines: [4]
+        hint: "Строка про таймаут лока выглядит полезной, но она не решает главное ограничение PostgreSQL для concurrent index."
+
       fill:
         code: |
-          class AddIndexToOrdersUserId < ActiveRecord::Migration[7.0]
-            disable_ddl_transaction!
+          class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
+            ___
 
-            def change
-              add_index :orders, :user_id, ___
+            def up
+              safety_assured do
+                execute "SET lock_timeout = '5s'"
+
+                add_index :orders, :created_at, algorithm: :concurrently
+                add_index :orders, [:account_id, :status], algorithm: :concurrently
+                add_index :orders, :user_id, algorithm: :concurrently
+              end
+            end
+
+            def down
+              remove_index :orders, :user_id, if_exists: true
+              remove_index :orders, [:account_id, :status], if_exists: true
+              remove_index :orders, :created_at, if_exists: true
             end
           end
-        answer: "algorithm: :concurrently"
+        answer: "disable_ddl_transaction!"
+
       fix:
         code: |
-          class AddIndexToOrdersUserId < ActiveRecord::Migration[7.0]
-            disable_ddl_transaction!
+          class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
+            def up
+              safety_assured do
+                execute "SET lock_timeout = '5s'"
 
-            def change
-              add_index :orders, :user_id
+                add_index :orders, :created_at, algorithm: :concurrently
+                add_index :orders, [:account_id, :status], algorithm: :concurrently
+                add_index :orders, :user_id, algorithm: :concurrently
+              end
+            end
+
+            def down
+              remove_index :orders, :user_id, if_exists: true
+              remove_index :orders, [:account_id, :status], if_exists: true
+              remove_index :orders, :created_at, if_exists: true
             end
           end
         answer: |
-          class AddIndexToOrdersUserId < ActiveRecord::Migration[7.0]
+          class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
             disable_ddl_transaction!
 
-            def change
-              add_index :orders, :user_id, algorithm: :concurrently
+            def up
+              safety_assured do
+                execute "SET lock_timeout = '5s'"
+
+                add_index :orders, :created_at, algorithm: :concurrently
+                add_index :orders, [:account_id, :status], algorithm: :concurrently
+                add_index :orders, :user_id, algorithm: :concurrently
+              end
+            end
+
+            def down
+              remove_index :orders, :user_id, if_exists: true
+              remove_index :orders, [:account_id, :status], if_exists: true
+              remove_index :orders, :created_at, if_exists: true
             end
           end
-    explanation: "Для неблокирующего индекса нужны оба условия: algorithm: :concurrently (PostgreSQL строит индекс в фоне без ACCESS EXCLUSIVE лока) и disable_ddl_transaction! (CONCURRENTLY нельзя запускать внутри транзакции, которую Rails добавляет по умолчанию). Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://api.rubyonrails.org/classes/ActiveRecord/Migration.html"
+    explanation: "`lock_timeout` ограничивает ожидание блокировки, но не отключает транзакцию миграции. Поэтому для неблокирующего индекса нужны оба условия: algorithm: :concurrently (PostgreSQL строит индекс в фоне без ACCESS EXCLUSIVE лока) и disable_ddl_transaction! (CONCURRENTLY нельзя запускать внутри транзакции, которую Rails добавляет по умолчанию). Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://api.rubyonrails.org/classes/ActiveRecord/Migration.html"
 
   - id: q2
     type: code_challenge
     default_mode: highlight
     difficulty: hard
     topics: [locking, schema]
-    text: "Миграция ждёт DDL-лок бесконечно, блокируя новые запросы. Найди строку, которую нужно добавить перед ALTER TABLE."
+    text: "Миграция ждёт DDL-лок бесконечно, блокируя новые запросы. Найди строку, которая выглядит как защита от долгой операции, но не решает проблему ожидания лока."
     modes:
       highlight:
         code: |
           class AddStatusToOrders < ActiveRecord::Migration[7.0]
             def up
+              execute "SET statement_timeout = '2s'"
+
               add_column :orders, :status, :string, default: 'pending'
+            end
+
+            def down
+              remove_column :orders, :status
             end
           end
         correct_lines: [3]
-        hint: "Кликни на строку, перед которой нужно установить lock_timeout"
+        hint: "Эта настройка ограничивает длительность выполнения запроса, но проблема здесь в ожидании DDL-лока перед ALTER TABLE."
+
       fill:
         code: |
           class AddStatusToOrders < ActiveRecord::Migration[7.0]
             def up
               ___
+
               add_column :orders, :status, :string, default: 'pending'
+            end
+
+            def down
+              remove_column :orders, :status
             end
           end
         answer: "execute \"SET lock_timeout = '2s'\""
+
       fix:
         code: |
           class AddStatusToOrders < ActiveRecord::Migration[7.0]
             def up
+              execute "SET statement_timeout = '2s'"
+
               add_column :orders, :status, :string, default: 'pending'
+            end
+
+            def down
+              remove_column :orders, :status
             end
           end
         answer: |
           class AddStatusToOrders < ActiveRecord::Migration[7.0]
             def up
               execute "SET lock_timeout = '2s'"
+
               add_column :orders, :status, :string, default: 'pending'
             end
+
+            def down
+              remove_column :orders, :status
+            end
           end
-    explanation: "lock_timeout прерывает попытку захвата лока если она длится дольше указанного времени. Лучше упасть быстро и повторить, чем блокировать все запросы. Источник: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT"
+    explanation: "`statement_timeout` ограничивает общее время выполнения SQL-выражения, но здесь главная опасность — долгое ожидание DDL-лока перед `ALTER TABLE`. Для этого нужен `lock_timeout`: если миграция не смогла быстро получить lock, она упадёт, а не будет висеть и блокировать новые запросы. Источник: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT"
 
   - id: q3
     type: code_challenge
@@ -117,16 +187,15 @@ questions:
           # Шаг 1: добавить без NOT NULL
           class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
             def up
-              ___
+              add_column :users, :verified, :boolean, ___
             end
           end
-        answer: "add_column :users, :verified, :boolean, default: false"
+        answer: "default: false"
       fix:
         code: |
           class AddVerifiedToUsers < ActiveRecord::Migration[7.0]
             def change
-              add_column :users, :verified, :boolean,
-                         default: false, null: false
+              add_column :users, :verified, :boolean, default: false, null: false
             end
           end
         answer: |
