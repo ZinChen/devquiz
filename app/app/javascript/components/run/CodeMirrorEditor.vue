@@ -7,8 +7,8 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { EditorView, minimalSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { languages } from '@codemirror/language-data'
 import { tags } from '@lezer/highlight'
+import { loadLang } from '@/composables/useCodeMirrorLang.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -81,8 +81,7 @@ const baseTheme = EditorView.theme({
 })
 
 async function createView() {
-  const langDesc = languages.find(l => l.name.toLowerCase() === props.lang.toLowerCase())
-  const langSupport = langDesc ? await langDesc.load() : null
+  const langSupport = await loadLang(props.lang)
 
   const extensions = [
     minimalSetup,

@@ -2,14 +2,13 @@ import { ref, shallowRef } from 'vue'
 import { createHighlighter } from 'shiki'
 
 const highlighter = shallowRef(null)
+const ready = ref(false)
 let initPromise = null
 
 const SUPPORTED_LANGS = ['ruby', 'sql', 'javascript', 'typescript', 'python', 'bash', 'json', 'yaml']
 const THEME = 'github-light'
 
 export function useShiki() {
-  const ready = ref(!!highlighter.value)
-
   function init() {
     if (initPromise) return initPromise
     initPromise = createHighlighter({ themes: [THEME], langs: SUPPORTED_LANGS }).then(h => {

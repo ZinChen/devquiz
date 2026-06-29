@@ -16,8 +16,9 @@ class RunsController < ApplicationController
   end
 
   def create
-    answers_data = params[:answers].to_unsafe_h
-    used_hint_ids = Array(params[:used_hints]).map(&:to_s).to_set
+    answers_data    = params[:answers].to_unsafe_h
+    used_hint_ids   = Array(params[:used_hints]).map(&:to_s).to_set
+    challenge_mode  = params[:challenge_mode].presence || "fill"
 
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
@@ -30,7 +31,6 @@ class RunsController < ApplicationController
     )
 
     questions_map   = load_questions.index_by { |q| q["id"] }
-    challenge_mode  = params[:challenge_mode].presence || "fill"
     correct_count   = 0
 
     answers_data.each do |question_id, selected|

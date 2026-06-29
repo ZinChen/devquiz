@@ -141,6 +141,8 @@ function handleKeydown(e) {
   const q = currentQuestion.value
   if (!q) return
 
+  if (q.type === 'code_challenge' && props.challengeMode === 'fix') return
+
   if (e.key === 'ArrowRight') {
     e.preventDefault()
     goTo((currentIndex.value + 1) % props.questions.length)

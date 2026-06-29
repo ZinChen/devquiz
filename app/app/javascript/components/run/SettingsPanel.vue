@@ -45,7 +45,15 @@
           ></button>
         </div>
       </div>
-      <p v-if="locked" class="challenge-toggle__locked-hint">Тест уже начат</p>
+      <div class="challenge-toggle__footer">
+        <p v-if="locked" class="challenge-toggle__locked-hint">Тест уже начат</p>
+        <button
+          v-if="locked"
+          type="button"
+          class="challenge-toggle__reset-btn"
+          @click="$emit('reset')"
+        >Сброс</button>
+      </div>
     </template>
   </div>
 </template>
@@ -58,7 +66,7 @@ const props = defineProps({
   locked:           { type: Boolean, default: false },
 })
 
-defineEmits(['update:mode', 'update:challengeMode'])
+defineEmits(['update:mode', 'update:challengeMode', 'reset'])
 
 const challengeModeOptions = [
   { value: 'highlight', icon: '🔍', label: 'Highlight', hint: 'Кликни на проблемную строку' },
@@ -192,9 +200,31 @@ const activeIndex = computed(
   cursor: not-allowed;
 }
 
+.challenge-toggle__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  max-width: 156px;
+}
+
 .challenge-toggle__locked-hint {
   font-size: 0.7rem;
   color: #9CA3AF;
-  margin-top: 0.25rem;
+}
+
+.challenge-toggle__reset-btn {
+  font-size: 0.7rem;
+  color: #6366F1;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.challenge-toggle__reset-btn:hover {
+  color: #4F46E5;
 }
 </style>

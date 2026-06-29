@@ -31,6 +31,7 @@
         v-model:challengeMode="challengeMode"
         :hasCodeChallenge="hasCodeChallenge"
         :locked="sessionStarted"
+        @reset="resetChallenge"
       />
     </div>
 
@@ -91,6 +92,7 @@ const {
   optionLetter,
   formatText,
   updateIndex,
+  resetChallenge,
   submit,
 } = useQuizSession(props.test, props.questions)
 

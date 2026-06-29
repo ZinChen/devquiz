@@ -70,6 +70,7 @@
 <script setup>
 import { computed, ref, watch, nextTick, onMounted } from 'vue'
 import { useShiki } from '@/composables/useShiki.js'
+import { preloadLang } from '@/composables/useCodeMirrorLang.js'
 import CodeMirrorEditor from '@/components/run/CodeMirrorEditor.vue'
 
 const props = defineProps({
@@ -96,7 +97,10 @@ const { ready, init, tokenize } = useShiki()
 const modeData = computed(() => props.question.modes?.[props.mode] ?? {})
 const lang     = computed(() => props.question.language || 'ruby')
 
-onMounted(() => init())
+onMounted(() => {
+  init()
+  preloadLang(lang.value)
+})
 
 // ── highlight ────────────────────────────────────────────────────────
 const highlightLines = computed(() =>

@@ -10,17 +10,22 @@ export function useQuizSession(test, questionsSource) {
   }
 
   function resolveSavedIndex() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      return saved?.currentIndex || 0
-    } catch {}
-    return 0
+    return savedSession?.currentIndex || 0
   }
+
+  function resolveSavedSession() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    } catch {}
+    return null
+  }
+
+  const savedSession = resolveSavedSession()
 
   const questions      = ref(resolveQuestions())
   const answers        = ref({})
   const usedHints      = ref(new Set())
-  const challengeMode  = ref(DEFAULT_CHALLENGE_MODE)
+  const challengeMode  = ref(savedSession?.challengeMode || DEFAULT_CHALLENGE_MODE)
   const startedAt      = ref(new Date().toISOString())
   const elapsed        = ref(0)
   const savedIndex     = ref(resolveSavedIndex())
@@ -59,22 +64,20 @@ export function useQuizSession(test, questionsSource) {
   onMounted(() => {
     initAnswers()
 
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      if (saved) {
-        const hasAnswers = saved.answers && Object.values(saved.answers).some(a =>
-          Array.isArray(a) ? a.length > 0 : a !== null
-        )
+    if (savedSession) {
+      const hasAnswers = savedSession.answers && Object.values(savedSession.answers).some(a =>
+        Array.isArray(a) ? a.length > 0 : (typeof a === 'string' ? a.length > 0 : a !== null)
+      )
 
-        if (hasAnswers) {
-          answers.value   = saved.answers
-          startedAt.value = saved.startedAt || startedAt.value
-          elapsed.value   = saved.elapsed   || 0
-        } else {
-          localStorage.removeItem(STORAGE_KEY)
-        }
+      if (hasAnswers) {
+        answers.value        = savedSession.answers
+        startedAt.value      = savedSession.startedAt || startedAt.value
+        elapsed.value        = savedSession.elapsed   || 0
+        sessionStarted.value = true
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
       }
-    } catch {}
+    }
 
     timer = setInterval(() => elapsed.value++, 1000)
     saveTimer = setInterval(() => saveSession(), 10000)
@@ -88,12 +91,22 @@ export function useQuizSession(test, questionsSource) {
 
   function saveSession(extra = {}) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      answers:      answers.value,
-      startedAt:    startedAt.value,
-      elapsed:      elapsed.value,
-      currentIndex: savedIndex.value,
+      answers:       answers.value,
+      startedAt:     startedAt.value,
+      elapsed:       elapsed.value,
+      currentIndex:  savedIndex.value,
+      challengeMode: challengeMode.value,
       ...extra,
     }))
+  }
+
+  function resetChallenge() {
+    sessionStarted.value = false
+    challengeMode.value  = DEFAULT_CHALLENGE_MODE
+    initAnswers()
+    elapsed.value   = 0
+    startedAt.value = new Date().toISOString()
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   function updateIndex(idx) {
@@ -205,6 +218,7 @@ export function useQuizSession(test, questionsSource) {
     formatText,
     updateIndex,
     saveSession,
+    resetChallenge,
     submit,
   }
 }

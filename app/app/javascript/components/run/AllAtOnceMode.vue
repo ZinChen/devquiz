@@ -110,6 +110,8 @@ function handleKeydown(e) {
   const q = currentQuestion()
   if (!q) return
 
+  if (q.type === 'code_challenge' && props.challengeMode === 'fix') return
+
   if (e.key === 'ArrowRight') {
     e.preventDefault()
     scrollTo((activeIndex.value + 1) % props.questions.length)
