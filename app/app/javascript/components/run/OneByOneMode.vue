@@ -125,7 +125,7 @@ function onCardEnter(el) {
   nextTick(() => { containerHeight.value = el.offsetHeight })
 }
 
-function onRadioPick(q, optId, autoAdvance = true) {
+function onRadioPick(q, optId, autoAdvance = false) {
   props.answers[q.id] = optId
   if (autoAdvance) {
     const nextIdx = currentIndex.value + 1
