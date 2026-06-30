@@ -39,15 +39,30 @@
         <div v-if="item.type === 'code_challenge'" class="result-code-challenge">
           <!-- highlight: show code with highlighted correct/selected lines -->
           <template v-if="item.challengeMode === 'highlight'">
-            <pre class="result-code-block result-code-block--lines"><code><div
+            <pre class="result-code-block result-code-block--lines"><code><template
                 v-for="(line, i) in (item.code ?? '').trimEnd().split('\n')"
                 :key="i"
-                class="result-code-line"
-                :class="{
-                  'result-code-line--correct':  isCorrectLine(item, i + 1),
-                  'result-code-line--selected': isSelectedLine(item, i + 1) && !isCorrectLine(item, i + 1),
-                }"
-              >{{ line || ' ' }}</div></code></pre>
+              ><div
+                  v-if="i === 0 && (isCorrectLine(item, 'after:0') || isSelectedLine(item, 'after:0'))"
+                  class="result-code-line result-code-line--gap"
+                  :class="{
+                    'result-code-line--correct':  isCorrectLine(item, 'after:0'),
+                    'result-code-line--selected': isSelectedLine(item, 'after:0') && !isCorrectLine(item, 'after:0'),
+                  }"
+                > </div><div
+                  class="result-code-line"
+                  :class="{
+                    'result-code-line--correct':  isCorrectLine(item, i + 1),
+                    'result-code-line--selected': isSelectedLine(item, i + 1) && !isCorrectLine(item, i + 1),
+                  }"
+                >{{ line || ' ' }}</div><div
+                  v-if="isCorrectLine(item, `after:${i + 1}`) || isSelectedLine(item, `after:${i + 1}`)"
+                  class="result-code-line result-code-line--gap"
+                  :class="{
+                    'result-code-line--correct':  isCorrectLine(item, `after:${i + 1}`),
+                    'result-code-line--selected': isSelectedLine(item, `after:${i + 1}`) && !isCorrectLine(item, `after:${i + 1}`),
+                  }"
+                > </div></template></code></pre>
             <div class="result-code-legend">
               <span class="result-code-legend__item result-code-legend__item--correct">верная строка</span>
               <span v-if="!item.correct" class="result-code-legend__item result-code-legend__item--wrong">ваш выбор</span>
@@ -177,12 +192,17 @@ function optionStyle(item, optId) {
   return { background: '#F7F8FA', color: '#374151' }
 }
 
+function parseLineVal(s) {
+  const t = s.trim()
+  return t.startsWith('after:') ? t : parseInt(t)
+}
+
 function isCorrectLine(item, lineNum) {
-  return item.correctAnswer?.split(',').map(n => parseInt(n)).includes(lineNum)
+  return item.correctAnswer?.split(',').map(parseLineVal).includes(lineNum)
 }
 
 function isSelectedLine(item, lineNum) {
-  return item.selectedAnswer?.split(',').map(n => parseInt(n)).includes(lineNum)
+  return item.selectedAnswer?.split(',').map(parseLineVal).includes(lineNum)
 }
 
 function optionLetterStyle(item, optId) {

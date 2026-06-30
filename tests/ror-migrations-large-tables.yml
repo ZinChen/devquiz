@@ -1,5 +1,5 @@
 slug: ror-migrations-large-tables
-title: "Rails: Миграции на больших таблицах"
+title: "Rails: Миграции"
 description: "Безопасные миграции в продакшне: нулевое время простоя, DDL-локи, CONCURRENTLY, бэкфилл и PostgreSQL-специфика."
 tags: [rails, migrations, postgresql, locking, zero-downtime, advanced, claude-gen]
 difficulty: advanced
@@ -34,7 +34,7 @@ questions:
               remove_index :orders, :created_at, if_exists: true
             end
           end
-        correct_lines: [4]
+        correct_lines: ["after:1"]
         hint: "Посмотри на объявление класса — чего не хватает на уровне миграции, чтобы CONCURRENTLY вообще мог запуститься?"
 
       fill:
@@ -711,7 +711,7 @@ questions:
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
-        correct_lines: [3]
+        correct_lines: ["after:1"]
         hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает рядом с def up?"
 
       fill:

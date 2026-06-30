@@ -167,7 +167,7 @@ class RunsController < ApplicationController
     mode_data = question.dig("modes", mode) || {}
     case mode
     when "highlight"
-      correct = Array(mode_data["correct_lines"]).map(&:to_s).sort
+      correct  = Array(mode_data["correct_lines"]).map(&:to_s).sort
       selected = selected_arr.first.to_s.split(",").map(&:strip).sort
       selected == correct
     when "fix"
