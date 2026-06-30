@@ -35,6 +35,7 @@ questions:
             end
           end
         correct_lines: ["after:1"]
+        insert_text: "  disable_ddl_transaction!"
         hint: "Посмотри на объявление класса — чего не хватает на уровне миграции, чтобы CONCURRENTLY вообще мог запуститься?"
 
       fill:
@@ -458,7 +459,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [indexes, locking]
-    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Найди строку без нужного флага."
+    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Найди строку, где не хватает флага."
     modes:
       highlight:
         code: |
@@ -473,7 +474,8 @@ questions:
                 if_exists: true
             end
           end
-        correct_lines: [7]
+        correct_lines: ["after:9"]
+        insert_text: "    algorithm: :concurrently"
         hint: "disable_ddl_transaction! и lock_timeout есть. Чего не хватает в самом вызове remove_index?"
 
       fill:
@@ -700,7 +702,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, locking]
-    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Найди строку, которая выглядит как защита, но не решает главное ограничение."
+    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Найди строку, где не сделано главное ограничение."
     modes:
       highlight:
         code: |
@@ -712,6 +714,7 @@ questions:
             end
           end
         correct_lines: ["after:1"]
+        insert_text: "  disable_ddl_transaction!"
         hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает рядом с def up?"
 
       fill:

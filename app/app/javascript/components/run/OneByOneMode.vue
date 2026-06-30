@@ -142,11 +142,14 @@ function handleKeydown(e) {
   if (!q) return
 
   if (q.type === 'code_challenge' && props.challengeMode === 'fix') return
+  const isCodeInput = q.type === 'code_challenge' && (props.challengeMode === 'fill' || props.challengeMode === 'fix')
 
   if (e.key === 'ArrowRight') {
+    if (isCodeInput) return
     e.preventDefault()
     goTo((currentIndex.value + 1) % props.questions.length)
   } else if (e.key === 'ArrowLeft') {
+    if (isCodeInput) return
     e.preventDefault()
     goTo((currentIndex.value - 1 + props.questions.length) % props.questions.length)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -171,6 +174,7 @@ function handleKeydown(e) {
       onRadioPick(q, opts[nextPos].id, false)
     }
   } else if (e.key === ' ') {
+    if (q.type === 'code_challenge') return
     e.preventDefault()
     const opts = q.options
     if (!opts?.length) return

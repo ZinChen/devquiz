@@ -150,7 +150,9 @@ class RunsController < ApplicationController
         base.merge(
           challenge_mode:  challenge_mode,
           code:            mode_data["code"],
+          language:        q["language"] || "ruby",
           correct_answer:  mode_data["answer"] || mode_data["correct_lines"]&.join(","),
+          insert_text:     mode_data["insert_text"],
           selected_answer: ans.selected_options.first.to_s
         )
       else
@@ -167,9 +169,24 @@ class RunsController < ApplicationController
     mode_data = question.dig("modes", mode) || {}
     case mode
     when "highlight"
-      correct  = Array(mode_data["correct_lines"]).map(&:to_s).sort
-      selected = selected_arr.first.to_s.split(",").map(&:strip).sort
-      selected == correct
+      correct_raw = Array(mode_data["correct_lines"]).map(&:to_s)
+      selected    = selected_arr.first.to_s.split(",").map(&:strip).sort
+
+      # build all accepted forms for each correct entry:
+      # "after:N" also accepts line N (the line before the gap)
+      # plain line number N also accepts "after:N-1"
+      accepted = correct_raw.flat_map do |c|
+        if c.start_with?("after:")
+          n = c.sub("after:", "").to_i
+          [c, n.to_s]
+        else
+          n = c.to_i
+          [c, "after:#{n - 1}"]
+        end
+      end
+
+      selected.all? { |s| accepted.include?(s) } &&
+        selected.size == correct_raw.size
     when "fix"
       normalize = ->(s) { s.to_s.lines.map(&:rstrip).reject(&:empty?).join("\n").strip }
       normalize.(selected_arr.first) == normalize.(mode_data["answer"])

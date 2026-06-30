@@ -7,41 +7,61 @@
         ref="linesWrapRef"
         class="code-block-inner-wrap code-block-inner-wrap--lines"
         @mousemove="onLinesMouseMove"
-        @mouseleave="if (!keepGap) hoveredGap = null"
+        @mouseleave="onLinesMouseLeave"
       >
         <div
-          v-for="(line, i) in highlightLines"
-          :key="i"
-          class="code-line"
-          :class="{
-            'code-line--selected': selectedLines.includes(i + 1),
-            'code-line--gap-selected-before': selectedLines.includes(`after:${i}`),
-            'code-line--gap-selected-after':  selectedLines.includes(`after:${i + 1}`),
-          }"
-          @click="onLineClick(i, $event)"
-        >
-          <code>
-            <template v-if="tokenizedHighlight">
-              <span
-                v-for="(tok, ti) in (tokenizedHighlight[i] || [])"
-                :key="ti"
-                :style="tok.color ? { color: tok.color } : {}"
-              >{{ tok.content }}</span>
-            </template>
-            <template v-else>{{ line || ' ' }}</template>
-          </code>
-        </div>
+          v-if="selectedLines.includes('after:0')"
+          class="code-line code-line--gap-inserted"
+          @click="toggleLine('after:0')"
+        ><code class="code-line--gap-inserted__dots">···</code></div>
 
-        <!-- floating + button, shown on hover near a gap -->
-        <button
-          v-if="hoveredGap !== null"
-          class="gap-insert-btn"
-          :class="{ 'gap-insert-btn--selected': selectedLines.includes(`after:${hoveredGap}`) }"
+        <template v-for="(line, i) in highlightLines" :key="i">
+          <div
+            class="code-line"
+            :class="{ 'code-line--selected': selectedLines.includes(i + 1) }"
+            @click="onLineClick(i, $event)"
+          >
+            <code>
+              <template v-if="tokenizedHighlight">
+                <span
+                  v-for="(tok, ti) in (tokenizedHighlight[i] || [])"
+                  :key="ti"
+                  :style="tok.color ? { color: tok.color } : {}"
+                >{{ tok.content }}</span>
+              </template>
+              <template v-else>{{ line || ' ' }}</template>
+            </code>
+          </div>
+
+          <div
+            v-if="selectedLines.includes(`after:${i + 1}`)"
+            class="code-line code-line--gap-inserted"
+            @click="toggleLine(`after:${i + 1}`)"
+          ><code class="code-line--gap-inserted__dots">···</code></div>
+        </template>
+
+        <!-- floating + indicator, shown on hover near a gap -->
+        <template v-if="hoveredGap !== null && !selectedLines.includes(`after:${hoveredGap}`)">
+          <div
+            class="gap-line"
+            :style="{ top: `${gapBtnTop + 11}px` }"
+          ></div>
+          <div
+            class="gap-insert-btn"
+            :style="{ top: `${gapBtnTop}px` }"
+            @click.stop="toggleLine(`after:${hoveredGap}`)"
+            @mouseenter="keepGap = true"
+            @mouseleave="keepGap = false; hoveredGap = null"
+          >+</div>
+        </template>
+        <div
+          v-else-if="hoveredGap !== null"
+          class="gap-insert-btn gap-insert-btn--selected"
           :style="{ top: `${gapBtnTop}px` }"
           @click.stop="toggleLine(`after:${hoveredGap}`)"
           @mouseenter="keepGap = true"
           @mouseleave="keepGap = false; hoveredGap = null"
-        >+</button>
+        >+</div>
       </div>
       <p v-if="hintVisible" class="code-challenge__hint">{{ modeData.hint || 'Кликни на проблемную строку' }}</p>
       <button v-else class="code-challenge__hint-btn" @click="showHint">Показать подсказку</button>
@@ -118,24 +138,36 @@ const hoveredGap   = ref(null)  // null | number (after:N index)
 const gapBtnTop    = ref(0)
 const keepGap      = ref(false)
 
+function onLinesMouseLeave() {
+  if (!keepGap.value) hoveredGap.value = null
+}
+
+const GAP_STRIP_WIDTH = 70  // px from left edge of wrap
+
 function onLinesMouseMove(e) {
   if (keepGap.value) return
   const wrap = linesWrapRef.value
   if (!wrap) return
 
-  const lineEls = wrap.querySelectorAll('.code-line')
+  const wrapRect = wrap.getBoundingClientRect()
+
+  // only show + when mouse is in the left strip
+  if (e.clientX - wrapRect.left > GAP_STRIP_WIDTH) {
+    hoveredGap.value = null
+    return
+  }
+
+  const lineEls = wrap.querySelectorAll('.code-line:not(.code-line--gap-inserted)')
   for (let i = 0; i < lineEls.length; i++) {
     const rect = lineEls[i].getBoundingClientRect()
-    const wrapRect = wrap.getBoundingClientRect()
     const relY = e.clientY - rect.top
     const half = rect.height / 2
 
     if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-      const gapIndex = relY < half ? i : i + 1
+      const gapIndex  = relY < half ? i : i + 1
       hoveredGap.value = gapIndex
-      // position button at the boundary
-      const boundaryY = relY < half ? rect.top : rect.bottom
-      gapBtnTop.value = boundaryY - wrapRect.top - 11  // 11 = half button height
+      const boundaryY  = relY < half ? rect.top : rect.bottom
+      gapBtnTop.value  = boundaryY - wrapRect.top - 11
       return
     }
   }
@@ -316,7 +348,7 @@ watch(() => props.mode, focusActive)
 
 .gap-insert-btn {
   position: absolute;
-  left: 0.5rem;
+  left: 0;
   width: 22px;
   height: 22px;
   background: #fff;
@@ -332,14 +364,7 @@ watch(() => props.mode, focusActive)
   justify-content: center;
   padding: 0;
   z-index: 10;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
   user-select: none;
-}
-
-.gap-insert-btn:hover {
-  background: #F0F4FF;
-  border-color: #4F63F5;
-  color: #4F63F5;
 }
 
 .gap-insert-btn--selected {
@@ -348,12 +373,28 @@ watch(() => props.mode, focusActive)
   color: #10B981;
 }
 
-.code-line--gap-selected-before {
-  border-top: 2px solid #10B981;
+.gap-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #D1D5DB;
+  pointer-events: none;
 }
 
-.code-line--gap-selected-after {
-  border-bottom: 2px solid #10B981;
+.code-line--gap-inserted {
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid #10B981;
+  cursor: pointer;
+}
+
+.code-line--gap-inserted__dots {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  color: #10B981;
+  opacity: 0.5;
+  letter-spacing: 0.1em;
 }
 
 .code-line {
