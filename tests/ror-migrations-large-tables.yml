@@ -586,7 +586,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "CHECK constraint на большой таблице нужно добавлять без немедленной проверки всех строк. Опасный параметр."
+    text: "CHECK constraint на большой имеет здесь опасный для производительности параметр."
     modes:
       highlight:
         code: |
@@ -644,7 +644,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, performance]
-    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Неподходящий метод вывода."
+    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. В чём ошибка?"
     modes:
       highlight:
         code: |
