@@ -25,7 +25,7 @@ export function useQuizSession(test, questionsSource) {
   const questions      = ref(resolveQuestions())
   const answers        = ref({})
   const usedHints      = ref(new Set())
-  const challengeMode  = ref(savedSession?.challengeMode || DEFAULT_CHALLENGE_MODE)
+  const challengeMode  = ref(savedSession?.challengeMode || localStorage.getItem('devquiz_challenge_mode') || DEFAULT_CHALLENGE_MODE)
   const startedAt      = ref(new Date().toISOString())
   const elapsed        = ref(0)
   const savedIndex     = ref(resolveSavedIndex())
@@ -55,7 +55,8 @@ export function useQuizSession(test, questionsSource) {
     return q.modes?.fill?.prefill ?? ''
   }
 
-  watch(challengeMode, () => {
+  watch(challengeMode, val => {
+    localStorage.setItem('devquiz_challenge_mode', val)
     questions.value.forEach(q => {
       if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
     })
@@ -70,7 +71,16 @@ export function useQuizSession(test, questionsSource) {
       )
 
       if (hasAnswers) {
-        answers.value        = savedSession.answers
+        const restored = savedSession.answers
+        questions.value.forEach(q => {
+          if (q.type === 'code_challenge' && challengeMode.value === 'fill') {
+            const prefill = q.modes?.fill?.prefill ?? ''
+            if (prefill && (restored[q.id] === '' || restored[q.id] === undefined)) {
+              restored[q.id] = prefill
+            }
+          }
+        })
+        answers.value        = restored
         startedAt.value      = savedSession.startedAt || startedAt.value
         elapsed.value        = savedSession.elapsed   || 0
         sessionStarted.value = true
@@ -133,7 +143,8 @@ export function useQuizSession(test, questionsSource) {
         const original = q.modes?.fix?.code ?? ''
         return typeof a === 'string' && a.trim() !== original.trim()
       }
-      return typeof a === 'string' && a.trim().length > 0
+      const prefill = q.modes?.fill?.prefill ?? ''
+      return typeof a === 'string' && a.trim().length > 0 && a.trim() !== prefill.trim()
     }
     return a !== null
   }

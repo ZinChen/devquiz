@@ -190,7 +190,6 @@ questions:
 
       fill:
         code: |
-          # Шаг 1: добавить столбец со значением по умолчанию "not_required"
           class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
             def up
               add_column :accounts, :risk_review_state, :string,
@@ -198,7 +197,7 @@ questions:
                         comment: "Current AML/KYC review state"
             end
           end
-        prefill: "null: false"
+        prefill: "null: false, default: \"not_required\""
         answer: "default: \"not_required\""
 
       fix:
@@ -407,7 +406,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, migrations]
-    text: "Нужно поменять только DEFAULT у столбца. Слишком тяжёлый метод."
+    text: "Нужно поменять DEFAULT у столбца. Что можно улучшить?"
     modes:
       highlight:
         code: |
@@ -428,10 +427,15 @@ questions:
         code: |
           class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
             def change
-              ___ :subscriptions, :billing_state, "active"
+              change_column_comment :subscriptions, :billing_state,
+                from: nil,
+                to: "Current billing lifecycle state"
+
+              ___
             end
           end
-        answer: "change_column_default"
+        prefill: "change_column :subscriptions, :billing_state, :string, default: \"active\""
+        answer: "change_column_default :subscriptions, :billing_state, \"active\""
 
       fix:
         code: |
@@ -463,7 +467,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [indexes, locking]
-    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Не хватает флага."
+    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Чего не хватает?"
     modes:
       highlight:
         code: |
@@ -532,7 +536,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, schema]
-    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Не хватает информации для rollback."
+    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Чего здесь не хватает?"
     modes:
       highlight:
         code: |
@@ -720,7 +724,7 @@ questions:
           end
         correct_lines: ["after:1"]
         insert_text: "  disable_ddl_transaction!"
-        hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает рядом с def up?"
+        hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает в классе рядом с def up?"
 
       fill:
         code: |
