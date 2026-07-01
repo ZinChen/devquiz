@@ -24,38 +24,40 @@
       <div class="test-card__meta">
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
-        <Link
-          v-if="test.attemptsCount > 0"
-          :href="`/tests/${test.slug}/attempts`"
-          class="badge badge-sm test-card__attempts"
-          @click.stop
-        >{{ test.attemptsCount }} попыток</Link>
-        <Link
-          v-if="test.bestScore != null && test.bestAttemptId"
-          :href="`/tests/${test.slug}/runs/${test.bestAttemptId}`"
-          class="badge badge-sm score-badge"
-          :class="test.bestScore >= 60 ? 'score--pass' : 'score--fail'"
-          @click.stop
-        >
-          <svg v-if="test.bestScore >= 60" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="2,6 5,9 10,3"/>
-          </svg>
-          <svg v-else width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/>
-          </svg>
-          {{ test.bestScore.toFixed(0) }}%
-        </Link>
-        <div
-          v-if="test.hasCodeChallenge"
-          class="challenge-modes-indicator"
-          title="Режимы кодовых задач"
-        >
-          <span
-            v-for="mode in CHALLENGE_MODES" :key="mode"
-            class="challenge-mode-dot"
-            :class="{ 'challenge-mode-dot--done': test.completedChallengeModes?.includes(mode) }"
-            :title="MODE_LABELS[mode]"
-          ></span>
+        <div class="test-card__user-stats">
+          <Link
+            v-if="test.attemptsCount > 0"
+            :href="`/tests/${test.slug}/attempts`"
+            class="badge badge-sm test-card__attempts"
+            @click.stop
+          >{{ test.attemptsCount }} попыток</Link>
+          <Link
+            v-if="test.bestScore != null && test.bestAttemptId"
+            :href="`/tests/${test.slug}/runs/${test.bestAttemptId}`"
+            class="badge badge-sm score-badge"
+            :class="test.bestScore >= 60 ? 'score--pass' : 'score--fail'"
+            @click.stop
+          >
+            <svg v-if="test.bestScore >= 60" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2,6 5,9 10,3"/>
+            </svg>
+            <svg v-else width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/>
+            </svg>
+            {{ test.bestScore.toFixed(0) }}%
+          </Link>
+          <div
+            v-if="test.hasCodeChallenge"
+            class="challenge-modes-indicator"
+            title="Режимы кодовых задач"
+          >
+            <span
+              v-for="mode in CHALLENGE_MODES" :key="mode"
+              class="challenge-mode-dot"
+              :class="{ 'challenge-mode-dot--done': test.completedChallengeModes?.includes(mode) }"
+              :title="MODE_LABELS[mode]"
+            ></span>
+          </div>
         </div>
       </div>
     </Link>
@@ -155,14 +157,28 @@ const duplicateTitles = computed(() => {
 .test-card__meta {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   font-size: 0.75rem;
   color: #9CA3AF;
   margin-top: auto;
 }
 
-.test-card__attempts {
+.test-card__user-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-left: auto;
+}
+
+@media (max-width: 767px) {
+  .test-card__user-stats {
+    margin-right: 0;
+    justify-content: flex-end;
+  }
+}
+
+.test-card__attempts {
   background: #6B728020;
   color: #6B7280;
   border: none;
@@ -193,8 +209,14 @@ const duplicateTitles = computed(() => {
   display: flex;
   align-items: center;
   gap: 3px;
-  margin-left: auto;
 }
+
+@media (min-width: 768px) {
+  .challenge-modes-indicator {
+    margin-left: auto;
+  }
+}
+
 
 .challenge-mode-dot {
   display: block;

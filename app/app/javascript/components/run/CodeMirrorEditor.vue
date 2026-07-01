@@ -87,7 +87,6 @@ async function createView() {
     minimalSetup,
     baseTheme,
     syntaxHighlighting(githubLight),
-    EditorView.lineWrapping,
     EditorView.updateListener.of(update => {
       if (update.docChanged) {
         emit('update:modelValue', update.state.doc.toString())
@@ -124,6 +123,6 @@ watch(() => props.modelValue, val => {
 <style scoped>
 .codemirror-wrap {
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: auto;
 }
 </style>

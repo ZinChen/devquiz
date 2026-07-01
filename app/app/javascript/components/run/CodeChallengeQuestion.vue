@@ -290,7 +290,6 @@ function focusActive() {
 }
 
 onMounted(focusActive)
-watch(() => props.mode, focusActive)
 </script>
 
 <style scoped>
@@ -329,7 +328,8 @@ watch(() => props.mode, focusActive)
 .code-block-inner-wrap {
   background: #F3F4F6;
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .code-block-inner {
