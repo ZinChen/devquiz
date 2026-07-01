@@ -52,7 +52,7 @@ export function useQuizSession(test, questionsSource) {
   function initCodeAnswer(q) {
     if (challengeMode.value === 'highlight') return []
     if (challengeMode.value === 'fix') return q.modes?.fix?.code ?? ''
-    return ''
+    return q.modes?.fill?.prefill ?? ''
   }
 
   watch(challengeMode, () => {

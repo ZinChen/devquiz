@@ -3,7 +3,7 @@
 
     <!-- ── highlight mode ─────────────────────────────────────────── -->
     <template v-if="mode === 'highlight'">
-      <p class="code-challenge__mode-hint">Найди строку с проблемой</p>
+      <p class="code-challenge__mode-hint">Найди строку с проблемой или недостающим кодом</p>
       <div
         ref="linesWrapRef"
         class="code-block-inner-wrap code-block-inner-wrap--lines"
@@ -228,7 +228,7 @@ const fillInputEl = ref(null)
 const fillAnswer = computed({
   get: () => typeof props.answers[props.question.id] === 'string'
     ? props.answers[props.question.id]
-    : (modeData.value.prefill ?? ''),
+    : '',
   set: val => { props.answers[props.question.id] = val },
 })
 
