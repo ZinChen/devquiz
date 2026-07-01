@@ -60,6 +60,17 @@ body {
   background: #3D50E0;
 }
 
+.tag-badge--excluded {
+  background: #FEE2E2;
+  color: #EF4444;
+  border: none;
+  text-decoration: line-through;
+}
+
+.tag-badge--excluded:hover {
+  background: #FECACA;
+}
+
 .tag-filter {
   background: #F3F4F6;
   color: #6B7280;

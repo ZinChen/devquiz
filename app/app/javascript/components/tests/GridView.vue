@@ -17,8 +17,14 @@
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag) }"
-          @click.prevent.stop="$emit('toggle-tag', tag)"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--excluded': excludedTags.includes(tag) }"
+          @click.prevent.stop="onTagClick($event, tag)"
+          @mousedown.stop="lp.start($event, tag)"
+          @mouseup.stop="lp.cancel()"
+          @mouseleave.stop="lp.cancel()"
+          @touchstart.passive.stop="lp.start($event, tag)"
+          @touchend.stop="lp.cancel()"
+          @touchcancel.stop="lp.cancel()"
         >{{ tag }}</button>
       </div>
       <div class="test-card__meta">
@@ -72,8 +78,30 @@ import { Link } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 
-const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
-defineEmits(['clear-filters', 'toggle-tag'])
+const props = defineProps({
+  tests:        Array,
+  selectedTags: { type: Array, default: () => [] },
+  excludedTags: { type: Array, default: () => [] },
+})
+const emit = defineEmits(['clear-filters', 'toggle-tag', 'exclude-tag'])
+
+function useLongPress(onLong, delay = 500) {
+  let timer = null
+  let fired = false
+  function start(e, ...args) { fired = false; timer = setTimeout(() => { fired = true; onLong(...args) }, delay) }
+  function cancel() { clearTimeout(timer) }
+  function click(e) { if (fired) { e.preventDefault(); return true } return false }
+  return { start, cancel, click }
+}
+
+const lp = useLongPress(tag => emit('exclude-tag', tag))
+
+function onTagClick(e, tag) {
+  if (lp.click(e)) return
+  if (e.ctrlKey || e.metaKey) { emit('exclude-tag', tag); return }
+  if (props.excludedTags.includes(tag)) { emit('exclude-tag', tag); return }
+  emit('toggle-tag', tag)
+}
 
 const CHALLENGE_MODES = ['highlight', 'fill', 'fix']
 const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', fix: 'Fix' }
