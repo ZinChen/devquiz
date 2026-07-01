@@ -3,6 +3,7 @@
 
     <!-- ── highlight mode ─────────────────────────────────────────── -->
     <template v-if="mode === 'highlight'">
+      <p class="code-challenge__mode-hint">Найди строку с проблемой</p>
       <div
         ref="linesWrapRef"
         class="code-block-inner-wrap code-block-inner-wrap--lines"
@@ -227,7 +228,7 @@ const fillInputEl = ref(null)
 const fillAnswer = computed({
   get: () => typeof props.answers[props.question.id] === 'string'
     ? props.answers[props.question.id]
-    : '',
+    : (modeData.value.prefill ?? ''),
   set: val => { props.answers[props.question.id] = val },
 })
 
@@ -317,6 +318,12 @@ watch(() => props.mode, focusActive)
 
 .code-challenge__hint-btn:hover {
   color: #6B7280;
+}
+
+.code-challenge__mode-hint {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin: 0 0 0.375rem;
 }
 
 .code-block-inner-wrap {

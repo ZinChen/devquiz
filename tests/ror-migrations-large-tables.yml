@@ -13,7 +13,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, indexes, locking]
-    text: "Индекс на большой таблице без простоя требует два условия. Найди строку с проблемой."
+    text: "Индекс на большой таблице без простоя требует два условия."
     modes:
       highlight:
         code: |
@@ -107,7 +107,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [locking, schema]
-    text: "Миграция ждёт DDL-лок бесконечно, блокируя новые запросы. Найди строку, которая выглядит как защита от долгой операции, но не решает проблему ожидания лока."
+    text: "Миграция ждёт DDL-лок бесконечно, блокируя новые запросы. Выглядит как защита от долгой операции, но не решает проблему ожидания лока."
     modes:
       highlight:
         code: |
@@ -138,6 +138,7 @@ questions:
               remove_column :orders, :status
             end
           end
+        prefill: "execute \"SET statement_timeout = '2s'\""
         answer: "execute \"SET lock_timeout = '2s'\""
 
       fix:
@@ -172,7 +173,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Найди проблемный параметр."
+    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Проблемный параметр."
     modes:
       highlight:
         code: |
@@ -197,6 +198,7 @@ questions:
                         comment: "Current AML/KYC review state"
             end
           end
+        prefill: "null: false"
         answer: "default: \"not_required\""
 
       fix:
@@ -225,7 +227,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, performance]
-    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Найди строку с неправильным методом."
+    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Неправильный метод."
     modes:
       highlight:
         code: |
@@ -283,7 +285,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Найди параметр, который делает миграцию опасной."
+    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Параметр, который делает миграцию опасной."
     modes:
       highlight:
         code: |
@@ -316,6 +318,7 @@ questions:
                 ___
             end
           end
+        prefill: "on_delete: :restrict, validate: true"
         answer: "validate: false"
 
       fix:
@@ -353,7 +356,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [schema, locking]
-    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Найди строку с неправильным методом."
+    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Неправильный метод."
     modes:
       highlight:
         code: |
@@ -376,6 +379,7 @@ questions:
               ___
             end
           end
+        prefill: "Rails.logger.info \"Validating invoices.customer_id foreign key\""
         answer: "validate_foreign_key :invoices, :customers"
 
       fix:
@@ -403,7 +407,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, migrations]
-    text: "Нужно поменять только DEFAULT у столбца. Найди строку, где выбран слишком тяжёлый метод."
+    text: "Нужно поменять только DEFAULT у столбца. Слишком тяжёлый метод."
     modes:
       highlight:
         code: |
@@ -459,7 +463,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [indexes, locking]
-    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Найди строку, где не хватает флага."
+    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Не хватает флага."
     modes:
       highlight:
         code: |
@@ -528,7 +532,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, schema]
-    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Найди строку, где не хватает информации для rollback."
+    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Не хватает информации для rollback."
     modes:
       highlight:
         code: |
@@ -578,7 +582,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "CHECK constraint на большой таблице нужно добавлять без немедленной проверки всех строк. Найди опасный параметр."
+    text: "CHECK constraint на большой таблице нужно добавлять без немедленной проверки всех строк. Опасный параметр."
     modes:
       highlight:
         code: |
@@ -636,7 +640,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, performance]
-    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Найди строку с неподходящим методом вывода."
+    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Неподходящий метод вывода."
     modes:
       highlight:
         code: |
@@ -667,6 +671,7 @@ questions:
               end
             end
           end
+        prefill: "Rails.logger.info"
         answer: "say"
 
       fix:
@@ -702,7 +707,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, locking]
-    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Найди строку, где не сделано главное ограничение."
+    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Не сделано главное ограничение."
     modes:
       highlight:
         code: |
