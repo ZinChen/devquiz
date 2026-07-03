@@ -77,6 +77,10 @@ body {
   border: none;
 }
 
+.tag-filter:hover {
+  background: #E5E7EB;
+}
+
 .tag-filter--active {
   background: #4F63F5;
   color: #fff;

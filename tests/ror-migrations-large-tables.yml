@@ -228,7 +228,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, performance]
-    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Неправильный метод."
+    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Какой метод неправильный?"
     modes:
       highlight:
         code: |
