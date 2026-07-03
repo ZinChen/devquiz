@@ -1,0 +1,37 @@
+name: Milestone Release
+
+on:
+  milestone:
+    types: [closed]
+
+jobs:
+  release:
+    name: Tag and release milestone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub release for milestone
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MILESTONE_NUMBER: ${{ github.event.milestone.number }}
+          MILESTONE_TITLE: ${{ github.event.milestone.title }}
+        run: |
+          tag="v${MILESTONE_TITLE#v}"
+
+          notes=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --milestone "$MILESTONE_TITLE" \
+            --state closed \
+            --json number,title \
+            --jq '.[] | "- #\(.number) \(.title)"')
+
+          gh release create "$tag" \
+            --repo "${{ github.repository }}" \
+            --target main \
+            --title "$tag" \
+            --notes "## Milestone: ${MILESTONE_TITLE}
+
+          ${notes}"
