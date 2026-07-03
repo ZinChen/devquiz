@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_25_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_29_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,10 +49,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_100000) do
     t.string "question_id", null: false
     t.jsonb "selected_options", default: []
     t.datetime "updated_at", null: false
+    t.boolean "used_hint", default: false, null: false
     t.index ["attempt_id"], name: "index_test_attempt_answers_on_attempt_id"
   end
 
   create_table "test_attempts", force: :cascade do |t|
+    t.string "challenge_mode"
     t.datetime "completed_at"
     t.integer "correct_count", default: 0
     t.datetime "created_at", null: false
@@ -79,6 +81,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_25_100000) do
     t.string "difficulty"
     t.integer "estimated_time"
     t.string "file_checksum"
+    t.boolean "has_code_challenge", default: false, null: false
     t.decimal "pass_rate", precision: 5, scale: 2, default: "0.0"
     t.integer "questions_count", default: 0
     t.string "slug", null: false

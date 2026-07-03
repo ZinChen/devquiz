@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "Rack — стандартный интерфейс: app.call(env) → [status, headers, body]. Rails, Sinatra, Hanami — все Rack-приложения. Middleware stack в Rails — это Rack middleware."
     difficulty: medium
+    topics: [mvc]
 
   - id: q2
     text: "Объясните жизненный цикл HTTP-запроса в Rails."
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "Полный путь: Nginx/Puma → Rack middleware stack → Router → before_filters → Controller action → Model queries → View rendering → Response. Middleware обрабатывается до/после Router."
     difficulty: medium
+    topics: [mvc, controllers]
 
   - id: q3
     text: "Что такое мемоизация и как её реализовать в Ruby?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "`||=` — memoize через instance variable. При nil/false: @result = fetch_data. При повторном вызове — возвращает @result. Для false-значений используйте defined?(@result)."
     difficulty: medium
+    topics: [performance]
 
   - id: q4
     text: "В чём разница между `render` и `redirect_to` в контроллере?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "render: один HTTP-цикл, @переменные доступны. redirect_to: два цикла, переменные сбрасываются (используйте flash). После POST → redirect_to предотвращает двойную отправку (PRG pattern)."
     difficulty: medium
+    topics: [controllers]
 
   - id: q5
     text: "Что такое CSRF и как Rails защищается от него?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "CSRF — атака через форму стороннего сайта. Rails включает protect_from_forgery by default: каждая форма содержит hidden authenticity_token, проверяемый при POST/PUT/DELETE."
     difficulty: medium
+    topics: [security]
 
   - id: q6
     text: "Что такое метапрограммирование в Ruby и какие его примеры в Rails?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "Метапрограммирование в Rails: has_many → define_method генерирует posts, post_ids. validates → динамические методы. attr_accessor. scope — class_eval. Мощь Ruby: код описывает другой код."
     difficulty: hard
+    topics: [models, architecture]
 
   - id: q7
     text: "Как работает кэширование в Rails? Назовите виды."
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "Fragment cache: cache(@post) в вьюхе. Low-level: Rails.cache.fetch('key') { compute }. HTTP caching: stale?/fresh_when. Хранилища: memory_store, redis_cache_store, solid_cache_store."
     difficulty: hard
+    topics: [caching]
 
   - id: q8
     text: "Что такое background jobs и зачем они нужны?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "Background jobs через Active Job (Sidekiq, Delayed Job, Good Job): UserMailer.welcome.deliver_later, ResizeImageJob.perform_later(id). Освобождает HTTP-поток, улучшает UX."
     difficulty: medium
+    topics: [background-jobs]
 
   - id: q9
     text: "Объясните разницу между optimistic и pessimistic locking."
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "Pessimistic: Post.lock.find(id) → SELECT FOR UPDATE — строка заблокирована. Optimistic: обновляет lock_version, при несовпадении бросает StaleObjectError. Pessimistic — для high-contention, optimistic — для low-contention."
     difficulty: hard
+    topics: [concurrency, transactions]
 
   - id: q10
     text: "Как Rails обеспечивает безопасность от SQL-инъекций?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "AR автоматически экранирует значения в хэш-форме where(name: params[:name]). При строковой интерполяции where(\"name = '#{params[:name]}'\") — SQL-инъекция! Используйте ? или именованные placeholders."
     difficulty: medium
+    topics: [security, queries]
 
   - id: q11
     text: "Что такое `before_action` callback и как ограничить его для определённых actions?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "only: и except: ограничивают применение фильтра. Также можно skip_before_action в наследниках. Логика условий: if: :method? or unless: :condition?."
     difficulty: easy
+    topics: [controllers]
 
   - id: q12
     text: "Как реализовать soft delete (мягкое удаление) в Rails?"
@@ -233,6 +244,7 @@ questions:
         correct: true
     explanation: "Soft delete: запись не удаляется из БД, устанавливается deleted_at timestamp. Gem paranoia/discard автоматизируют. Плюс: восстановление данных. Минус: усложняет запросы, нужен default_scope."
     difficulty: medium
+    topics: [models, queries]
 
   - id: q13
     text: "Объясните паттерн PRG (Post-Redirect-Get)."
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "После успешного POST (create/update) делается redirect_to → браузер делает GET. Предотвращает двойную отправку формы при F5. Стандарт в Rails CRUD."
     difficulty: medium
+    topics: [controllers, routing]
 
   - id: q14
     text: "Что такое `polymorphic routes` в Rails?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "link_to 'Edit', @post → Rails вызывает polymorphic_url(@post) → /posts/1. Работает с массивами: url_for([:admin, @post]) → /admin/posts/1. Упрощает вьюхи."
     difficulty: hard
+    topics: [routing]
 
   - id: q15
     text: "Как Rails обрабатывает ошибки и исключения в production?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "rescue_from RecordNotFound, with: :not_found — перехватывает исключения в контроллере. public/404.html, 500.html — статические страницы для ошибок. Мониторинг: Sentry, Honeybadger."
     difficulty: medium
+    topics: [controllers]
 
   - id: q16
     text: "Что такое Content Security Policy (CSP) и как его настроить в Rails?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "CSP защищает от XSS — браузер запрещает загружать ресурсы из недоверенных источников. Rails генерирует config/initializers/content_security_policy.rb. Важно для безопасных приложений."
     difficulty: hard
+    topics: [security]
 
   - id: q17
     text: "Как оптимизировать загрузку большого числа записей в Rails?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "User.find_each(batch_size: 1000) { |u| ... } — загружает по 1000 записей, не держит все в памяти. find_in_batches — даёт массив. in_batches — даёт Relation. Обязательно для больших таблиц."
     difficulty: medium
+    topics: [performance, queries]
 
   - id: q18
     text: "Объясните разницу между `session` и `cookies` в Rails."
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "По умолчанию Rails session — подписанный cookie (CookieStore). cookies[:key] — обычный cookie. cookies.signed — подписанный. cookies.encrypted — зашифрованный. Session не уязвим к подделке благодаря подписи."
     difficulty: medium
+    topics: [security, controllers]
 
   - id: q19
     text: "Как работает `accepts_nested_attributes_for`?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "has_many :addresses; accepts_nested_attributes_for :addresses — форма с fields_for :addresses создаёт/обновляет адреса вместе с пользователем. _destroy: true для удаления. Альтернатива: Form Objects."
     difficulty: medium
+    topics: [associations, controllers]
 
   - id: q20
     text: "Что проверяют при code review Rails-приложения?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "На code review: N+1 (includes), безопасность (strong params, экранирование), архитектура (thin controllers), тесты, индексы на FK, null: false в миграциях, отсутствие секретов в коде."
     difficulty: medium
+    topics: [security, performance]

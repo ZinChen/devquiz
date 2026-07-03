@@ -35,6 +35,7 @@ questions:
     correct: true
     explanation: Прямо указывает, что служба не запустилась из-за сбоя в зависимой unit-единице.
   difficulty: medium
+  topics: [linux]
   explanation: Этот лог прямо указывает, что служба не запустилась из-за сбоя в зависимости (другая юнит-единица, от которой она зависит, не смогла запуститься).
   extended_explanation: |-
     В systemd зависимости между юнитами описываются директивами After, Requires, Wants.
@@ -73,6 +74,7 @@ questions:
     correct: false
     explanation: "--today — несуществующая опция в journalctl."
   difficulty: medium
+  topics: [linux]
   explanation: "`--since today` — корректный синтаксис для просмотра логов с начала текущего дня. Остальные варианты (`--d`, `--s`, `--today`) — несуществующие опции."
   extended_explanation: |-
     journalctl поддерживает гибкую фильтрацию по времени:
@@ -118,6 +120,7 @@ questions:
     correct: true
     explanation: IFS= предотвращает обрезание пробелов, -r отключает интерпретацию escape.
   difficulty: medium
+  topics: [linux]
   explanation: IFS= предотвращает обрезание пробелов в начале и конце строки, -r отключает интерпретацию escape-последовательностей. Чтение из файла через перенаправление безопасно для строк с пробелами.
   extended_explanation: |-
     Безопасное чтение строк в bash требует:
@@ -159,6 +162,7 @@ questions:
     correct: false
     explanation: if — условная конструкция, не является глобальным перехватчиком ошибок.
   difficulty: medium
+  topics: [linux]
   explanation: "`trap ... ERR` позволяет перехватывать ненулевой код возврата (ошибку) в bash-скрипте и выполнять указанные действия."
   extended_explanation: |-
     Пример использования:
@@ -209,6 +213,7 @@ questions:
     correct: true
     explanation: Каталог .git содержит всю историю и возможные секреты, закоммиченные по ошибке.
   difficulty: medium
+  topics: [linux, security]
   explanation: Каталог .git содержит всю историю репозитория, включая исходный код, комментарии, имена авторов, а также секреты, которые могли быть случайно закоммичены.
   extended_explanation: |-
     При отсутствии защиты:
@@ -254,6 +259,7 @@ questions:
     correct: true
     explanation: listen_addresses определяет сетевые интерфейсы для ожидания подключений.
   difficulty: medium
+  topics: [linux]
   explanation: "`listen_addresses` определяет, на каких сетевых интерфейсах сервер PostgreSQL будет ожидать входящие подключения. Для разрешения подключений по сети нужно установить значение `'*'` или конкретный IP-адрес."
   extended_explanation: |-
     Настройка сети в PostgreSQL включает:
@@ -302,6 +308,7 @@ questions:
     correct: true
     explanation: На 8-ядерной системе нагрузка > 8 указывает на перегрузку CPU.
   difficulty: medium
+  topics: [linux]
   explanation: На сервере с 8 ядрами значения 14.20, 15.00, 14.80 означают, что в среднем более 14 процессов ожидают процессорного времени одновременно, что указывает на серьёзную перегрузку CPU.
   extended_explanation: |-
     Load average:
@@ -347,6 +354,7 @@ questions:
     correct: false
     explanation: Трассирует системные вызовы, создаёт огромную нагрузку, не для продакшена.
   difficulty: medium
+  topics: [linux]
   explanation: "`perf top` — это профилировщик, который в реальном времени показывает, какие функции ядра и пользовательского пространства потребляют больше всего процессорного времени. Идеально подходит для выявления нагрузки, вызванной ядром."
   extended_explanation: |-
     Альтернативные инструменты:
@@ -387,6 +395,7 @@ questions:
     correct: true
     explanation: 'В пользовательском crontab формат: минуты часы день месяц день_недели команда (без поля пользователя).'
   difficulty: medium
+  topics: [linux]
   explanation: В формате системного crontab (`/etc/crontab`) используется шестое поле — пользователь. В пользовательском crontab (редактируемом через `crontab -e`) поле пользователя не указывается. Запись будет интерпретирована с ошибкой и проигнорирована.
   extended_explanation: |-
     Правильные форматы:
@@ -438,6 +447,7 @@ questions:
     correct: false
     explanation: Таймер работает корректно, RemainAfterExit влияет только на состояние сервиса.
   difficulty: medium
+  topics: [linux]
   explanation: "`Type=oneshot` означает, что сервис выполняет одноразовую задачу и завершается. `RemainAfterExit=true` указывает systemd, что даже после завершения основного процесса сервис должен считаться активным (active)."
   extended_explanation: |-
     Пример применения:
@@ -486,6 +496,7 @@ questions:
     correct: true
     explanation: 'After указывает порядок: сервис запускается после достижения network.target.'
   difficulty: medium
+  topics: [linux]
   explanation: "`After=network.target` указывает systemd, что данный сервис должен быть запущен после того, как `network.target` будет достигнут (активирован)."
   extended_explanation: |-
     Директивы зависимостей в systemd:
@@ -526,6 +537,7 @@ questions:
     correct: false
     explanation: Команда SysVinit для runlevel 3, в systemd работает через совместимость, но не для rescue.
   difficulty: medium
+  topics: [linux]
   explanation: "`systemctl rescue` — корректная команда для перевода системы в rescue mode (однопользовательский режим, минимальное окружение, только root-консоль)."
   extended_explanation: |-
     Режимы systemd:
@@ -571,6 +583,7 @@ questions:
     correct: true
     explanation: Без sticky-бита возможны symlink-атаки и гонки (race conditions).
   difficulty: medium
+  topics: [linux, security]
   explanation: Каталог `/tmp` должен иметь бит sticky (`chmod 1777`), чтобы пользователи могли создавать свои файлы, но не могли удалять или переименовывать чужие. Без sticky-бита злоумышленник может создавать символические ссылки на чувствительные файлы, что ведёт к эскалации привилегий.
   extended_explanation: |-
     Типичная атака:
@@ -618,6 +631,7 @@ questions:
     correct: false
     explanation: 5432/postgres — стандартный порт PostgreSQL.
   difficulty: medium
+  topics: [linux, security]
   explanation: PID 1 — это обычно init или systemd. Если процесс с PID 1 слушает нестандартный порт 6666 и обозначен как unknown, это является сильным индикатором компрометации или подозрительной активности.
   extended_explanation: |-
     Признаки подозрительных сервисов:
@@ -665,6 +679,7 @@ questions:
     correct: false
     explanation: nofail работает для любых точек монтирования.
   difficulty: medium
+  topics: [linux]
   explanation: Опция `nofail` указывает systemd, что если устройство отсутствует или возникает ошибка при монтировании, не следует прерывать загрузку. Последнее поле `0` отключает автоматическую проверку файловой системы при загрузке.
   extended_explanation: |-
     Поля /etc/fstab:
@@ -709,6 +724,7 @@ questions:
     correct: false
     explanation: Некорректный режим может вызвать проблемы, но неправильный UUID — самый частый сценарий при добавлении новой записи.
   difficulty: medium
+  topics: [linux]
   explanation: Если в `/etc/fstab` указан неверный UUID (или неверный путь к устройству), systemd не сможет смонтировать раздел при загрузке. Без опции `nofail` критическая ошибка монтирования приводит к падению в emergency mode.
   extended_explanation: |-
     Диагностика проблемы:

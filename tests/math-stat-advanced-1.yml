@@ -41,6 +41,7 @@ questions:
     correct: false
     explanation: Это значение больше, чем 16%.
   difficulty: medium
+  topics: [math-stats]
   explanation: Сначала находим z-оценку, затем по таблице нормального распределения определяем вероятность.
   extended_explanation: |-
     Вероятность того, что нормальная случайная величина меньше заданного значения, вычисляется через функцию распределения Φ.
@@ -78,6 +79,7 @@ questions:
     correct: false
     explanation: Это e^1, неверно.
   difficulty: medium
+  topics: [math-stats]
   explanation: Матожидание логнормальной величины X = e^Y, где Y ~ N(μ, σ²), равно e^{μ + σ²/2}.
   extended_explanation: |-
     Для логнормального распределения важно помнить, что параметры относятся к логарифму случайной величины.
@@ -116,6 +118,7 @@ questions:
     correct: true
     explanation: Получено по формуле с поправкой на конечную популяцию.
   difficulty: medium
+  topics: [math-stats]
   explanation: Сначала рассчитывается объём для бесконечной популяции, затем применяется поправка для N=10000.
   extended_explanation: |-
     При оценке доли максимальная вариация достигается при p=0.5, что даёт наибольший необходимый объём выборки.
@@ -148,6 +151,7 @@ questions:
     correct: false
     explanation: Матожидание оценки равно истинному параметру.
   difficulty: medium
+  topics: [math-stats]
   explanation: Сложность вычислений — это критерий практической применимости, а не статистического качества оценки.
   extended_explanation: |-
     Хорошая точечная оценка должна быть несмещённой (или асимптотически несмещённой), состоятельной (консистентной) и эффективной (иметь минимальную дисперсию).
@@ -188,6 +192,7 @@ questions:
     correct: false
     explanation: Это только P(X=2).
   difficulty: medium
+  topics: [math-stats]
   explanation: Вероятность не менее двух обнаружений равна сумме вероятностей ровно двух и ровно трёх обнаружений.
   extended_explanation: |-
     Биномиальное распределение описывает число успехов в n независимых испытаниях с вероятностью успеха p.
@@ -227,6 +232,7 @@ questions:
     correct: false
     explanation: Вторая — корректная.
   difficulty: medium
+  topics: [math-stats]
   explanation: Для показательного распределения плотность имеет вид λe^{-λx}, x≥0, и интеграл по всей области равен 1.
   extended_explanation: |-
     Первая функция имеет неправильный множитель, третья — неправильную область определения и интеграл не равен 1.
@@ -267,6 +273,7 @@ questions:
     correct: false
     explanation: Другая вероятность.
   difficulty: medium
+  topics: [math-stats]
   explanation: Предельная ошибка Δ = z·σ_w, отсюда находим z, а затем доверительную вероятность.
   extended_explanation: |-
     Доверительная вероятность для доли при повторной выборке определяется через стандартное отклонение выборочной доли.
@@ -299,6 +306,7 @@ questions:
     correct: true
     explanation: Непараметрический аналог t-критерия для зависимых выборок.
   difficulty: medium
+  topics: [math-stats]
   explanation: Данные «до» и «после» — это зависимые (парные) измерения, поэтому нужен критерий для связанных выборок.
   extended_explanation: |-
     Для парных измерений используются:
@@ -333,6 +341,7 @@ questions:
     correct: false
     explanation: Альтернатива направлена только на уменьшение, что не соответствует цели.
   difficulty: medium
+  topics: [math-stats]
   explanation: Нулевая гипотеза утверждает отсутствие эффекта (средний объём продаж не изменился). Альтернативная гипотеза утверждает наличие любого изменения (увеличения или уменьшения).
   extended_explanation: |-
     В задаче проверяется влияние рекламной кампании на продажи без предположения о направлении эффекта.
@@ -377,6 +386,7 @@ questions:
     correct: false
     explanation: Не соответствует сумме вкладов.
   difficulty: medium
+  topics: [math-stats]
   explanation: Изменение Y равно сумме произведений коэффициентов на относительные изменения факторов.
   extended_explanation: |-
     Коэффициенты показывают, на сколько единиц изменится Y при изменении X на единицу.
@@ -416,6 +426,7 @@ questions:
     correct: false
     explanation: Близко, но не точно 1.
   difficulty: medium
+  topics: [math-stats]
   explanation: Данные лежат строго на прямой линии y = 10 + 5x, поэтому r = 1.
   extended_explanation: |-
     Коэффициент корреляции Пирсона равен ±1, если точки лежат на прямой с ненулевым наклоном.
@@ -448,6 +459,7 @@ questions:
     correct: true
     explanation: Уилкоксон учитывает не только знак, но и величину разностей, поэтому асимметрия может дать значимость при нулевой медиане.
   difficulty: medium
+  topics: [math-stats]
   explanation: Критерий Уилкоксона может показать значимость, если положительные разности по модулю больше отрицательных, даже при нулевой медиане.
   extended_explanation: |-
     Медиана разностей равна нулю, если количество положительных и отрицательных разностей одинаково.
@@ -488,6 +500,7 @@ questions:
     correct: false
     explanation: Синтаксис корректен.
   difficulty: medium
+  topics: [queries]
   explanation: HAVING применяется после GROUP BY и фильтрует группы.
   extended_explanation: Запрос группирует клиентов по регионам, затем оставляет только те регионы, где количество клиентов больше 10.
   recommendation: |-
@@ -525,6 +538,7 @@ questions:
     correct: false
     explanation: LIMIT не обязателен.
   difficulty: medium
+  topics: [queries]
   explanation: При JOIN один заказ может иметь несколько позиций, поэтому количество строк в результате больше количества заказов.
   extended_explanation: Для подсчёта уникальных заказов нужно использовать COUNT(DISTINCT o.id), если таблица order_items содержит несколько записей на заказ.
   recommendation: |-
@@ -555,6 +569,7 @@ questions:
     correct: false
     explanation: Уникальность обеспечивает B-Tree.
   difficulty: medium
+  topics: [indexes]
   explanation: BRIN (Block Range Index) эффективен для очень больших таблиц с данными, имеющими физический порядок.
   extended_explanation: |-
     BRIN занимает мало места и быстро отсекает большие диапазоны блоков, но допускает ложные срабатывания.

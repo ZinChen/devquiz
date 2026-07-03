@@ -39,6 +39,7 @@ questions:
     text: CHOOSE first_name, last_name FROM Employees HAVING department = 'Marketing';
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: 'Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации. HAVING используется для фильтрации после GROUP BY.'
   extended_explanation: |-
     Правильный синтаксис SELECT в SQL: сначала указываются выбираемые колонки, затем FROM с таблицей, затем WHERE с условием фильтрации. HAVING используется для фильтрации после GROUP BY.
@@ -71,6 +72,7 @@ questions:
     text: ALTER TABLE Clients ALTER COLUMN email VARCHAR(255);
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: Для добавления нового столбца в существующую таблицу используется команда ALTER TABLE с операцией ADD. ALTER COLUMN используется для изменения существующего столбца.
   extended_explanation: |-
     Для добавления нового столбца в существующую таблицу используется команда ALTER TABLE с операцией ADD. ALTER COLUMN используется для изменения существующего столбца.
@@ -117,6 +119,7 @@ questions:
     text: Добавится новая запись (Null, 5, 'BMW X5 M50d', Null)
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
   extended_explanation: |-
     По условию все столбцы таблицы обязательны, а в команде не переданы значения для всех необходимых полей. Поэтому результатом будет ошибка.
@@ -160,6 +163,7 @@ questions:
     text: Используется GROUP BY вместо GROUP
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: 'Для всех SQL языков фильтрация по агрегированным значениям выполняется через `HAVING` после группировки, поэтому сначала нужно указать GROUP BY, потом HAVING. Дополнительно: в PostgreSQL ссылка на alias из списка `SELECT` в `HAVING`не допускается, поэтому там нужно явно писать `HAVING SUM(salary) <= 700000`.'
   extended_explanation: |-
     Для всех SQL языков фильтрация по агрегированным значениям выполняется через `HAVING` после группировки, поэтому сначала нужно указать GROUP BY, потом HAVING. Дополнительно: в PostgreSQL ссылка на alias из списка `SELECT` в `HAVING`не допускается, поэтому там нужно явно писать `HAVING SUM(salary) <= 700000`.
@@ -206,6 +210,7 @@ questions:
     text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Чтобы найти записи, которые есть только в левой таблице (Orders) и отсутствуют в правой (Clients), нужно выполнить LEFT JOIN и проверить, что ключ из правой таблицы равен NULL.
   extended_explanation: |-
     Чтобы найти записи, которые есть только в левой таблице (Orders) и отсутствуют в правой (Clients), нужно выполнить LEFT JOIN и проверить, что ключ из правой таблицы равен NULL.
@@ -248,6 +253,7 @@ questions:
     text: SELECT first_name, last_name FROM Employees WHERE salary < AVG(salary);
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: 'Функция `MEDIAN` есть в Oracle, но так как тест по SQL вцелом, то правильно выбрать ответ с Median. В PostgreSQL встроенной функции `MEDIAN` нет; для медианы используют ordered-set aggregate `percentile_cont(0.5) WITHIN GROUP (ORDER BY salary)` в подзапросе. Пример: "SELECT first_name, last_name FROM Employees WHERE salary < (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM Employees);"'
   extended_explanation: |-
     Функция `MEDIAN` есть в Oracle, но так как тест по SQL вцелом, то правильно выбрать ответ с Median. В PostgreSQL встроенной функции `MEDIAN` нет; для медианы используют ordered-set aggregate `percentile_cont(0.5) WITHIN GROUP (ORDER BY salary)` в подзапросе. Пример: "SELECT first_name, last_name FROM Employees WHERE salary < (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM Employees);"
@@ -301,6 +307,7 @@ questions:
     text: Вместо CREATE VIEW PeopleView нужно написать CREATE PeopleView VIEW
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: 'Поскольку столбец phone_number есть в обеих таблицах (Respondents и Info), возникает неоднозначность. Нужно явно указать, из какой таблицы брать phone_number: Respondents.phone_number или Info.phone_number.'
   extended_explanation: |-
     Поскольку столбец phone_number есть в обеих таблицах (Respondents и Info), возникает неоднозначность. Нужно явно указать, из какой таблицы брать phone_number: Respondents.phone_number или Info.phone_number.
@@ -350,6 +357,7 @@ questions:
     text: Выбор других значений столбца в соответствии с требованиями запроса (product_name, price)
     correct: false
   difficulty: medium
+  topics: [indexes]
   explanation: Некластеризованный индекс содержит только ключевые значения и указатели на строки в таблице. При выполнении запроса происходит поиск по индексу, затем переход к основной таблице для получения остальных колонок. Никакого 'сохранения в дополнительной таблице' не происходит.
   extended_explanation: |-
     Некластеризованный индекс содержит только ключевые значения и указатели на строки в таблице. При выполнении запроса происходит поиск по индексу, затем переход к основной таблице для получения остальных колонок. Никакого 'сохранения в дополнительной таблице' не происходит.
@@ -391,6 +399,7 @@ questions:
     text: BEGIN CATCH <> END CATCH
     correct: false
   difficulty: medium
+  topics: [transactions]
   explanation: В процедуре обработки ошибок сначала идет блок BEGIN TRY, внутри которого выполняются операции, а затем блок BEGIN CATCH для обработки ошибок. BEGIN CATCH не может быть первым.
   extended_explanation: |-
     В процедуре обработки ошибок сначала идет блок BEGIN TRY, внутри которого выполняются операции, а затем блок BEGIN CATCH для обработки ошибок. BEGIN CATCH не может быть первым.
@@ -427,6 +436,7 @@ questions:
     text: Добавлю дополнительные индексы в другие столбцы в таблице Orders
     correct: false
   difficulty: medium
+  topics: [queries, indexes]
   explanation: 'Оптимальный подход: сначала подзапросом найти максимальную дату (последний заказ) для конкретного клиента, затем JOIN с исходной таблицей для получения полных данных. Это эффективно использует индекс по order_date.'
   extended_explanation: |-
     Оптимальный подход: сначала подзапросом найти максимальную дату (последний заказ) для конкретного клиента, затем JOIN с исходной таблицей для получения полных данных. Это эффективно использует индекс по order_date.
@@ -459,6 +469,7 @@ questions:
     text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Для поиска строк, начинающихся с определенных букв, используется оператор LIKE с символом '%'. 'A%' означает строки, начинающиеся с A. Условия должны быть правильно сгруппированы, и нужна сортировка ORDER BY age DESC.
   extended_explanation: |-
     Для поиска строк, начинающихся с определенных букв, используется оператор LIKE с символом '%'. 'A%' означает строки, начинающиеся с A. Условия должны быть правильно сгруппированы, и нужна сортировка ORDER BY age DESC.
@@ -491,6 +502,7 @@ questions:
     text: ALTER, DROP
     correct: false
   difficulty: medium
+  topics: [security]
   explanation: GRANT используется для предоставления прав доступа, REVOKE — для отзыва прав. Это основные операторы управления доступом (DCL — Data Control Language) в SQL.
   extended_explanation: |-
     GRANT используется для предоставления прав доступа, REVOKE — для отзыва прав. Это основные операторы управления доступом (DCL — Data Control Language) в SQL.
@@ -536,6 +548,7 @@ questions:
     text: Получение информации о дорогих и дешевых товарах, где отобразится только список дорогих товаров.
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Запрос использует CASE для создания категории price_category ('expensive' для цены > 100, иначе 'cheap'), выбирает product_name, price, price_category и сортирует по убыванию цены.
   extended_explanation: |-
     Запрос использует CASE для создания категории price_category ('expensive' для цены > 100, иначе 'cheap'), выбирает product_name, price, price_category и сортирует по убыванию цены.
@@ -568,6 +581,7 @@ questions:
     text: SELECT surname FROM group_A ORDER BY surname LIMIT 10;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: DISTINCT убирает дубликаты, ORDER BY surname сортирует по возрастанию (по умолчанию ASC), LIMIT 10 ограничивает вывод десятью записями.
   extended_explanation: |-
     DISTINCT убирает дубликаты, ORDER BY surname сортирует по возрастанию (по умолчанию ASC), LIMIT 10 ограничивает вывод десятью записями.
@@ -599,6 +613,7 @@ questions:
     text: SELECT * FROM workers w LEFT JOIN salary s ON w.position = s.position; GROUP BY position ORDER BY surname;
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: INNER JOIN (или просто JOIN) workers с salary по полю position вернет все соответствия сотрудников и их зарплат. SELECT * покажет все поля, включая surname и salary.
   extended_explanation: |-
     INNER JOIN (или просто JOIN) workers с salary по полю position вернет все соответствия сотрудников и их зарплат. SELECT * покажет все поля, включая surname и salary.

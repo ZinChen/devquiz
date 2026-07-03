@@ -7,6 +7,7 @@
           v-for="(q, idx) in questions" :key="q.id"
           @click="scrollTo(idx)"
           class="question-sidebar__cell"
+          tabindex="-1"
           :class="{
             'question-sidebar__cell--answered': isAnswered(q),
             'question-sidebar__cell--active':   idx === activeIndex,
@@ -29,7 +30,16 @@
         </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
 
+        <CodeChallengeQuestion
+          v-if="q.type === 'code_challenge'"
+          :question="q"
+          :answers="answers"
+          :mode="challengeMode"
+          :hint-shown="isHintShown?.(q.id) ?? false"
+          @hint-used="markHintUsed?.($event)"
+        />
         <QuestionOptions
+          v-else
           :question="q"
           :answers="answers"
           :optionStyle="optionStyle"
@@ -43,7 +53,9 @@
         <button
           type="submit"
           class="btn btn-primary all-at-once__submit-btn"
-          :disabled="answeredCount < questions.length"
+          :class="{ 'all-at-once__submit-btn--disabled': answeredCount < questions.length }"
+          :aria-disabled="answeredCount < questions.length"
+          @click="answeredCount < questions.length && $event.preventDefault()"
         >Завершить тест</button>
       </div>
       <p v-if="answeredCount < questions.length" class="submit-hint">
@@ -56,6 +68,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
+import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 
 const props = defineProps({
@@ -64,13 +77,16 @@ const props = defineProps({
   answeredCount:     Number,
   bookmarkedIds:     { type: Array, default: () => [] },
   isAnswered:        Function,
+  isHintShown:       Function,
+  markHintUsed:      Function,
   optionStyle:       Function,
   optionLetterStyle: Function,
   optionLetter:      Function,
   formatText:        Function,
+  challengeMode:     { type: String, default: 'highlight' },
 })
 
-defineEmits(['submit'])
+const emit = defineEmits(['submit', 'index-change'])
 
 const questionEls   = ref([])
 const activeIndex   = ref(0)
@@ -78,6 +94,7 @@ const focusedOptIdx = ref(0)
 
 function scrollTo(idx) {
   programmaticScroll = true
+  emit('index-change', idx)
   activeIndex.value = idx
   focusedOptIdx.value = 0
   const el = questionEls.value[idx]
@@ -96,10 +113,15 @@ function handleKeydown(e) {
   const q = currentQuestion()
   if (!q) return
 
+  if (q.type === 'code_challenge' && props.challengeMode === 'fix') return
+  const isCodeInput = q.type === 'code_challenge' && (props.challengeMode === 'fill' || props.challengeMode === 'fix')
+
   if (e.key === 'ArrowRight') {
+    if (isCodeInput) return
     e.preventDefault()
     scrollTo((activeIndex.value + 1) % props.questions.length)
   } else if (e.key === 'ArrowLeft') {
+    if (isCodeInput) return
     e.preventDefault()
     scrollTo((activeIndex.value - 1 + props.questions.length) % props.questions.length)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -124,6 +146,7 @@ function handleKeydown(e) {
       props.answers[q.id] = opts[nextPos].id
     }
   } else if (e.key === ' ') {
+    if (q.type === 'code_challenge') return
     e.preventDefault()
     const opts = q.options
     if (!opts?.length) return
@@ -156,7 +179,7 @@ let programmaticScroll = false
 let scrollEndTimer = null
 
 function handleScroll() {
-  if (programmaticScroll) {
+if (programmaticScroll) {
     clearTimeout(scrollEndTimer)
     scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
     return
@@ -166,7 +189,10 @@ function handleScroll() {
     const rect = el.getBoundingClientRect()
     return rect.top >= 0 && rect.bottom > 0
   })
-  if (idx !== -1) activeIndex.value = idx
+  if (idx !== -1 && idx !== activeIndex.value) {
+    emit('index-change', idx)
+    activeIndex.value = idx
+  }
 }
 
 onMounted(() => {
@@ -318,5 +344,16 @@ onUnmounted(() => {
 .all-at-once__submit-btn {
   padding-left: 2rem;
   padding-right: 2rem;
+}
+
+.all-at-once__submit-btn--disabled {
+  background: #C7D2FE;
+  border-color: #C7D2FE;
+  cursor: not-allowed;
+}
+
+.all-at-once__submit-btn:focus-visible {
+  outline: 2px solid #4F63F5;
+  outline-offset: 2px;
 }
 </style>

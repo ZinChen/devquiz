@@ -45,6 +45,7 @@ questions:
     text: "'read'"
     correct: false
   difficulty: medium
+  topics: [queries, schema]
   explanation: Для вставки значения в колонку типа массив enum (permission[]) необходимо явно привести массив к этому типу, используя `array['read']::permission[]`.
   extended_explanation: |-
     Для вставки значения в колонку типа массив enum (permission[]) необходимо явно привести массив к этому типу, используя `array['read']::permission[]`.
@@ -75,6 +76,7 @@ questions:
     text: Генерируемые колонки в PostgreSQL не вычисляются выражением и не зависят от исходных данных
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: В PostgreSQL генерируемые колонки могут ссылаться только на обычные колонки той же таблицы, но не на другие генерируемые колонки.
   extended_explanation: |-
     В PostgreSQL генерируемые колонки могут ссылаться только на обычные колонки той же таблицы, но не на другие генерируемые колонки.
@@ -113,6 +115,7 @@ questions:
     text: Update role set permissions = array_remove(permissions, 'read')
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: Ключевое условие — избежать дубликатов. Вариант с `array_append` внутри UPDATE, дополненный условием `WHERE array_position(...) IS NULL`, гарантирует добавление только при отсутствии элемента.
   extended_explanation: |-
     Ключевое условие — избежать дубликатов. Вариант с `array_append` внутри UPDATE, дополненный условием `WHERE array_position(...) IS NULL`, гарантирует добавление только при отсутствии элемента.
@@ -151,6 +154,7 @@ questions:
     text: Использовать EXCEPT, чтобы объединить оба набора строк и сохранить все дубликаты
     correct: false
   difficulty: medium
+  topics: [queries]
   explanation: "`UNION ALL` объединяет результаты двух `SELECT` без удаления дублей. `UNION` удаляет дубли, а `JOIN` и `EXCEPT` решают другие задачи."
   extended_explanation: |-
     `UNION ALL` объединяет результаты двух `SELECT` без удаления дублей. `UNION` удаляет дубли, а `JOIN` и `EXCEPT` решают другие задачи.
@@ -191,6 +195,7 @@ questions:
     text: Удаление записи из t1 всегда заменяет внешний ключ в t2 на NULL даже при ON DELETE SET DEFAULT
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: При `ON DELETE SET DEFAULT` PostgreSQL подставляет в дочерние строки значение по умолчанию. В этой схеме это значение берётся из последовательности, поэтому ссылка в `t2` может измениться на новый `id`, что действительно способно ломать логику приложения; при этом такое значение ещё должно удовлетворять внешнему ключу.
   extended_explanation: |-
     При `ON DELETE SET DEFAULT` PostgreSQL подставляет в дочерние строки значение по умолчанию. В этой схеме это значение берётся из последовательности, поэтому ссылка в `t2` может измениться на новый `id`, что действительно способно ломать логику приложения; при этом такое значение ещё должно удовлетворять внешнему ключу.
@@ -231,6 +236,7 @@ questions:
     text: Select * from some_table where id > 500000 and id < 500100 и это использует GIN-индекс по name
     correct: false
   difficulty: medium
+  topics: [indexes]
   explanation: Индекс создан на выражении `to_tsvector('english', name)`. Чтобы он использовался, условие WHERE должно в точности повторять это выражение.
   extended_explanation: |-
     Индекс создан на выражении `to_tsvector('english', name)`. Чтобы он использовался, условие WHERE должно в точности повторять это выражение.
@@ -275,6 +281,7 @@ questions:
     text: Create index logs_event_index on logs(event_time), потому что условие по user_id не влияет на выбор порядка колонок
     correct: false
   difficulty: medium
+  topics: [indexes]
   explanation: Для условий с равенством (`=`) и диапазоном (`BETWEEN`) наиболее эффективен составной индекс, где колонка с равенством (user_id) стоит первой.
   extended_explanation: |-
     Для условий с равенством (`=`) и диапазоном (`BETWEEN`) наиболее эффективен составной индекс, где колонка с равенством (user_id) стоит первой.
@@ -322,6 +329,7 @@ questions:
     text: Read Uncommitted, потому что в PostgreSQL он строже, чем Serializable
     correct: false
   difficulty: medium
+  topics: [transactions]
   explanation: В PostgreSQL уровень `SERIALIZABLE` обнаруживает конфликты на основе зависимостей между транзакциями. Здесь создается циклическая зависимость, которая приведет к ошибке сериализации.
   extended_explanation: |-
     В PostgreSQL уровень `SERIALIZABLE` обнаруживает конфликты на основе зависимостей между транзакциями. Здесь создается циклическая зависимость, которая приведет к ошибке сериализации.
@@ -359,6 +367,7 @@ questions:
     text: Delete from users where id = 1; -- всегда выполняется без блокировки со стороны CREATE INDEX
     correct: false
   difficulty: medium
+  topics: [locking]
   explanation: В PostgreSQL команда `CREATE INDEX` (без `CONCURRENTLY`) блокирует таблицу для изменений (`INSERT`/`UPDATE`/`DELETE`), но не блокирует операции чтения (`SELECT`).
   extended_explanation: |-
     В PostgreSQL команда `CREATE INDEX` (без `CONCURRENTLY`) блокирует таблицу для изменений (`INSERT`/`UPDATE`/`DELETE`), но не блокирует операции чтения (`SELECT`).
@@ -397,6 +406,7 @@ questions:
     text: К представлению some_view можно обращаться через SELECT сразу после WITH NO DATA без REFRESH
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: Материализованное представление с `WITH NO DATA` создаётся без данных и до `REFRESH MATERIALIZED VIEW` не предназначено для чтения через `SELECT`, но индекс на нём создавать можно.
   extended_explanation: |-
     Материализованное представление с `WITH NO DATA` создаётся без данных и до `REFRESH MATERIALIZED VIEW` не предназначено для чтения через `SELECT`, но индекс на нём создавать можно.
@@ -426,6 +436,7 @@ questions:
     text: explain (verbose), потому что verbose заменяет analyze и buffers
     correct: false
   difficulty: medium
+  topics: [performance]
   explanation: Чтобы получить реальное время выполнения и статистику использования буферов без влияния параллельной нагрузки, лучше всего использовать `EXPLAIN (ANALYZE, BUFFERS)` на копии данных.
   extended_explanation: |-
     Чтобы получить реальное время выполнения и статистику использования буферов без влияния параллельной нагрузки, лучше всего использовать `EXPLAIN (ANALYZE, BUFFERS)` на копии данных.
@@ -470,6 +481,7 @@ questions:
     text: Bitmap Index Scan, потому что он обязательно дешевле Seq Scan при выборке около 90% таблицы
     correct: false
   difficulty: medium
+  topics: [performance]
   explanation: Если условие выбирает большой процент строк (~90%), последовательное сканирование (Seq Scan) оказывается дешевле, чем чтение через индекс.
   extended_explanation: |-
     Если условие выбирает большой процент строк (~90%), последовательное сканирование (Seq Scan) оказывается дешевле, чем чтение через индекс.
@@ -508,6 +520,7 @@ questions:
     text: Изменить тип колонки action, и это автоматически запретит только новые значения 'login' без других изменений
     correct: false
   difficulty: medium
+  topics: [schema]
   explanation: Самый безопасный способ временно запретить вставку определенных строк — создать триггер `BEFORE INSERT`, проверяющий значение NEW.action.
   extended_explanation: |-
     Самый безопасный способ временно запретить вставку определенных строк — создать триггер `BEFORE INSERT`, проверяющий значение NEW.action.
@@ -537,6 +550,7 @@ questions:
     text: Команда выполнится успешно только потому, что пользователь manuel является членом роли исполнителя
     correct: false
   difficulty: medium
+  topics: [security]
   explanation: В PostgreSQL выдавать права на объект может его владелец, суперпользователь или роль, которой соответствующее право было передано с `GRANT OPTION`. Обычного доступа к таблице для этого недостаточно.
   extended_explanation: |-
     В PostgreSQL выдавать права на объект может его владелец, суперпользователь или роль, которой соответствующее право было передано с `GRANT OPTION`. Обычного доступа к таблице для этого недостаточно.
@@ -566,6 +580,7 @@ questions:
     text: Использование пула соединений (pgbouncer), потому что он сам по себе решает масштабирование записи и отказоустойчивость данных
     correct: false
   difficulty: medium
+  topics: [replication]
   explanation: Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.
   extended_explanation: |-
     Рост нагрузки на запись решает горизонтальное шардирование. Сочетание шардирования и репликации внутри каждого шарда дает и масштабирование, и отказоустойчивость.

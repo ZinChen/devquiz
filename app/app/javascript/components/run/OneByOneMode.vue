@@ -5,6 +5,7 @@
         v-for="(q, idx) in questions" :key="q.id"
         @click="goTo(idx)"
         class="question-nav__cell"
+        tabindex="-1"
         :class="{
           'question-nav__cell--active':   idx === currentIndex,
           'question-nav__cell--answered': idx !== currentIndex && isAnswered(q),
@@ -27,7 +28,17 @@
           <p class="question-card__counter">Вопрос {{ currentIndex + 1 }} из {{ questions.length }}</p>
           <p class="question-card__text" v-html="formatText(currentQuestion.text)"></p>
 
+          <CodeChallengeQuestion
+            v-if="currentQuestion.type === 'code_challenge'"
+            :question="currentQuestion"
+            :answers="answers"
+            :mode="challengeMode"
+            :hint-shown="isHintShown?.(currentQuestion.id) ?? false"
+            @submit-enter="isAnswered(currentQuestion) && currentIndex < questions.length - 1 ? goTo(currentIndex + 1) : null"
+            @hint-used="markHintUsed?.($event)"
+          />
           <QuestionOptions
+            v-else
             :question="currentQuestion"
             :answers="answers"
             :optionStyle="optionStyle"
@@ -38,24 +49,25 @@
 
           <div class="question-card__footer">
             <button
+              v-if="currentIndex < questions.length - 1"
+              @click="isAnswered(currentQuestion) && goTo(currentIndex + 1)"
+              class="btn btn-sm question-card__btn-next"
+              :class="{ 'question-card__btn-next--disabled': !isAnswered(currentQuestion) }"
+              :aria-disabled="!isAnswered(currentQuestion)"
+            >Далее →</button>
+            <button
+              v-else
+              @click="answeredCount >= questions.length && $emit('submit')"
+              class="btn btn-sm question-card__btn-next"
+              :class="{ 'question-card__btn-next--disabled': answeredCount < questions.length }"
+              :aria-disabled="answeredCount < questions.length"
+            >Завершить</button>
+
+            <button
               v-if="currentIndex > 0"
               @click="goTo(currentIndex - 1)"
               class="btn btn-ghost btn-sm question-card__btn-back"
             >← Назад</button>
-            <div v-else></div>
-
-            <button
-              v-if="currentIndex < questions.length - 1"
-              @click="goTo(currentIndex + 1)"
-              class="btn btn-sm question-card__btn-next"
-              :disabled="!isAnswered(currentQuestion)"
-            >Далее →</button>
-            <button
-              v-else
-              @click="$emit('submit')"
-              class="btn btn-sm question-card__btn-next"
-              :disabled="answeredCount < questions.length"
-            >Завершить</button>
           </div>
         </div>
       </TransitionGroup>
@@ -70,17 +82,21 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
+import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 
 const props = defineProps({
   questions:         Array,
   answers:           Object,
   answeredCount:     Number,
   isAnswered:        Function,
+  isHintShown:       Function,
+  markHintUsed:      Function,
   optionStyle:       Function,
   optionLetterStyle: Function,
   optionLetter:      Function,
   formatText:        Function,
   savedIndex:        { type: Number, default: 0 },
+  challengeMode:     { type: String, default: 'highlight' },
 })
 
 const emit = defineEmits(['submit', 'index-change'])
@@ -111,7 +127,7 @@ function onCardEnter(el) {
   nextTick(() => { containerHeight.value = el.offsetHeight })
 }
 
-function onRadioPick(q, optId, autoAdvance = true) {
+function onRadioPick(q, optId, autoAdvance = false) {
   props.answers[q.id] = optId
   if (autoAdvance) {
     const nextIdx = currentIndex.value + 1
@@ -127,10 +143,15 @@ function handleKeydown(e) {
   const q = currentQuestion.value
   if (!q) return
 
+  if (q.type === 'code_challenge' && props.challengeMode === 'fix') return
+  const isCodeInput = q.type === 'code_challenge' && (props.challengeMode === 'fill' || props.challengeMode === 'fix')
+
   if (e.key === 'ArrowRight') {
+    if (isCodeInput) return
     e.preventDefault()
     goTo((currentIndex.value + 1) % props.questions.length)
   } else if (e.key === 'ArrowLeft') {
+    if (isCodeInput) return
     e.preventDefault()
     goTo((currentIndex.value - 1 + props.questions.length) % props.questions.length)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -155,6 +176,7 @@ function handleKeydown(e) {
       onRadioPick(q, opts[nextPos].id, false)
     }
   } else if (e.key === ' ') {
+    if (q.type === 'code_challenge') return
     e.preventDefault()
     const opts = q.options
     if (!opts?.length) return
@@ -169,6 +191,7 @@ function handleKeydown(e) {
       props.answers[q.id] = null
     }
   } else if (e.key === 'Enter') {
+    if (document.activeElement?.tagName === 'BUTTON') return
     e.preventDefault()
     if (q.type === 'multiple') {
       const opts = q.options
@@ -315,12 +338,26 @@ onUnmounted(() => {
 
 .question-card__btn-back {
   color: #9CA3AF;
+  order: 1;
 }
 
 .question-card__btn-next {
+  margin-left: auto;
   background: #4F63F5;
   border: none;
   color: #fff;
+  order: 2;
+}
+
+.question-card__btn-next--disabled {
+  background: #C7D2FE;
+  cursor: not-allowed;
+}
+
+.question-card__btn-next:focus-visible,
+.question-card__btn-back:focus-visible {
+  outline: 2px solid #4F63F5;
+  outline-offset: 2px;
 }
 
 .card-slide-enter-active,

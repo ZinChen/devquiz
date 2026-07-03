@@ -34,6 +34,7 @@ questions:
     correct: false
     explanation: WHERE должен идти до GROUP BY, и в нем нельзя использовать агрегаты.
   difficulty: medium
+  topics: [queries]
   explanation: HAVING фильтрует группы после группировки, WHERE фильтрует строки до группировки.
   extended_explanation: |-
     Запрос должен:
@@ -73,6 +74,7 @@ questions:
     correct: true
     explanation: Агрегатные функции игнорируют NULL, но если все значения NULL, результат будет NULL.
   difficulty: medium
+  topics: [queries]
   explanation: MAX игнорирует NULL, но если все значения NULL, возвращается NULL.
   extended_explanation: |-
     Агрегатные функции:
@@ -117,6 +119,7 @@ questions:
     correct: false
     explanation: Условие WHERE B.id IS NULL не может выполниться после INNER JOIN.
   difficulty: medium
+  topics: [queries]
   explanation: INNER JOIN возвращает только строки с совпадением, поэтому B.id не может быть NULL, и условие WHERE отсеивает всё.
   extended_explanation: |-
     Логика выполнения:
@@ -157,6 +160,7 @@ questions:
     correct: true
     explanation: Работает в Oracle, используя DECODE вместо CASE.
   difficulty: medium
+  topics: [queries]
   explanation: CASE позволяет реализовать условную логику внутри SUM. Несколько вариантов корректны в разных СУБД.
   extended_explanation: |-
     ## Почему первый вариант правильный
@@ -206,6 +210,7 @@ questions:
     correct: false
     explanation: IN требует наличия дорогих товаров, противоположное условие.
   difficulty: medium
+  topics: [queries]
   explanation: Первое условие отбирает поставщиков с дорогими товарами, второе исключает тех, у кого есть снятые.
   extended_explanation: |-
     Запрос работает в два этапа:
@@ -244,6 +249,7 @@ questions:
     correct: false
     explanation: Нет синтаксиса для изменения запроса представления через ALTER.
   difficulty: medium
+  topics: [schema]
   explanation: Изменить определение материализованного представления можно только через DROP и CREATE.
   extended_explanation: |-
     Материализованные представления:
@@ -284,6 +290,7 @@ questions:
     correct: false
     explanation: Функции регулярных выражений не входят в стандарт ANSI SQL.
   difficulty: medium
+  topics: [queries]
   explanation: SUBSTR (или SUBSTRING) с фиксированными позициями — единственный переносимый способ при известном формате.
   extended_explanation: |-
     При известном фиксированном формате:
@@ -323,6 +330,7 @@ questions:
     correct: false
     explanation: Так было бы для непервых строк, но не для первой.
   difficulty: medium
+  topics: [queries]
   explanation: 'LAG с тремя параметрами: сдвиг на 1 строку, значение по умолчанию, если предыдущей строки нет.'
   extended_explanation: |-
     Функция LAG(column, offset, default):
@@ -362,6 +370,7 @@ questions:
     correct: false
     explanation: FIRST_VALUE дает разницу с первой продажей, а не с предыдущей.
   difficulty: medium
+  topics: [queries]
   explanation: LAG с PARTITION BY shop_id и ORDER BY sale_date дает предыдущую продажу того же магазина.
   extended_explanation: |-
     Компоненты окна:
@@ -402,6 +411,7 @@ questions:
     correct: true
     explanation: Корректно в Oracle и некоторых других СУБД — ADD с несколькими колонками в скобках.
   difficulty: medium
+  topics: [schema]
   explanation: 'Синтаксис добавления столбцов зависит от СУБД: либо несколько ADD, либо ADD (колонки через запятую).'
   extended_explanation: |-
     ## Почему оба варианта могут быть правильными
@@ -447,6 +457,7 @@ questions:
     correct: false
     explanation: Сузит до клиента, но потом нужно сканировать все его записи по дате.
   difficulty: medium
+  topics: [indexes]
   explanation: Для условий с равенством и диапазоном эффективнее индекс, где первым идет столбец с равенством.
   extended_explanation: |-
     Индекс (customer_id, order_date):
@@ -486,6 +497,7 @@ questions:
     correct: false
     explanation: Нет PARTITION BY department_id, нет сортировки по зарплате.
   difficulty: medium
+  topics: [queries]
   explanation: RANK с PARTITION BY department_id дает ранги в каждом отделе, включая одинаковые ранги при равных зарплатах.
   extended_explanation: |-
     ## Почему RANK подходит
@@ -526,6 +538,7 @@ questions:
     correct: false
     explanation: ANY может использоваться с <, >, <=, >=, =, <>.
   difficulty: medium
+  topics: [queries]
   explanation: EXISTS проверяет наличие строк в подзапросе, ANY сравнивает выражение со значениями из подзапроса.
   extended_explanation: |-
     EXISTS:
@@ -565,6 +578,7 @@ questions:
     correct: false
     explanation: UNION работает с любыми сравнимыми типами.
   difficulty: medium
+  topics: [queries]
   explanation: EXCEPT возвращает строки из первого запроса, отсутствующие во втором. UNION объединяет результаты.
   extended_explanation: |-
     Множественные операции:
@@ -605,6 +619,7 @@ questions:
     correct: false
     explanation: DELETE — DML.
   difficulty: medium
+  topics: [schema]
   explanation: 'DDL (Data Definition Language) — команды для определения структуры данных: CREATE, ALTER, DROP, RENAME, TRUNCATE.'
   extended_explanation: |-
     Классификация SQL команд:

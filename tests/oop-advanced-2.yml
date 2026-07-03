@@ -33,6 +33,7 @@ questions:
     correct: false
     explanation: Память должна выделяться до инициализации полей и вызова конструктора.
   difficulty: medium
+  topics: [oop]
   explanation: При создании объекта сначала выделяется память, затем вызывается конструктор, инициализируются поля, после чего возвращается ссылка на объект.
   extended_explanation: |-
     Создание объекта в ООП включает следующие этапы:
@@ -73,6 +74,7 @@ questions:
     correct: true
     explanation: Абстракция скрывает детали реализации, предоставляя простой интерфейс.
   difficulty: medium
+  topics: [oop]
   explanation: Абстракция как средство управления сложностью проявляется в сокрытии деталей реализации и предоставлении простого интерфейса.
   extended_explanation: |-
     Абстракция в ООП:
@@ -112,6 +114,7 @@ questions:
     correct: false
     explanation: Это ближе к структурным паттернам.
   difficulty: medium
+  topics: [oop]
   explanation: Поведенческие паттерны описывают взаимодействие объектов и распределение ответственности между ними.
   extended_explanation: |-
     Поведенческие паттерны (behavioral patterns):
@@ -179,6 +182,7 @@ questions:
     correct: true
     explanation: Класс Банк требует модификации при добавлении нового типа счета (нужно менять метод создать_счет).
   difficulty: medium
+  topics: [oop]
   explanation: Класс Банк нарушает OCP, так как требует модификации при добавлении новых типов счетов (нужно добавлять новые условия в метод создать_счет).
   extended_explanation: |-
     Принцип открытости/закрытости (OCP):
@@ -218,6 +222,7 @@ questions:
     correct: false
     explanation: Private доступен только внутри самого класса.
   difficulty: medium
+  topics: [oop]
   explanation: Protected Internal обеспечивает доступ из класса, наследников (даже из других сборок) и из любых классов внутри той же сборки.
   extended_explanation: |-
     Protected Internal в C#:
@@ -257,6 +262,7 @@ questions:
     correct: false
     explanation: Абстрактный класс нельзя инстанциировать, даже если есть реализованные методы.
   difficulty: medium
+  topics: [oop]
   explanation: Абстрактный класс может содержать как абстрактные методы (без реализации), так и обычные методы с реализацией, наследники обязаны реализовать только абстрактные.
   extended_explanation: |-
     Абстрактный класс:
@@ -298,6 +304,7 @@ questions:
     correct: false
     explanation: Это не причина для статики; такие методы могут быть и экземплярными.
   difficulty: medium
+  topics: [oop]
   explanation: Статические методы вызываются через имя класса без создания объекта, что удобно для утилитных функций.
   extended_explanation: |-
     Статические методы:
@@ -338,6 +345,7 @@ questions:
     correct: false
     explanation: Атрибуты можно переопределять и добавлять новые.
   difficulty: medium
+  topics: [oop]
   explanation: Интерпретируемые языки часто поддерживают множественное наследование или его аналоги (mixins, трейты) для объединения поведения.
   extended_explanation: |-
     Особенности наследования в интерпретируемых языках:
@@ -377,6 +385,7 @@ questions:
     correct: false
     explanation: Нет общего интерфейса, нельзя использовать полиморфизм.
   difficulty: medium
+  topics: [oop]
   explanation: Полиморфизм позволяет объектам разных классов с одинаковым интерфейсом обрабатываться единообразно.
   extended_explanation: |-
     Полиморфизм через наследование:
@@ -416,6 +425,7 @@ questions:
     correct: true
     explanation: Прямые вызовы и обмен данными создают сильную связанность.
   difficulty: medium
+  topics: [oop]
   explanation: Жесткое связывание (прямые вызовы, обмен данными) увеличивает связанность, что ухудшает гибкость и поддержку кода.
   extended_explanation: |-
     Связанность (coupling) — степень зависимости между классами:
@@ -455,6 +465,7 @@ questions:
     correct: false
     explanation: Сериализуются данные, а не методы.
   difficulty: medium
+  topics: [oop]
   explanation: Сериализация сохраняет состояние объекта, а не методы. Виртуальные функции могут использоваться в процессе сериализации для кастомной логики.
   extended_explanation: |-
     Сериализация с наследованием:
@@ -494,6 +505,7 @@ questions:
     correct: false
     explanation: Это реляционная модель.
   difficulty: medium
+  topics: [oop]
   explanation: ООП-языки поддерживают инкапсуляцию и механизмы множественного наследования (через классы, интерфейсы, миксины, трейты).
   extended_explanation: |-
     Общие черты ООП-языков:
@@ -535,6 +547,7 @@ questions:
     correct: false
     explanation: Глобальные переменные не относятся к ООП-принципам.
   difficulty: medium
+  topics: [oop]
   explanation: Наследование и полиморфизм обеспечивают возможность единообразного вызова методов и передачи аргументов между объектами разных классов.
   extended_explanation: |-
     Наследование и полиморфизм в рантайме:
@@ -575,6 +588,7 @@ questions:
     correct: false
     explanation: ООП структурирует код, а не создает хаос.
   difficulty: medium
+  topics: [oop]
   explanation: ООП обеспечивает модульность, переиспользование и облегчает поддержку крупных систем благодаря принципам инкапсуляции, наследования и полиморфизма.
   extended_explanation: |-
     Ценность ООП для сложных систем:
@@ -616,6 +630,7 @@ questions:
     correct: false
     explanation: Многие ООБД поддерживают транзакции.
   difficulty: medium
+  topics: [oop]
   explanation: ООБД хранят данные в виде объектов с атрибутами и методами, что упрощает работу со сложными структурами и отношениями.
   extended_explanation: |-
     Объектно-ориентированные БД:

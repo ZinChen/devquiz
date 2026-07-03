@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="run-header">
       <nav class="run-breadcrumbs">
-        <Link href="/" class="run-breadcrumbs__link">← Все тесты</Link>
+        <Link href="/" class="run-breadcrumbs__link">Все тесты</Link>
         <Link :href="`/tests/${test.slug}`" class="run-breadcrumbs__link">← {{ test.title }}</Link>
       </nav>
       <div class="run-header__right">
@@ -11,6 +11,7 @@
           <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
         </div>
         <button
+          type="button"
           @click="settingsOpen = !settingsOpen"
           class="run-header__settings-btn"
           title="Настройки"
@@ -23,10 +24,14 @@
       </div>
     </div>
 
-    <div class="run-header run-settings-wrap">
+    <div class="run-settings-wrap">
       <SettingsPanel
         v-if="settingsOpen"
         v-model:mode="mode"
+        v-model:challengeMode="challengeMode"
+        :hasCodeChallenge="hasCodeChallenge"
+        :locked="sessionStarted"
+        @reset="resetChallenge"
       />
     </div>
 
@@ -37,11 +42,14 @@
       :answeredCount="answeredCount"
       :bookmarkedIds="bookmarkedIds"
       :isAnswered="isAnswered"
+      :isHintShown="isHintShown"
+      :markHintUsed="markHintUsed"
       :optionStyle="optionStyle"
       :optionLetterStyle="optionLetterStyle"
       :optionLetter="optionLetter"
       :formatText="formatText"
       :savedIndex="savedIndex"
+      :challengeMode="challengeMode"
       @submit="submit"
       @index-change="updateIndex"
     />
@@ -70,18 +78,27 @@ const activeMode = computed(() => modeComponents[mode.value])
 const {
   questions,
   answers,
+  challengeMode,
   savedIndex,
+  sessionStarted,
   answeredCount,
   timeDisplay,
   timerWarning,
   isAnswered,
+  isHintShown,
+  markHintUsed,
   optionStyle,
   optionLetterStyle,
   optionLetter,
   formatText,
   updateIndex,
+  resetChallenge,
   submit,
 } = useQuizSession(props.test, props.questions)
+
+const hasCodeChallenge = computed(() =>
+  props.questions.some(q => q.type === 'code_challenge')
+)
 </script>
 
 <style scoped>
@@ -93,7 +110,6 @@ const {
 }
 
 .run-settings-wrap {
-  display: block;
   margin-bottom: 0;
 }
 

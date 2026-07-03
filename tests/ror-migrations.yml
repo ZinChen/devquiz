@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "`bin/rails db:migrate` применяет все миграции из db/migrate/ у которых версия выше последней записи в schema_migrations."
     difficulty: easy
+    topics: [migrations]
 
   - id: q2
     text: "Как откатить последнюю миграцию?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "`rails db:rollback` откатывает последнюю миграцию. `STEP=3` откатывает 3 последних."
     difficulty: easy
+    topics: [migrations]
 
   - id: q3
     text: "Что хранится в таблице `schema_migrations`?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "schema_migrations содержит одну колонку version со timestamp каждой применённой миграции. По ней Rails определяет, что уже выполнено."
     difficulty: easy
+    topics: [migrations]
 
   - id: q4
     text: "Какой тип колонки использовать для хранения денежных значений?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "decimal с precision/scale избегает ошибок округления float. `t.decimal :price, precision: 10, scale: 2`. Вариант с integer (в копейках) тоже корректен, но decimal семантически точнее."
     difficulty: medium
+    topics: [schema]
 
   - id: q5
     text: "Как безопасно добавить NOT NULL колонку к существующей таблице с данными?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "Добавление NOT NULL без default к таблице с данными упадёт. Безопасно: add_column (nullable) → backfill данных → change_column_null (false, default_value)."
     difficulty: hard
+    topics: [migrations, locking]
 
   - id: q6
     text: "Что делает `add_index :users, :email, unique: true`?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "Уникальный индекс на уровне БД — надёжная гарантия уникальности в отличие от validates :uniqueness (которая подвержена race conditions)."
     difficulty: medium
+    topics: [indexes]
 
   - id: q7
     text: "Как переименовать колонку в миграции?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "rename_column(table, old, new) — метод миграции для переименования колонки."
     difficulty: easy
+    topics: [migrations]
 
   - id: q8
     text: "Что такое `change_column` и когда оно необратимо?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "change_column не знает как автоматически откатиться (каким был тип раньше). Используйте reversible { |dir| dir.up { ... }; dir.down { ... } } или def change/def up/def down."
     difficulty: medium
+    topics: [migrations]
 
   - id: q9
     text: "Для чего используется `db/schema.rb`?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "schema.rb обновляется после каждой миграции и отражает актуальное состояние схемы. `rails db:schema:load` применяет schema.rb напрямую (быстрее, чем все миграции)."
     difficulty: medium
+    topics: [migrations]
 
   - id: q10
     text: "Когда лучше использовать `structure.sql` вместо `schema.rb`?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "schema.rb использует Ruby DSL и теряет PostgreSQL-специфику. structure.sql хранит дамп SQL и сохраняет всё. Включается через `config.active_record.schema_format = :sql`."
     difficulty: hard
+    topics: [migrations, schema]
 
   - id: q11
     text: "Как добавить внешний ключ с ограничением в миграции?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "add_reference с foreign_key: true добавляет и индекс и FK-constraint. add_foreign_key — только FK. B + add_index — полный аналог D. Ответ B — типичная Rails-конвенция."
     difficulty: medium
+    topics: [migrations, schema]
 
   - id: q12
     text: "Что такое `null: false` и `default:` в миграции?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "Ограничения на уровне БД надёжнее моделей — работают даже при прямом SQL. Всегда добавляйте NOT NULL + DEFAULT вместе при добавлении к существующим таблицам."
     difficulty: medium
+    topics: [schema]
 
   - id: q13
     text: "Как откатить конкретную миграцию по версии?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "`migrate:down VERSION=X` откатывает конкретную миграцию. `migrate VERSION=X` откатывает все миграции новее X."
     difficulty: medium
+    topics: [migrations]
 
   - id: q14
     text: "Что произойдёт при `rails db:migrate` в production если миграция уже применена?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "Rails сверяет файлы в db/migrate/ с записями в schema_migrations. Только новые версии применяются. Это идемпотентная операция."
     difficulty: easy
+    topics: [migrations]
 
   - id: q15
     text: "Как добавить составной уникальный индекс?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "Массив колонок создаёт составной индекс. unique: true гарантирует уникальность комбинации значений обоих полей."
     difficulty: medium
+    topics: [indexes]
 
   - id: q16
     text: "Что такое `reversible` блок в миграции?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "reversible { |dir| dir.up { execute 'CREATE VIEW...' }; dir.down { execute 'DROP VIEW...' } } — для операций, которые Rails не может автоматически откатить."
     difficulty: medium
+    topics: [migrations]
 
   - id: q17
     text: "Как создать индекс только для части строк (partial index) в PostgreSQL через Rails?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "where: принимает SQL-строку для PostgreSQL partial indexes. Индексирует только строки, где active = true — меньше размер, быстрее для таких запросов."
     difficulty: hard
+    topics: [indexes]
 
   - id: q18
     text: "Нужно ли коммитить `db/schema.rb` в git?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "schema.rb всегда коммитят вместе с миграцией. Новые разработчики используют db:schema:load. Без него невозможно воспроизвести схему без истории всех миграций."
     difficulty: easy
+    topics: [migrations]
 
   - id: q19
     text: "Как переименовать таблицу в миграции?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "rename_table — обратимая операция. Rails автоматически генерирует rollback (переименование обратно)."
     difficulty: easy
+    topics: [migrations]
 
   - id: q20
     text: "Что такое `db:seed` и как безопасно писать seed-файл?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "db/seeds.rb выполняется через `rails db:seed`. find_or_create_by делает его идемпотентным — безопасно запускать повторно. Полезно для первоначальных данных (роли, категории)."
     difficulty: medium
+    topics: [migrations]

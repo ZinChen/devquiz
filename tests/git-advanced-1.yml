@@ -33,6 +33,7 @@ questions:
     correct: true
     explanation: "--no-ff гарантирует создание отдельного коммита слияния даже при возможности fast-forward."
   difficulty: medium
+  topics: [git]
   explanation: Флаг --no-ff гарантирует создание отдельного коммита слияния, сохраняя информацию о ветке hotfix.
   extended_explanation: |-
     При обычном слиянии Git выполняет fast-forward, если целевая ветка не имеет новых коммитов:
@@ -68,6 +69,7 @@ questions:
     correct: false
     explanation: revert отменяет изменения коммита, но создает новый коммит, что сложнее простого восстановления файлов.
   difficulty: medium
+  topics: [git]
   explanation: git checkout <коммит> -- <директория> восстанавливает файлы из указанного коммита, перезаписывая текущее состояние.
   extended_explanation: |-
     Если удаление уже закоммичено:
@@ -120,6 +122,7 @@ questions:
     correct: false
     explanation: mixed не теряет изменения в рабочей директории, но в логе видна потеря коммита.
   difficulty: medium
+  topics: [git]
   explanation: Из reflog видно, что был выполнен `git reset --hard HEAD~1`. Коммит 9b1e104 можно восстановить через `git cherry-pick 9b1e104`.
   extended_explanation: |-
     Анализ reflog:
@@ -168,6 +171,7 @@ questions:
     correct: false
     explanation: Коммиты не удаляются сразу, они становятся недостижимыми, но доступны через reflog.
   difficulty: medium
+  topics: [git]
   explanation: reflog хранит историю перемещения HEAD. Можно найти хеш последнего коммита ветки и создать ветку заново.
   extended_explanation: |-
     При удалении ветки:
@@ -210,6 +214,7 @@ questions:
     correct: true
     explanation: GitHub Flow основан на одной основной ветке и автоматическом деплое после merge.
   difficulty: medium
+  topics: [git]
   explanation: GitHub Flow предполагает работу с одной основной веткой (main) и автоматический деплой после слияния.
   extended_explanation: |-
     GitHub Flow — это легковесный подход:
@@ -248,6 +253,7 @@ questions:
     correct: false
     explanation: Подмодули не связаны с конфликтами в файлах.
   difficulty: medium
+  topics: [git]
   explanation: Если после разрешения конфликта в файле остались маркеры <<<<<<<, =======, >>>>>>>, это приведет к синтаксическим ошибкам и падению тестов.
   extended_explanation: |-
     При конфликте Git вставляет маркеры:
@@ -291,6 +297,7 @@ questions:
     correct: true
     explanation: ".gitmodules содержит соответствие локального пути и URL репозитория подмодуля."
   difficulty: medium
+  topics: [git]
   explanation: ".gitmodules хранит метаданные подмодулей — локальный путь и URL репозитория."
   extended_explanation: |-
     Файл .gitmodules имеет формат:
@@ -339,6 +346,7 @@ questions:
     correct: false
     explanation: LFS не реализует дельта-сжатие, он хранит полные версии файлов на сервере.
   difficulty: medium
+  topics: [git]
   explanation: Git LFS хранит в репозитории только указатели на файлы, а сами файлы — на отдельном сервере, что уменьшает размер репозитория и ускоряет клонирование.
   extended_explanation: |-
     Git LFS (Large File Storage) работает следующим образом:
@@ -423,6 +431,7 @@ questions:
     correct: true
     explanation: filter-branch переписывает всю историю, удаляя файл из всех коммитов.
   difficulty: medium
+  topics: [git]
   explanation: git filter-branch --index-filter применяет команду к индексу каждого коммита, удаляя файл из всей истории.
   extended_explanation: |-
     Для полного удаления файла из истории нужен filter-branch:
@@ -465,6 +474,7 @@ questions:
     correct: false
     explanation: checkout переключает ветки, но не синхронизирует с удаленным репозиторием.
   difficulty: medium
+  topics: [git]
   explanation: git reset --hard origin/main перемещает текущую ветку на коммит, на который указывает origin/main, полностью заменяя локальную историю.
   extended_explanation: |-
     Для полной синхронизации локальной ветки с удаленной (переписывание локальной истории):
@@ -502,6 +512,7 @@ questions:
     correct: false
     explanation: remote set-url меняет URL основного репозитория, не подмодуля.
   difficulty: medium
+  topics: [git]
   explanation: После изменения .gitmodules нужно выполнить git submodule sync для обновления локальной конфигурации.
   extended_explanation: |-
     Процедура обновления URL подмодуля:
@@ -563,6 +574,7 @@ questions:
     correct: true
     explanation: "-s создает подписанный GPG тег, push отправляет конкретный тег на удаленный репозиторий."
   difficulty: medium
+  topics: [git]
   explanation: git tag -s создает подписанный GPG-ключом тег, git push origin v3.0.0 отправляет его на удаленный репозиторий.
   extended_explanation: |-
     ### Типы тегов в Git
@@ -622,6 +634,7 @@ questions:
     correct: false
     explanation: show показывает изменения в стэше, last невалидный синтаксис.
   difficulty: medium
+  topics: [git]
   explanation: git stash list показывает все стэши, git stash drop stash@{N} удаляет конкретный стэш без применения.
   extended_explanation: |-
     ### Работа со стэшами
@@ -706,6 +719,7 @@ questions:
     correct: false
     explanation: Потребуется force-push для замены main.
   difficulty: medium
+  topics: [git]
   explanation: git revert создает новые коммиты, отменяющие изменения указанных коммитов, не удаляя их из истории. Это безопасно для публичных веток.
   extended_explanation: |-
     ### Сравнение подходов
@@ -760,6 +774,7 @@ questions:
     correct: false
     explanation: merge не является допустимой командой в интерактивном rebase.
   difficulty: medium
+  topics: [git]
   explanation: squash объединяет коммит с предыдущим и предлагает отредактировать сообщение объединенного коммита.
   extended_explanation: |-
     ### Команды интерактивного rebase

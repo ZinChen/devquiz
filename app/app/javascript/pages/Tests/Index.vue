@@ -40,14 +40,20 @@
       <div class="tag-filters">
         <button
           v-for="tag in allTags" :key="tag"
-          @click="tagCount(tag) > 0 && toggleTag(tag, tagCount(tag))"
+          @click="onTagClick($event, tag)"
+          @mousedown="lp.start($event, tag)"
+          @mouseup="lp.cancel()"
+          @mouseleave="lp.cancel()"
+          @touchstart.passive="lp.start($event, tag)"
+          @touchend="lp.cancel()"
+          @touchcancel="lp.cancel()"
           class="badge badge-sm transition-all tag-filter-btn"
           :class="[
-            selectedTags.includes(tag) ? 'tag-filter--active' : 'tag-filter',
-            tagCount(tag) === 0 ? 'tag-filter--disabled' : 'cursor-pointer'
+            excludedTags.includes(tag) ? 'tag-filter--excluded' : selectedTags.includes(tag) ? 'tag-filter--active' : 'tag-filter',
+            tagCount(tag) === 0 && !excludedTags.includes(tag) ? 'tag-filter--disabled' : 'cursor-pointer'
           ]"
         >
-          {{ tag }} <span class="tag-count">{{ tagCount(tag) }}</span>
+          {{ tag }} <span v-if="!excludedTags.includes(tag)" class="tag-count">{{ tagCount(tag) }}</span>
         </button>
       </div>
 
@@ -62,12 +68,24 @@
       </div>
     </div>
 
-    <component :is="activeViewComponent" :tests="filteredTests" :selected-tags="selectedTags" @clear-filters="clearFilters" @toggle-tag="toggleTag" />
+    <component :is="activeViewComponent" :tests="filteredTests" :selected-tags="selectedTags" :excluded-tags="excludedTags" @clear-filters="clearFilters" @toggle-tag="toggleTag" @exclude-tag="toggleExcludeTag" />
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, nextTick } from 'vue'
+
+function useLongPress(onLong, delay = 500) {
+  let timer = null
+  let fired = false
+  function start(e, ...args) {
+    fired = false
+    timer = setTimeout(() => { fired = true; onLong(...args) }, delay)
+  }
+  function cancel() { clearTimeout(timer) }
+  function click(e) { if (fired) { e.preventDefault(); return true } return false }
+  return { start, cancel, click }
+}
 import AppLayout from '@/components/AppLayout.vue'
 import GridView from '@/components/tests/GridView.vue'
 import ListView from '@/components/tests/ListView.vue'
@@ -78,7 +96,16 @@ const props = defineProps({
   allTags: Array,
 })
 
-const { searchQuery, selectedTags, filterDifficulty, tagCountCache, clearFilters, toggleTag, toggleDifficulty } = useTestFilters()
+const { searchQuery, selectedTags, excludedTags, filterDifficulty, tagCountCache, clearFilters, toggleTag, toggleExcludeTag, toggleDifficulty } = useTestFilters()
+
+const lp = useLongPress(tag => toggleExcludeTag(tag))
+
+function onTagClick(e, tag) {
+  if (lp.click(e, tag)) return
+  if (e.ctrlKey || e.metaKey) { toggleExcludeTag(tag); return }
+  if (excludedTags.value.includes(tag)) { toggleExcludeTag(tag); return }
+  if (tagCount(tag) > 0) toggleTag(tag, tagCount(tag))
+}
 
 const searchOpen = ref(false)
 const searchInputRef = ref(null)
@@ -135,10 +162,12 @@ const baseFilteredTests = computed(() => {
 })
 
 const filteredTests = computed(() => {
-  if (selectedTags.value.length === 0) return baseFilteredTests.value
-  return baseFilteredTests.value.filter(t =>
-    selectedTags.value.every(tag => t.tags?.includes(tag))
-  )
+  let result = baseFilteredTests.value
+  if (selectedTags.value.length > 0)
+    result = result.filter(t => selectedTags.value.every(tag => t.tags?.includes(tag)))
+  if (excludedTags.value.length > 0)
+    result = result.filter(t => excludedTags.value.every(tag => !t.tags?.includes(tag)))
+  return result
 })
 
 function tagCount(tag) {
@@ -289,5 +318,12 @@ function tagCount(tag) {
 .tag-filter--disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.tag-filter--excluded {
+  background: #FEE2E2;
+  color: #EF4444;
+  border-color: #FCA5A5;
+  text-decoration: line-through;
 }
 </style>

@@ -3,52 +3,91 @@ import { router } from '@inertiajs/vue3'
 
 export function useQuizSession(test, questionsSource) {
   const STORAGE_KEY = `devquiz_session_${test.slug}`
+  const DEFAULT_CHALLENGE_MODE = test.defaultChallengeMode || 'highlight'
 
   function resolveQuestions() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      if (saved?.questions?.length) return saved.questions
-    } catch {}
     return questionsSource.map(q => ({ ...q }))
   }
 
   function resolveSavedIndex() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      return saved?.currentIndex || 0
-    } catch {}
-    return 0
+    return savedSession?.currentIndex || 0
   }
 
-  const questions    = ref(resolveQuestions())
-  const answers      = ref({})
-  const startedAt    = ref(new Date().toISOString())
-  const elapsed      = ref(0)
-  const savedIndex   = ref(resolveSavedIndex())
+  function resolveSavedSession() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
+    } catch {}
+    return null
+  }
+
+  const savedSession = resolveSavedSession()
+
+  const questions      = ref(resolveQuestions())
+  const answers        = ref({})
+  const usedHints      = ref(new Set())
+  const challengeMode  = ref(savedSession?.challengeMode || localStorage.getItem('devquiz_challenge_mode') || DEFAULT_CHALLENGE_MODE)
+  const startedAt      = ref(new Date().toISOString())
+  const elapsed        = ref(0)
+  const savedIndex     = ref(resolveSavedIndex())
+  const sessionStarted = ref(false)
   let timer
   let saveTimer
 
-  onMounted(() => {
+  function markHintUsed(questionId) {
+    usedHints.value = new Set([...usedHints.value, questionId])
+  }
+
+  function isHintShown(questionId) {
+    return usedHints.value.has(questionId)
+  }
+
+  function initAnswers() {
     questions.value.forEach(q => {
-      answers.value[q.id] = q.type === 'multiple' ? [] : null
+      if (q.type === 'multiple') answers.value[q.id] = []
+      else if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
+      else answers.value[q.id] = null
     })
+  }
 
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
-      if (saved) {
-        const hasAnswers = saved.answers && Object.values(saved.answers).some(a =>
-          Array.isArray(a) ? a.length > 0 : a !== null
-        )
+  function initCodeAnswer(q) {
+    if (challengeMode.value === 'highlight') return []
+    if (challengeMode.value === 'fix') return q.modes?.fix?.code ?? ''
+    return q.modes?.fill?.prefill ?? ''
+  }
 
-        if (hasAnswers) {
-          answers.value   = saved.answers
-          startedAt.value = saved.startedAt || startedAt.value
-          elapsed.value   = saved.elapsed   || 0
-        } else {
-          localStorage.removeItem(STORAGE_KEY)
-        }
+  watch(challengeMode, val => {
+    localStorage.setItem('devquiz_challenge_mode', val)
+    questions.value.forEach(q => {
+      if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
+    })
+  })
+
+  onMounted(() => {
+    initAnswers()
+
+    if (savedSession) {
+      const hasAnswers = savedSession.answers && Object.values(savedSession.answers).some(a =>
+        Array.isArray(a) ? a.length > 0 : (typeof a === 'string' ? a.length > 0 : a !== null)
+      )
+
+      if (hasAnswers) {
+        const restored = savedSession.answers
+        questions.value.forEach(q => {
+          if (q.type === 'code_challenge' && challengeMode.value === 'fill') {
+            const prefill = q.modes?.fill?.prefill ?? ''
+            if (prefill && (restored[q.id] === '' || restored[q.id] === undefined)) {
+              restored[q.id] = prefill
+            }
+          }
+        })
+        answers.value        = restored
+        startedAt.value      = savedSession.startedAt || startedAt.value
+        elapsed.value        = savedSession.elapsed   || 0
+        sessionStarted.value = true
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
       }
-    } catch {}
+    }
 
     timer = setInterval(() => elapsed.value++, 1000)
     saveTimer = setInterval(() => saveSession(), 10000)
@@ -62,16 +101,31 @@ export function useQuizSession(test, questionsSource) {
 
   function saveSession(extra = {}) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      questions:    questions.value,
-      answers:      answers.value,
-      startedAt:    startedAt.value,
-      elapsed:      elapsed.value,
-      currentIndex: savedIndex.value,
+      answers:       answers.value,
+      startedAt:     startedAt.value,
+      elapsed:       elapsed.value,
+      currentIndex:  savedIndex.value,
+      challengeMode: challengeMode.value,
       ...extra,
     }))
   }
 
+  function resetChallenge() {
+    sessionStarted.value = false
+    challengeMode.value  = DEFAULT_CHALLENGE_MODE
+    initAnswers()
+    elapsed.value   = 0
+    startedAt.value = new Date().toISOString()
+    localStorage.removeItem(STORAGE_KEY)
+  }
+
   function updateIndex(idx) {
+    if (!sessionStarted.value && idx !== savedIndex.value) {
+      const prevQ = questions.value[savedIndex.value]
+      if (prevQ && isAnswered(prevQ)) {
+        sessionStarted.value = true
+      }
+    }
     savedIndex.value = idx
     saveSession()
   }
@@ -82,7 +136,17 @@ export function useQuizSession(test, questionsSource) {
 
   function isAnswered(q) {
     const a = answers.value[q.id]
-    return q.type === 'multiple' ? a?.length > 0 : a !== null
+    if (q.type === 'multiple') return a?.length > 0
+    if (q.type === 'code_challenge') {
+      if (challengeMode.value === 'highlight') return Array.isArray(a) && a.length > 0
+      if (challengeMode.value === 'fix') {
+        const original = q.modes?.fix?.code ?? ''
+        return typeof a === 'string' && a.trim() !== original.trim()
+      }
+      const prefill = q.modes?.fill?.prefill ?? ''
+      return typeof a === 'string' && a.trim().length > 0 && a.trim() !== prefill.trim()
+    }
+    return a !== null
   }
 
   const timeDisplay = computed(() => {
@@ -99,13 +163,21 @@ export function useQuizSession(test, questionsSource) {
     const normalized = {}
     questions.value.forEach(q => {
       const a = answers.value[q.id]
-      normalized[q.id] = q.type === 'multiple' ? (a || []) : (a ? [a] : [])
+      if (q.type === 'multiple') {
+        normalized[q.id] = a || []
+      } else if (q.type === 'code_challenge') {
+        normalized[q.id] = Array.isArray(a) ? [a.join(',')] : [a || '']
+      } else {
+        normalized[q.id] = a ? [a] : []
+      }
     })
     localStorage.removeItem(STORAGE_KEY)
     router.post(`/tests/${test.slug}/run`, {
-      answers:    normalized,
-      started_at: startedAt.value,
-      time_spent: elapsed.value,
+      answers:        normalized,
+      started_at:     startedAt.value,
+      time_spent:     elapsed.value,
+      challenge_mode: challengeMode.value,
+      used_hints:     [...usedHints.value],
     })
   }
 
@@ -141,17 +213,23 @@ export function useQuizSession(test, questionsSource) {
   return {
     questions,
     answers,
+    usedHints,
+    challengeMode,
     savedIndex,
+    sessionStarted,
     answeredCount,
     timeDisplay,
     timerWarning,
     isAnswered,
+    isHintShown,
+    markHintUsed,
     optionStyle,
     optionLetterStyle,
     optionLetter,
     formatText,
     updateIndex,
     saveSession,
+    resetChallenge,
     submit,
   }
 }

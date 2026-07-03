@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "Service Object — PORO (Plain Old Ruby Object) с одной публичной точкой входа (call). Держит контроллеры тонкими, модели — без бизнес-логики."
     difficulty: medium
+    topics: [architecture]
 
   - id: q2
     text: "Как обычно реализуется вызов Service Object?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "Конвенция: `UserRegistrationService.call(params)` или `UserRegistrationService.new(params).call`. Единственная точка входа делает объект предсказуемым."
     difficulty: easy
+    topics: [architecture]
 
   - id: q3
     text: "Что такое Form Object в Rails?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "Form Object использует ActiveModel::Model для валидаций без сохранения в БД. Полезен для форм, которые изменяют несколько моделей или имеют специфическую бизнес-логику."
     difficulty: medium
+    topics: [architecture]
 
   - id: q4
     text: "Что такое Decorator / Presenter паттерн?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "Decorator оборачивает модель методами представления (full_name, formatted_date). Gem Draper — популярная реализация. Держит модели чистыми от view-логики."
     difficulty: medium
+    topics: [architecture]
 
   - id: q5
     text: "Что такое Query Object?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "Query Object — PORO принимающий AR::Relation и возвращающий AR::Relation. Полезен для сложных запросов: фильтрация с JOIN, подзапросами. `ReportQuery.new(User.all).call(filters)`."
     difficulty: medium
+    topics: [architecture, queries]
 
   - id: q6
     text: "В чём смысл паттерна Thin Controllers, Fat Models, и почему он устарел?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "Fat Models → God Object (модель знает всё, тысячи строк). Современный подход: Thin Controllers + Thin Models + Service Objects/Interactors для логики."
     difficulty: medium
+    topics: [architecture]
 
   - id: q7
     text: "Что такое Interactor (gem interactor)?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "Interactor.call(context) → context.success? / context.failure?. Organizer цепочит несколько Interactor'ов с rollback при ошибке. Структурирует сложную бизнес-логику."
     difficulty: hard
+    topics: [architecture]
 
   - id: q8
     text: "Что такое Policy Object (например, Pundit)?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "Policy Object (Pundit, Action Policy) — PostPolicy#update? проверяет может ли user редактировать post. Выносит авторизацию из контроллеров и моделей в отдельные тестируемые классы."
     difficulty: medium
+    topics: [architecture, security]
 
   - id: q9
     text: "Что такое Value Object?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "Value Object: два Money.new(100, :usd) равны если суммы и валюты равны. Не меняется (immutable). Примеры: Money, Coordinates, EmailAddress. Удобно с Comparable."
     difficulty: hard
+    topics: [architecture]
 
   - id: q10
     text: "Как правильно организовать файлы Service Objects в Rails-проекте?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "app/services/ — стандартная директория. Rails (Zeitwerk) автоматически загружает её. Структура внутри может отражать домен: app/services/users/, app/services/payments/."
     difficulty: easy
+    topics: [architecture]
 
   - id: q11
     text: "Что такое Null Object паттерн?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "GuestUser вместо nil: current_user || GuestUser.new. GuestUser#name → 'Гость', #admin? → false. Убирает nil-checks. Широко используется вместо проверки на null."
     difficulty: medium
+    topics: [architecture]
 
   - id: q12
     text: "Как реализовать Observer паттерн в Rails без gem?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "ActiveSupport::Notifications — publish/subscribe система в Rails. after_commit коллбэки — простой вариант. Для сложных случаев: wisper gem."
     difficulty: hard
+    topics: [architecture]
 
   - id: q13
     text: "Что такое Repository паттерн и нужен ли он в Rails?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "Repository скрывает источник данных за интерфейсом. В Rails ActiveRecord сам является Repository. Имеет смысл при: нескольких хранилищах (DB + API), необходимости тестовых двойников."
     difficulty: hard
+    topics: [architecture]
 
   - id: q14
     text: "Как использовать concerns для DRY-кода в моделях?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "ActiveSupport::Concern: included { } выполняется при include — там можно описывать ассоциации, scope, callbacks. class_methods { } для методов класса. Чисто и переиспользуемо."
     difficulty: medium
+    topics: [architecture, models]
 
   - id: q15
     text: "В чём разница между Command и Service Object паттернами?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "Command инкапсулирует действие с возможностью отмены (execute/undo). Service Object — просто исполнение бизнес-логики без хранения истории. В Rails чаще Service Object."
     difficulty: hard
+    topics: [architecture]
 
   - id: q16
     text: "Зачем использовать `ActiveModel::Model` в Form Objects?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "ActiveModel::Model включает Validations, Conversion, Naming — достаточно для form_with(@form_object). Не нужна таблица, но есть полный Rails form API."
     difficulty: medium
+    topics: [architecture, models]
 
   - id: q17
     text: "Что такое паттерн `Facade` в контексте Rails?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "Facade собирает данные из нескольких сервисов/моделей в один объект. DashboardFacade#user, #stats, #recent_orders — вместо @user, @stats, @orders в контроллере."
     difficulty: medium
+    topics: [architecture]
 
   - id: q18
     text: "Когда стоит использовать `after_commit` вместо `after_save`?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "after_save срабатывает внутри транзакции — если она откатится, email уже отправлен. after_commit — только после успешного COMMIT. Всегда используйте after_commit для побочных эффектов."
     difficulty: hard
+    topics: [models, transactions]
 
   - id: q19
     text: "Что такое `delegate` в Rails и зачем он нужен?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "delegate :name, :email, to: :user — генерирует методы post.name → post.user.name. Опция prefix: true → post.user_name. Избегает Law of Demeter violations."
     difficulty: medium
+    topics: [architecture, associations]
 
   - id: q20
     text: "Как правильно тестировать Service Objects?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "Service Object — обычный Ruby объект, тестируется как unit. Мокируем внешние зависимости, проверяем возвращаемое значение и побочные эффекты. Быстрее и изолированнее интеграционных тестов."
     difficulty: medium
+    topics: [architecture]

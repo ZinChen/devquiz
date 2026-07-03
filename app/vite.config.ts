@@ -15,4 +15,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'app/javascript'),
     },
   },
+  server: {
+    host: '0.0.0.0',
+  },
 })

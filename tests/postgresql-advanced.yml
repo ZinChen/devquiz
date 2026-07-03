@@ -24,6 +24,7 @@ questions:
         correct: false
     explanation: "B-tree оптимален для = и range queries. При низкой кардинальности (status IN ('active', 'inactive')) планировщик может предпочесть Seq Scan — 50% строк быстрее читать последовательно."
     difficulty: medium
+    topics: [indexes, performance]
 
   - id: q2
     text: "Что такое GIN индекс и для чего он используется?"
@@ -43,6 +44,7 @@ questions:
         correct: false
     explanation: "GIN: CREATE INDEX idx ON posts USING gin(to_tsvector('russian', body)) — full-text search. CREATE INDEX idx ON data USING gin(attrs) — JSONB queries. Медленнее обновляется, быстрее ищет."
     difficulty: hard
+    topics: [indexes]
 
   - id: q3
     text: "Что показывает `EXPLAIN ANALYZE` и как читать `cost=` значения?"
@@ -62,6 +64,7 @@ questions:
         correct: false
     explanation: "cost=0.00..8.27 rows=10: startup cost=0, total cost=8.27. actual time=0.5..2.1 rows=8: реальные данные. Большое расхождение оценки/факта → устаревшая статистика, нужен ANALYZE."
     difficulty: hard
+    topics: [performance]
 
   - id: q4
     text: "Что такое `VACUUM` и `AUTOVACUUM` в PostgreSQL?"
@@ -81,6 +84,7 @@ questions:
         correct: false
     explanation: "Каждый UPDATE создаёт новую версию строки, старая — 'мёртвая'. VACUUM убирает их, обновляет видимость. AUTOVACUUM — автоматический фоновый процесс. VACUUM FULL — блокирующая дефрагментация."
     difficulty: hard
+    topics: [performance, concurrency]
 
   - id: q5
     text: "Что такое партиционирование таблиц?"
@@ -100,6 +104,7 @@ questions:
         correct: false
     explanation: "RANGE: logs партиционированы по месяцам. LIST: по region. HASH: для равномерного распределения. Postgres исключает нерелевантные партиции (partition pruning). Упрощает удаление старых данных."
     difficulty: hard
+    topics: [performance, schema]
 
   - id: q6
     text: "Что такое CTE (WITH clause) и `RECURSIVE` CTE?"
@@ -119,6 +124,7 @@ questions:
         correct: false
     explanation: "WITH cte AS (SELECT ...) SELECT FROM cte. RECURSIVE CTE: WITH RECURSIVE tree AS (base_case UNION ALL recursive_case) — для обхода категорий, оргструктур. До PG12 CTE были 'optimization fences'."
     difficulty: hard
+    topics: [queries]
 
   - id: q7
     text: "Что такое JSONB и чем отличается от JSON в PostgreSQL?"
@@ -138,6 +144,7 @@ questions:
         correct: false
     explanation: "JSON — хранит текст, не индексируется по содержимому. JSONB — бинарный формат, поддерживает GIN-индекс, операторы @> (содержит), ? (ключ существует). Используйте JSONB."
     difficulty: medium
+    topics: [schema, indexes]
 
   - id: q8
     text: "Как работает `pg_trgm` и full-text search в PostgreSQL?"
@@ -157,6 +164,7 @@ questions:
         correct: false
     explanation: "pg_trgm + GIN: CREATE INDEX ON items USING gin(name gin_trgm_ops) → быстрый ILIKE '%text%'. FTS: to_tsvector('russian', body) @@ to_tsquery('postgres') — поиск с лемматизацией."
     difficulty: hard
+    topics: [indexes, queries]
 
   - id: q9
     text: "Что такое `pg_stat_statements` и зачем он нужен?"
@@ -176,6 +184,7 @@ questions:
         correct: false
     explanation: "pg_stat_statements накапливает статистику: SELECT ... FROM pg_stat_statements ORDER BY total_exec_time DESC — топ медленных запросов. Обязательно для оптимизации production БД."
     difficulty: medium
+    topics: [performance]
 
   - id: q10
     text: "Что такое `covering index` (включающий индекс)?"
@@ -195,6 +204,7 @@ questions:
         correct: false
     explanation: "CREATE INDEX CONCURRENTLY ON orders (user_id) INCLUDE (status, total) — запрос SELECT status, total WHERE user_id = X читает только индекс (Index Only Scan). Быстрее heap доступа."
     difficulty: hard
+    topics: [indexes, performance]
 
   - id: q11
     text: "Как безопасно создать индекс на продакшене без блокировки таблицы?"
@@ -214,6 +224,7 @@ questions:
         correct: false
     explanation: "CREATE INDEX блокирует запись. CREATE INDEX CONCURRENTLY — только короткие блокировки, таблица доступна для записи. Медленнее, нельзя в транзакции. Rails: algorithm: :concurrently + disable_ddl_transaction!"
     difficulty: hard
+    topics: [indexes, locking]
 
   - id: q12
     text: "Что такое репликация в PostgreSQL и каковы основные виды?"
@@ -233,6 +244,7 @@ questions:
         correct: false
     explanation: "Physical: бинарная копия WAL (streaming replication) — для read replicas, HA. Logical: репликация отдельных таблиц, cross-version. Синхронная: COMMIT ждёт подтверждения реплики."
     difficulty: hard
+    topics: [replication]
 
   - id: q13
     text: "Что такое `deadlock` в PostgreSQL и как его избежать?"
@@ -252,6 +264,7 @@ questions:
         correct: false
     explanation: "PostgreSQL обнаруживает deadlock и завершает одну транзакцию с ошибкой. Предотвращение: всегда блокировать ресурсы в одном порядке, минимизировать время транзакции."
     difficulty: hard
+    topics: [concurrency, locking]
 
   - id: q14
     text: "Что такое `WAL` (Write-Ahead Log) в PostgreSQL?"
@@ -271,6 +284,7 @@ questions:
         correct: false
     explanation: "WAL гарантирует: даже при crash данные не потеряются (replay WAL после рестарта). Используется для streaming replication. pg_wal/ — директория с WAL-сегментами."
     difficulty: hard
+    topics: [replication, transactions]
 
   - id: q15
     text: "Как работает `LATERAL JOIN`?"
@@ -290,6 +304,7 @@ questions:
         correct: false
     explanation: "SELECT u.*, last_order.* FROM users u, LATERAL (SELECT * FROM orders WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) last_order — последний заказ каждого пользователя эффективно."
     difficulty: hard
+    topics: [queries]
 
   - id: q16
     text: "Что такое `connection pooling` и зачем он нужен?"
@@ -309,6 +324,7 @@ questions:
         correct: false
     explanation: "Создание соединения к PostgreSQL дорого (~10-50ms). PgBouncer/pgpool переиспользуют соединения. PostgreSQL max_connections обычно 100-200 — без пула приложение упрётся в лимит."
     difficulty: medium
+    topics: [performance]
 
   - id: q17
     text: "Что такое `CHECK` constraint vs trigger для валидации?"
@@ -328,6 +344,7 @@ questions:
         correct: false
     explanation: "CHECK для простых правил (age > 0, status IN (...)). Trigger для сложной логики (проверка в другой таблице, вычисления). CHECK — проще, декларативен, виден в схеме."
     difficulty: medium
+    topics: [schema]
 
   - id: q18
     text: "Что делает `ANALYZE` в PostgreSQL?"
@@ -347,6 +364,7 @@ questions:
         correct: false
     explanation: "ANALYZE TABLE обновляет статистику: число строк, распределение значений. Устаревшая статистика → плохой план → медленные запросы. AUTOVACUUM запускает ANALYZE автоматически."
     difficulty: medium
+    topics: [performance]
 
   - id: q19
     text: "Что такое `table bloat` и как с ним бороться?"
@@ -366,6 +384,7 @@ questions:
         correct: false
     explanation: "MVCC оставляет мёртвые строки → bloat. VACUUM убирает, но не возвращает место ОС. VACUUM FULL — дефрагментирует (эксклюзивная блокировка). pg_repack — без блокировки. Мониторинг: pgstattuple."
     difficulty: hard
+    topics: [performance, concurrency]
 
   - id: q20
     text: "Как правильно хранить UUID в PostgreSQL?"
@@ -385,3 +404,4 @@ questions:
         correct: false
     explanation: "UUID тип: 16 байт vs 36 байт для VARCHAR(36). Поддерживает индексы, операторы сравнения. gen_random_uuid() (PostgreSQL 13+) или uuid-ossp расширение. В Rails: id :uuid в миграции."
     difficulty: medium
+    topics: [schema]

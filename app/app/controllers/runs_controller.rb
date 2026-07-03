@@ -16,7 +16,9 @@ class RunsController < ApplicationController
   end
 
   def create
-    answers_data = params[:answers].to_unsafe_h
+    answers_data    = params[:answers].to_unsafe_h
+    used_hint_ids   = Array(params[:used_hints]).map(&:to_s).to_set
+    challenge_mode  = params[:challenge_mode].presence || "fill"
 
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
@@ -24,26 +26,32 @@ class RunsController < ApplicationController
       total_questions: @meta.questions_count,
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
-      time_spent:      params[:time_spent].to_i
+      time_spent:      params[:time_spent].to_i,
+      challenge_mode:  challenge_mode
     )
 
-    questions_map = load_questions.index_by { |q| q["id"] }
-    correct_count = 0
+    questions_map   = load_questions.index_by { |q| q["id"] }
+    correct_count   = 0
 
     answers_data.each do |question_id, selected|
       question     = questions_map[question_id]
       next unless question
 
       selected_arr = Array(selected)
-      correct_ids  = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
-      is_correct   = selected_arr.sort == correct_ids.sort
+      is_correct   = if question["type"] == "code_challenge"
+        grade_code_challenge(question, selected_arr, challenge_mode)
+      else
+        correct_ids = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
+        selected_arr.sort == correct_ids.sort
+      end
 
       correct_count += 1 if is_correct
 
       attempt.test_attempt_answers.create!(
         question_id:      question_id,
         selected_options: selected_arr,
-        correct:          is_correct
+        correct:          is_correct,
+        used_hint:        used_hint_ids.include?(question_id)
       )
     end
 
@@ -76,23 +84,37 @@ class RunsController < ApplicationController
     @questions ||= YamlSyncService.load_questions(@meta.slug)
   end
 
+  def meta_yaml(slug = @meta.slug)
+    @meta_yaml ||= YAML.safe_load(
+      File.read(YamlSyncService::TESTS_DIR.join("#{slug}.yml")),
+      permitted_classes: [ Symbol ]
+    ) rescue {}
+  end
+
   def questions_with_db_ids
-    db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+    db_map        = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+    test_language = meta_yaml["language"] || "ruby"
     load_questions.map do |q|
       db_rec = db_map[q["id"].to_s]
-      q.merge("db_id" => db_rec&.id)
+      q.merge("db_id" => db_rec&.id, "language" => q["language"] || test_language)
     end
   end
 
   def test_props(t)
+    yaml = t.slug == @meta&.slug ? meta_yaml : (YAML.safe_load(
+      File.read(YamlSyncService::TESTS_DIR.join("#{t.slug}.yml")),
+      permitted_classes: [ Symbol ]
+    ) rescue {})
     {
-      slug:            t.slug,
-      title:           t.title,
-      description:     t.description,
-      tags:            t.tag_list,
-      difficulty:      t.difficulty,
-      estimated_time:  t.estimated_time,
-      questions_count: t.questions_count
+      slug:                   t.slug,
+      title:                  t.title,
+      description:            t.description,
+      tags:                   t.tag_list,
+      difficulty:             t.difficulty,
+      estimated_time:         t.estimated_time,
+      questions_count:        t.questions_count,
+      default_challenge_mode: yaml["default_challenge_mode"],
+      language:               yaml["language"] || "ruby"
     }
   end
 
@@ -108,21 +130,70 @@ class RunsController < ApplicationController
   end
 
   def answers_detail(attempt, questions_map)
+    challenge_mode = attempt.challenge_mode.presence || "fill"
     attempt.test_attempt_answers.map do |ans|
       q = questions_map[ans.question_id]
       next unless q
-      {
+
+      base = {
         question_id:          ans.question_id,
         question_text:        q["text"],
-        options:              q["options"].map { |o| o.slice("id", "text", "explanation") },
-        correct_ids:          q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
-        selected_options:     ans.selected_options,
+        type:                 q["type"].presence || "single",
         correct:              ans.correct,
         explanation:          q["explanation"],
         extended_explanation: q["extended_explanation"].presence,
         recommendation:       q["recommendation"].presence
       }
+
+      if q["type"] == "code_challenge"
+        mode_data = q.dig("modes", challenge_mode) || {}
+        base.merge(
+          challenge_mode:  challenge_mode,
+          code:            mode_data["code"],
+          language:        q["language"] || "ruby",
+          correct_answer:  Array(mode_data["answer"]).first || mode_data["correct_lines"]&.join(","),
+          insert_text:     mode_data["insert_text"],
+          selected_answer: ans.selected_options.first.to_s
+        )
+      else
+        base.merge(
+          options:          q["options"].map { |o| o.slice("id", "text", "explanation") },
+          correct_ids:      q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
+          selected_options: ans.selected_options
+        )
+      end
     end.compact
+  end
+
+  def grade_code_challenge(question, selected_arr, mode)
+    mode_data = question.dig("modes", mode) || {}
+    case mode
+    when "highlight"
+      correct_raw = Array(mode_data["correct_lines"]).map(&:to_s)
+      selected    = selected_arr.first.to_s.split(",").map(&:strip).sort
+
+      # build all accepted forms for each correct entry:
+      # "after:N" also accepts line N (the line before the gap)
+      # plain line number N also accepts "after:N-1"
+      accepted = correct_raw.flat_map do |c|
+        if c.start_with?("after:")
+          n = c.sub("after:", "").to_i
+          [ c, n.to_s ]
+        else
+          n = c.to_i
+          [ c, "after:#{n - 1}" ]
+        end
+      end
+
+      selected.all? { |s| accepted.include?(s) } &&
+        selected.size == correct_raw.size
+    when "fix"
+      normalize = ->(s) { s.to_s.lines.map(&:rstrip).reject(&:empty?).join("\n").strip }
+      normalize.(selected_arr.first) == normalize.(mode_data["answer"])
+    else
+      accepted = Array(mode_data["answer"]).map { |a| a.to_s.strip.downcase }
+      accepted.include?(selected_arr.first.to_s.strip.downcase)
+    end
   end
 
   def update_test_stats(meta, new_score, attempt)

@@ -1,0 +1,139 @@
+# Глобальный словарь тем DevQuiz
+# Используется в поле topics: каждого вопроса для анализа слабых мест.
+# Максимум 2 темы на вопрос.
+
+topics:
+
+  # ── Rails ──────────────────────────────────────────────────────────────────
+
+  mvc:
+    label: "MVC & Request lifecycle"
+    description: "MVC паттерн, жизненный цикл HTTP-запроса, Rack, Zeitwerk, структура Rails"
+    color: "#4F63F5"
+
+  routing:
+    label: "Роутинг"
+    description: "routes.rb, REST, URL-хелперы, HTTP-методы, nested routes"
+    color: "#7C3AED"
+
+  controllers:
+    label: "Контроллеры"
+    description: "actions, фильтры, before_action, render/redirect, params, flash"
+    color: "#2563EB"
+
+  models:
+    label: "Модели & AR"
+    description: "валидации, коллбэки, AR basics, мемоизация, soft delete"
+    color: "#059669"
+
+  queries:
+    label: "Запросы к БД"
+    description: "AR queries, scopes, lazy loading, joins, агрегации, pluck, group"
+    color: "#D97706"
+
+  associations:
+    label: "Ассоциации"
+    description: "belongs_to, has_many, has_one, polymorphic, STI, counter_cache"
+    color: "#DC2626"
+
+  migrations:
+    label: "Миграции"
+    description: "создание и изменение схемы, rollback, schema.rb, reversible"
+    color: "#6D28D9"
+
+  indexes:
+    label: "Индексы"
+    description: "B-tree, GIN, GiST, partial, covering, CONCURRENTLY, алгоритм выбора"
+    color: "#0891B2"
+
+  transactions:
+    label: "Транзакции"
+    description: "ACID, isolation levels, transaction{}, after_commit vs after_save"
+    color: "#BE185D"
+
+  locking:
+    label: "Локи & Zero-downtime"
+    description: "DDL локи, блокировки таблиц, lock_timeout, безопасные миграции в продакшне"
+    color: "#B91C1C"
+
+  performance:
+    label: "Производительность"
+    description: "N+1, batching, find_each, EXPLAIN ANALYZE, VACUUM, оптимизация запросов"
+    color: "#047857"
+
+  security:
+    label: "Безопасность"
+    description: "CSRF, SQL-инъекции, XSS, strong params, CSP, session/cookies"
+    color: "#991B1B"
+
+  architecture:
+    label: "Паттерны & Архитектура"
+    description: "Service Objects, Form Objects, Decorators, Query Objects, DRY, SOLID"
+    color: "#7C3AED"
+
+  concurrency:
+    label: "Конкурентность"
+    description: "MVCC, deadlock, optimistic/pessimistic locking, race conditions"
+    color: "#9333EA"
+
+  schema:
+    label: "Схема & Типы данных"
+    description: "типы данных, constraints, NULL, CHECK, FK, UUID, SERIAL"
+    color: "#0E7490"
+
+  caching:
+    label: "Кэширование"
+    description: "fragment cache, Rails.cache, HTTP caching, стратегии инвалидации"
+    color: "#C2410C"
+
+  background-jobs:
+    label: "Фоновые задачи"
+    description: "Active Job, Sidekiq, async processing, очереди"
+    color: "#92400E"
+
+  replication:
+    label: "Репликация"
+    description: "WAL, streaming replication, logical replication, HA"
+    color: "#1E40AF"
+
+  # ── Остальные домены ───────────────────────────────────────────────────────
+
+  algorithms:
+    label: "Алгоритмы & Структуры данных"
+    description: "сортировка, поиск, хэш-таблицы, деревья, сложность O(n), DSA"
+    color: "#0369A1"
+
+  api-design:
+    label: "API Design"
+    description: "REST, SOAP, HTTP статусы, версионирование, rate limiting, Postman"
+    color: "#7C3AED"
+
+  docker:
+    label: "Docker & Контейнеры"
+    description: "образы, Dockerfile, volumes, сети, Docker Compose, безопасность"
+    color: "#0284C7"
+
+  git:
+    label: "Git"
+    description: "ветки, merge, rebase, cherry-pick, история, конфликты"
+    color: "#B45309"
+
+  go:
+    label: "Go"
+    description: "горутины, каналы, интерфейсы, defer, конкурентность в Go"
+    color: "#0E7490"
+
+  linux:
+    label: "Linux"
+    description: "процессы, файловая система, сеть, системные вызовы, права"
+    color: "#374151"
+
+  math-stats:
+    label: "Математика & Статистика"
+    description: "теорвер, статистика, ML-метрики, математические алгоритмы"
+    color: "#7C3AED"
+
+  oop:
+    label: "ООП & Паттерны"
+    description: "SOLID, GoF паттерны, наследование, полиморфизм, инкапсуляция"
+    color: "#059669"

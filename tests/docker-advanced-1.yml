@@ -34,6 +34,7 @@ questions:
     correct: true
     explanation: Многоступенчатая сборка позволяет отделить установку зависимостей (редко меняется) от сборки приложения (часто меняется), сохраняя кэш для стабильных слоев.
   difficulty: medium
+  topics: [docker]
   explanation: Разделение на многоступенчатую сборку позволяет изолировать часто меняющиеся слои от редко меняющихся, сохраняя кэш для неизмененных частей.
   extended_explanation: |-
     При монолитной структуре Dockerfile:
@@ -80,6 +81,7 @@ questions:
     correct: false
     explanation: В рамках одного слоя это не работает (архив уже сохранён в слое до удаления).
   difficulty: medium
+  topics: [docker]
   explanation: ADD автоматически распаковывает архивы, но оставляет исходный архив в промежуточном кэше. COPY не распаковывает, поэтому лучше распаковать архив заранее и копировать только нужные файлы.
   extended_explanation: |-
     Особенности ADD:
@@ -121,6 +123,7 @@ questions:
     correct: false
     explanation: В Compose-файле порядок ключей не важен, он читается целиком.
   difficulty: medium
+  topics: [docker]
   explanation: Некорректное указание пути к томам (например, неверный синтаксис host_path:container_path) приводит к тому, что Docker не создает том или монтирует его неправильно.
   extended_explanation: |-
     В Docker Compose тома описываются в секции volumes для сервиса:
@@ -165,6 +168,7 @@ questions:
     correct: false
     explanation: bridge-сеть по умолчанию изолирована от внешнего мира, но имеет NAT для выхода в интернет, что и является причиной.
   difficulty: medium
+  topics: [docker]
   explanation: Для изоляции внутренних контейнеров от внешней сети нужно использовать пользовательскую сеть с опцией --internal или явно ограничивать доступ через сетевые политики.
   extended_explanation: |-
     Стандартная bridge-сеть:
@@ -205,6 +209,7 @@ questions:
     correct: false
     explanation: SIGKILL не типичный признак ошибки ФС.
   difficulty: medium
+  topics: [docker]
   explanation: Код 137 = 128 + 9, где 9 — сигнал SIGKILL. Чаще всего это происходит при превышении лимита памяти, установленного для контейнера. Диагностика через docker stats и docker inspect.
   extended_explanation: |-
     Код 137 (exit code 137):
@@ -245,6 +250,7 @@ questions:
     correct: true
     explanation: Флаг --device=/dev/sda:/dev/sda пробрасывает конкретное устройство в контейнер, давая прямой доступ.
   difficulty: medium
+  topics: [docker]
   explanation: Доступ к блочным устройствам хоста предоставляется через опцию --device, которая пробрасывает конкретные устройства в контейнер.
   extended_explanation: |-
     По умолчанию Docker:
@@ -285,6 +291,7 @@ questions:
     correct: true
     explanation: Локальные тома на одном хосте могут быть повреждены при неожиданном выключении. Отказоустойчивое хранилище защитило бы от таких проблем.
   difficulty: medium
+  topics: [docker]
   explanation: Локальные тома (по умолчанию) хранятся на том же хосте, где запущен контейнер. При неожиданном выключении хоста файловая система томов может быть повреждена. Отказоустойчивое хранилище (распределенное, сетевое, с репликацией) предотвратило бы такие проблемы.
   extended_explanation: |-
     Признаки:
@@ -329,6 +336,7 @@ questions:
     correct: false
     explanation: Логи не дают метрики CPU/памяти.
   difficulty: medium
+  topics: [docker]
   explanation: Cadvisor собирает метрики контейнеров (CPU, память), но не отправляет уведомления. Для оповещений нужно настроить Prometheus Alertmanager с правилами на основе метрик Cadvisor.
   extended_explanation: |-
     Cadvisor:
@@ -371,6 +379,7 @@ questions:
     correct: true
     explanation: Docker упаковывает приложение со всем окружением, обеспечивая идентичность среды на всех этапах.
   difficulty: medium
+  topics: [docker]
   explanation: 'Docker стандартизирует среду выполнения: приложение упаковывается вместе со всеми зависимостями в образ, который проходит через все этапы CI/CD без изменений, исключая расхождения в окружении.'
   extended_explanation: |-
     Проблема доставки приложений:
@@ -410,6 +419,7 @@ questions:
     correct: false
     explanation: Наоборот, добавляют проверку, что может замедлить, но повысить безопасность.
   difficulty: medium
+  topics: [docker]
   explanation: Сканеры уязвимостей интегрируются в CI/CD как этап проверки. При обнаружении критических уязвимостей они могут блокировать публикацию образа в registry или развертывание в production.
   extended_explanation: |-
     Сканеры уязвимостей (Trivy, Snyk, Clair):
@@ -447,6 +457,7 @@ questions:
     correct: false
     explanation: Слишком общее объяснение, не специфично для сценария.
   difficulty: medium
+  topics: [docker]
   explanation: 'Симптомы (резкий рост CPU/памяти + подозрительный трафик) характерны для криптомайнеров, внедренных в контейнеры через скомпрометированные образы. Последствия: утечка данных, использование ресурсов для майнинга, нарушение работы сервисов.'
   extended_explanation: |-
     Симптомы:
@@ -494,6 +505,7 @@ questions:
     correct: false
     explanation: Это tmpfs, а не тома.
   difficulty: medium
+  topics: [docker]
   explanation: Файловая система контейнера использует слои (overlayFS) с механизмом Copy-on-Write, что добавляет накладные расходы. Тома монтируются напрямую к хостовой ФС, минуя слоистую систему, обеспечивая более высокую производительность ввода-вывода.
   extended_explanation: |-
     Файловая система контейнера:
@@ -534,6 +546,7 @@ questions:
     correct: false
     explanation: Лимиты предотвратят бесконтрольный рост, но не очистят уже накопившиеся файлы. При достижении лимита контейнер может остановиться, что нарушит работу приложения.
   difficulty: medium
+  topics: [docker]
   explanation: Cron-задача позволяет регулярно запускать скрипт очистки, который удаляет только те временные файлы, которые уже не нужны приложению (например, старше N дней), не затрагивая активные файлы.
   extended_explanation: |-
     Проблема:
@@ -583,6 +596,7 @@ questions:
     correct: false
     explanation: Docker не генерирует секреты автоматически.
   difficulty: medium
+  topics: [docker]
   explanation: Секреты в Docker монтируются как файлы (обычно в /run/secrets/) с правами только для чтения. Это предотвращает случайное изменение процессов внутри контейнера и не копирует секреты в образ.
   extended_explanation: |-
     Механизм secrets в Docker:
@@ -622,6 +636,7 @@ questions:
     correct: false
     explanation: Опасно, секреты будут видны в открытом виде.
   difficulty: medium
+  topics: [docker]
   explanation: В Docker Swarm секреты определяются на уровне стека, но доступны только тем сервисам, которым они явно назначены в секции secrets сервиса. Без этого сервис не получит доступ к секрету.
   extended_explanation: |-
     Проблема:
