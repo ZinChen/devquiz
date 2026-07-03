@@ -27,7 +27,7 @@ class TestsController < ApplicationController
     return {} unless current_user
     TestAttempt
       .where(user_id: current_user.id, test_slug: slugs)
-      .where.not(challenge_mode: [nil, ""])
+      .where.not(challenge_mode: [ nil, "" ])
       .group(:test_slug)
       .pluck(:test_slug, Arel.sql("array_agg(DISTINCT challenge_mode)"))
       .to_h

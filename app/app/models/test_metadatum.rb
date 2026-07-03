@@ -23,5 +23,4 @@ class TestMetadatum < ApplicationRecord
   def tag_list=(arr)
     self.tags = Array(arr).join(",")
   end
-
 end

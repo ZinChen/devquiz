@@ -178,10 +178,10 @@ class RunsController < ApplicationController
       accepted = correct_raw.flat_map do |c|
         if c.start_with?("after:")
           n = c.sub("after:", "").to_i
-          [c, n.to_s]
+          [ c, n.to_s ]
         else
           n = c.to_i
-          [c, "after:#{n - 1}"]
+          [ c, "after:#{n - 1}" ]
         end
       end
 
