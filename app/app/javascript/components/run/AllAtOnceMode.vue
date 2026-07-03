@@ -7,6 +7,7 @@
           v-for="(q, idx) in questions" :key="q.id"
           @click="scrollTo(idx)"
           class="question-sidebar__cell"
+          tabindex="-1"
           :class="{
             'question-sidebar__cell--answered': isAnswered(q),
             'question-sidebar__cell--active':   idx === activeIndex,
@@ -52,7 +53,9 @@
         <button
           type="submit"
           class="btn btn-primary all-at-once__submit-btn"
-          :disabled="answeredCount < questions.length"
+          :class="{ 'all-at-once__submit-btn--disabled': answeredCount < questions.length }"
+          :aria-disabled="answeredCount < questions.length"
+          @click="answeredCount < questions.length && $event.preventDefault()"
         >Завершить тест</button>
       </div>
       <p v-if="answeredCount < questions.length" class="submit-hint">
@@ -341,5 +344,16 @@ onUnmounted(() => {
 .all-at-once__submit-btn {
   padding-left: 2rem;
   padding-right: 2rem;
+}
+
+.all-at-once__submit-btn--disabled {
+  background: #C7D2FE;
+  border-color: #C7D2FE;
+  cursor: not-allowed;
+}
+
+.all-at-once__submit-btn:focus-visible {
+  outline: 2px solid #4F63F5;
+  outline-offset: 2px;
 }
 </style>

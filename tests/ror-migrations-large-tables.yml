@@ -378,7 +378,7 @@ questions:
               ___
             end
           end
-        prefill: "Rails.logger.info \"Validating invoices.customer_id foreign key\""
+        prefill: "validate_check_constraint :invoices, name: \"fk_invoices_customer_id\""
         answer: "validate_foreign_key :invoices, :customers"
 
       fix:

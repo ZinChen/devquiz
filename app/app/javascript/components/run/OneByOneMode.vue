@@ -5,6 +5,7 @@
         v-for="(q, idx) in questions" :key="q.id"
         @click="goTo(idx)"
         class="question-nav__cell"
+        tabindex="-1"
         :class="{
           'question-nav__cell--active':   idx === currentIndex,
           'question-nav__cell--answered': idx !== currentIndex && isAnswered(q),
@@ -48,24 +49,25 @@
 
           <div class="question-card__footer">
             <button
+              v-if="currentIndex < questions.length - 1"
+              @click="isAnswered(currentQuestion) && goTo(currentIndex + 1)"
+              class="btn btn-sm question-card__btn-next"
+              :class="{ 'question-card__btn-next--disabled': !isAnswered(currentQuestion) }"
+              :aria-disabled="!isAnswered(currentQuestion)"
+            >Далее →</button>
+            <button
+              v-else
+              @click="answeredCount >= questions.length && $emit('submit')"
+              class="btn btn-sm question-card__btn-next"
+              :class="{ 'question-card__btn-next--disabled': answeredCount < questions.length }"
+              :aria-disabled="answeredCount < questions.length"
+            >Завершить</button>
+
+            <button
               v-if="currentIndex > 0"
               @click="goTo(currentIndex - 1)"
               class="btn btn-ghost btn-sm question-card__btn-back"
             >← Назад</button>
-            <div v-else></div>
-
-            <button
-              v-if="currentIndex < questions.length - 1"
-              @click="goTo(currentIndex + 1)"
-              class="btn btn-sm question-card__btn-next"
-              :disabled="!isAnswered(currentQuestion)"
-            >Далее →</button>
-            <button
-              v-else
-              @click="$emit('submit')"
-              class="btn btn-sm question-card__btn-next"
-              :disabled="answeredCount < questions.length"
-            >Завершить</button>
           </div>
         </div>
       </TransitionGroup>
@@ -335,12 +337,25 @@ onUnmounted(() => {
 
 .question-card__btn-back {
   color: #9CA3AF;
+  order: 1;
 }
 
 .question-card__btn-next {
   background: #4F63F5;
   border: none;
   color: #fff;
+  order: 2;
+}
+
+.question-card__btn-next--disabled {
+  background: #C7D2FE;
+  cursor: not-allowed;
+}
+
+.question-card__btn-next:focus-visible,
+.question-card__btn-back:focus-visible {
+  outline: 2px solid #4F63F5;
+  outline-offset: 2px;
 }
 
 .card-slide-enter-active,

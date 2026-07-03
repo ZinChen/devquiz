@@ -88,6 +88,7 @@
                   placeholder="___"
                   spellcheck="false"
                   autocomplete="off"
+                  tabindex="0"
                   @keydown.enter.prevent="$emit('submit-enter')"
                 /></span><span
                 v-else
