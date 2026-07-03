@@ -554,7 +554,7 @@ function optionLetterStyle(item, optId) {
 
 .result-code-answer {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;

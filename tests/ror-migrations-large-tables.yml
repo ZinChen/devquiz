@@ -198,7 +198,9 @@ questions:
             end
           end
         prefill: "null: false, default: \"not_required\""
-        answer: "default: \"not_required\""
+        answer:
+          - "default: \"not_required\""
+          - "null: false, default: \"not_required\""
 
       fix:
         code: |
@@ -313,12 +315,11 @@ questions:
                 column: :customer_id,
                 primary_key: :id,
                 name: "fk_invoices_customer_id",
-                on_delete: :restrict,
                 ___
             end
           end
         prefill: "on_delete: :restrict, validate: true"
-        answer: "validate: false"
+        answer: "on_delete: :restrict, validate: false"
 
       fix:
         code: |
@@ -536,7 +537,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, schema]
-    text: "Миграция удаляет старый столбец, но откат должен восстановить схему. Чего здесь не хватает?"
+    text: "Миграция удаляет старый текстовый столбец, но откат должен восстановить схему. Чего здесь не хватает?"
     modes:
       highlight:
         code: |
@@ -609,11 +610,11 @@ questions:
               add_check_constraint :users,
                 "email IS NOT NULL",
                 name: "users_email_present",
-                if_not_exists: true,
                 ___
             end
           end
-        answer: "validate: false"
+        prefill: "if_not_exists: true, validate: true"
+        answer: "if_not_exists: true, validate: false"
 
       fix:
         code: |
@@ -710,41 +711,44 @@ questions:
     type: code_challenge
     default_mode: highlight
     difficulty: hard
-    topics: [migrations, locking]
-    text: "Финальная проверка: индекс на таблицу с 20 млн строк должен добавляться без простоя. Не сделано главное ограничение."
+    topics: [migrations, locking, indexes]
+    text: "Финальная проверка: прошлый запуск этой миграции уже падал по statement_timeout на середине построения индекса. Что нужно сделать перед повторным запуском?"
     modes:
       highlight:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
-            def up
-              execute "SET statement_timeout = '10min'"
+            disable_ddl_transaction!
 
+            def up
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
-        correct_lines: ["after:1"]
-        insert_text: "  disable_ddl_transaction!"
-        hint: "algorithm: :concurrently есть. Посмотри на объявление класса — чего не хватает в классе рядом с def up?"
+        correct_lines: ["after:4"]
+        insert_text: "      remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true"
+        hint: "Неудачный CREATE INDEX CONCURRENTLY не откатывается сам — что остаётся в базе после сбоя и мешает просто повторить add_index?"
 
       fill:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
-            ___
+            disable_ddl_transaction!
 
             def up
-              execute "SET statement_timeout = '10min'"
+              ___
 
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
-        answer: "disable_ddl_transaction!"
+        prefill: "remove_index :posts, :published_at"
+        answer:
+          - "remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true"
+          - "remove_index :posts, :published_at, if_exists: true"
 
       fix:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
-            def up
-              execute "SET statement_timeout = '10min'"
+            disable_ddl_transaction!
 
+            def up
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
@@ -753,10 +757,10 @@ questions:
             disable_ddl_transaction!
 
             def up
-              execute "SET statement_timeout = '10min'"
+              remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true
 
               add_index :posts, :published_at, algorithm: :concurrently
             end
           end
 
-    explanation: "`algorithm: :concurrently` заставляет Rails использовать `CREATE INDEX CONCURRENTLY`, но PostgreSQL запрещает выполнять такую команду внутри транзакционного блока. Rails по умолчанию оборачивает миграции в транзакцию, поэтому рядом с concurrent index нужен `disable_ddl_transaction!`. `statement_timeout` ограничивает время выполнения запроса, но не отключает транзакцию миграции. Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://guides.rubyonrails.org/active_record_migrations.html#using-the-disable-ddl-transaction-method"
+    explanation: "Если `CREATE INDEX CONCURRENTLY` прерывается (например, по `statement_timeout` или обрыву соединения), PostgreSQL не откатывает операцию целиком: в базе остаётся индекс в статусе `INVALID` — он не используется планировщиком, но занимает место и мешает создать индекс с тем же именем повторно. Поэтому перед повторной попыткой такой индекс нужно сначала удалить через `remove_index ..., if_exists: true`, и только потом снова вызывать `add_index` с `algorithm: :concurrently`. Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_index"

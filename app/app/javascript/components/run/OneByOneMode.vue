@@ -191,6 +191,7 @@ function handleKeydown(e) {
       props.answers[q.id] = null
     }
   } else if (e.key === 'Enter') {
+    if (document.activeElement?.tagName === 'BUTTON') return
     e.preventDefault()
     if (q.type === 'multiple') {
       const opts = q.options
@@ -341,6 +342,7 @@ onUnmounted(() => {
 }
 
 .question-card__btn-next {
+  margin-left: auto;
   background: #4F63F5;
   border: none;
   color: #fff;

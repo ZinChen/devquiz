@@ -151,7 +151,7 @@ class RunsController < ApplicationController
           challenge_mode:  challenge_mode,
           code:            mode_data["code"],
           language:        q["language"] || "ruby",
-          correct_answer:  mode_data["answer"] || mode_data["correct_lines"]&.join(","),
+          correct_answer:  Array(mode_data["answer"]).first || mode_data["correct_lines"]&.join(","),
           insert_text:     mode_data["insert_text"],
           selected_answer: ans.selected_options.first.to_s
         )
@@ -191,7 +191,8 @@ class RunsController < ApplicationController
       normalize = ->(s) { s.to_s.lines.map(&:rstrip).reject(&:empty?).join("\n").strip }
       normalize.(selected_arr.first) == normalize.(mode_data["answer"])
     else
-      selected_arr.first.to_s.strip.downcase == mode_data["answer"].to_s.strip.downcase
+      accepted = Array(mode_data["answer"]).map { |a| a.to_s.strip.downcase }
+      accepted.include?(selected_arr.first.to_s.strip.downcase)
     end
   end
 
