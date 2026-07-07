@@ -61,6 +61,33 @@ questions:
           end
         answer: "disable_ddl_transaction!"
 
+      select:
+        code: |
+          class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
+            ___
+
+            def up
+              safety_assured do
+                execute "SET lock_timeout = '5s'"
+
+                add_index :orders, :created_at, algorithm: :concurrently
+                add_index :orders, [:account_id, :status], algorithm: :concurrently
+                add_index :orders, :user_id, algorithm: :concurrently
+              end
+            end
+
+            def down
+              remove_index :orders, :user_id, if_exists: true
+              remove_index :orders, [:account_id, :status], if_exists: true
+              remove_index :orders, :created_at, if_exists: true
+            end
+          end
+        options:
+          - disable_ddl_transaction!
+          - self.verbose = false
+          - suppress_messages
+          - connection.schema_cache.clear!
+        answer: disable_ddl_transaction!
       fix:
         code: |
           class AddReportingIndexesToOrders < ActiveRecord::Migration[7.0]
@@ -141,6 +168,25 @@ questions:
         prefill: "execute \"SET statement_timeout = '2s'\""
         answer: "execute \"SET lock_timeout = '2s'\""
 
+      select:
+        code: |
+          class AddStatusToOrders < ActiveRecord::Migration[7.0]
+            def up
+              ___
+
+              add_column :orders, :status, :string, default: 'pending'
+            end
+
+            def down
+              remove_column :orders, :status
+            end
+          end
+        options:
+          - execute "SET statement_timeout = '2s'"
+          - execute "SET lock_timeout = '2s'"
+          - execute "SET idle_in_transaction_session_timeout = '2s'"
+          - execute "SET deadlock_timeout = '2s'"
+        answer: execute "SET lock_timeout = '2s'"
       fix:
         code: |
           class AddStatusToOrders < ActiveRecord::Migration[7.0]
@@ -202,6 +248,21 @@ questions:
           - "default: \"not_required\""
           - "null: false, default: \"not_required\""
 
+      select:
+        code: |
+          class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
+            def up
+              add_column :accounts, :risk_review_state, :string,
+                        ___,
+                        comment: "Current AML/KYC review state"
+            end
+          end
+        options:
+          - 'default: "not_required", null: false'
+          - 'null: false'
+          - 'default: "not_required"'
+          - 'if_not_exists: true'
+        answer: 'default: "not_required"'
       fix:
         code: |
           class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
@@ -257,6 +318,23 @@ questions:
           end
         answer: "in_batches"
 
+      select:
+        code: |
+          class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
+            def up
+              User.where(notification_channel: nil).___(of: 1000) do |batch|
+                batch.update_all(notification_channel: "email")
+              end
+            end
+          end
+        options:
+          - find_each
+          - find_in_batches
+          - in_batches
+          - each_batch
+        answer: in_batches
       fix:
         code: |
           class BackfillNotificationPreferences < ActiveRecord::Migration[7.0]
@@ -321,6 +399,25 @@ questions:
         prefill: "on_delete: :restrict, validate: true"
         answer: "on_delete: :restrict, validate: false"
 
+      select:
+        code: |
+          class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              add_foreign_key :invoices, :customers,
+                column: :customer_id,
+                primary_key: :id,
+                name: "fk_invoices_customer_id",
+                ___
+            end
+          end
+        options:
+          - 'on_delete: :restrict, validate: true'
+          - 'on_delete: :cascade, validate: true'
+          - 'on_delete: :restrict, validate: false'
+          - 'deferrable: :deferred, validate: true'
+        answer: 'on_delete: :restrict, validate: false'
       fix:
         code: |
           class AddCustomerForeignKeyToInvoices < ActiveRecord::Migration[7.0]
@@ -382,6 +479,21 @@ questions:
         prefill: "validate_check_constraint :invoices, name: \"fk_invoices_customer_id\""
         answer: "validate_foreign_key :invoices, :customers"
 
+      select:
+        code: |
+          class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
+            def change
+              say "Validating invoices.customer_id foreign key"
+
+              ___
+            end
+          end
+        options:
+          - 'validate_check_constraint :invoices, name: "fk_invoices_customer_id"'
+          - validate_foreign_key :invoices, :customers
+          - 'add_foreign_key :invoices, :customers, validate: true'
+          - foreign_key_exists? :invoices, :customers
+        answer: validate_foreign_key :invoices, :customers
       fix:
         code: |
           class ValidateCustomerForeignKeyOnInvoices < ActiveRecord::Migration[7.0]
@@ -438,6 +550,23 @@ questions:
         prefill: "change_column :subscriptions, :billing_state, :string, default: \"active\""
         answer: "change_column_default :subscriptions, :billing_state, \"active\""
 
+      select:
+        code: |
+          class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
+            def change
+              change_column_comment :subscriptions, :billing_state,
+                from: nil,
+                to: "Current billing lifecycle state"
+
+              ___
+            end
+          end
+        options:
+          - 'change_column :subscriptions, :billing_state, :string, default: "active"'
+          - change_column_null :subscriptions, :billing_state, false, "active"
+          - change_column_default :subscriptions, :billing_state, "active"
+          - rename_column :subscriptions, :billing_state, :active
+        answer: change_column_default :subscriptions, :billing_state, "active"
       fix:
         code: |
           class ChangeDefaultBillingStateOnSubscriptions < ActiveRecord::Migration[7.0]
@@ -503,6 +632,26 @@ questions:
           end
         answer: "algorithm: :concurrently"
 
+      select:
+        code: |
+          class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
+            def up
+              execute "SET lock_timeout = '2s'"
+
+              remove_index :accounts,
+                name: "index_accounts_on_legacy_external_id",
+                if_exists: true,
+                ___
+            end
+          end
+        options:
+          - 'algorithm: :concurrently'
+          - 'algorithm: :inplace'
+          - 'lock: :none'
+          - 'concurrently: true'
+        answer: 'algorithm: :concurrently'
       fix:
         code: |
           class DropUnusedExternalIdIndexFromAccounts < ActiveRecord::Migration[7.0]
@@ -562,6 +711,21 @@ questions:
           end
         answer: ":string"
 
+      select:
+        code: |
+          class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
+            def change
+              remove_index :users, :legacy_token, if_exists: true
+
+              remove_column :users, :legacy_token, ___
+            end
+          end
+        options:
+          - 'type: :string'
+          - :string
+          - 'as: :string'
+          - 'column_type: :string'
+        answer: :string
       fix:
         code: |
           class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
@@ -616,6 +780,22 @@ questions:
         prefill: "if_not_exists: true, validate: true"
         answer: "if_not_exists: true, validate: false"
 
+      select:
+        code: |
+          class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
+            def up
+              add_check_constraint :users,
+                "email IS NOT NULL",
+                name: "users_email_present",
+                ___
+            end
+          end
+        options:
+          - 'if_not_exists: true, validate: true'
+          - 'if_not_exists: false, validate: false'
+          - 'if_not_exists: true, validate: false'
+          - 'if_not_exists: true, deferrable: :deferred'
+        answer: 'if_not_exists: true, validate: false'
       fix:
         code: |
           class AddEmailPresenceConstraintToUsers < ActiveRecord::Migration[7.0]
@@ -679,6 +859,25 @@ questions:
         prefill: "Rails.logger.info"
         answer: "say"
 
+      select:
+        code: |
+          class BackfillUserSlugs < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
+            def up
+              User.where(slug: nil).in_batches(of: 1000) do |batch|
+                batch.update_all("slug = lower(regexp_replace(name, '[^a-zA-Z0-9]+', '-', 'g'))")
+
+                ___ "Processed slug batch"
+              end
+            end
+          end
+        options:
+          - Rails.logger.info
+          - puts
+          - say
+          - warn
+        answer: say
       fix:
         code: |
           class BackfillUserSlugs < ActiveRecord::Migration[7.0]
@@ -743,6 +942,23 @@ questions:
           - "remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true"
           - "remove_index :posts, :published_at, if_exists: true"
 
+      select:
+        code: |
+          class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
+            disable_ddl_transaction!
+
+            def up
+              ___
+
+              add_index :posts, :published_at, algorithm: :concurrently
+            end
+          end
+        options:
+          - 'remove_index :posts, :published_at, if_exists: true'
+          - 'add_index :posts, :published_at, algorithm: :concurrently, if_not_exists: true'
+          - 'remove_index :posts, :published_at, algorithm: :concurrently'
+          - 'remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true'
+        answer: 'remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true'
       fix:
         code: |
           class AddIndexToPostsPublishedAt < ActiveRecord::Migration[7.0]
