@@ -53,7 +53,7 @@
             {{ test.bestScore.toFixed(0) }}%
           </Link>
           <div
-            v-if="test.hasCodeChallenge"
+            v-if="test.hasCodeChallenge && currentUser"
             class="challenge-modes-indicator"
             title="Режимы кодовых задач"
           >
@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 
@@ -84,6 +84,8 @@ const props = defineProps({
   excludedTags: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['clear-filters', 'toggle-tag', 'exclude-tag'])
+
+const currentUser = computed(() => usePage().props.currentUser)
 
 function useLongPress(onLong, delay = 500) {
   let timer = null

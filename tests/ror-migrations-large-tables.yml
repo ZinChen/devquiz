@@ -134,7 +134,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [locking, schema]
-    text: "Миграция ждёт DDL-лок бесконечно, блокируя новые запросы. Выглядит как защита от долгой операции, но не решает проблему ожидания лока."
+    text: "В миграции необходимо добавить защиту от долгой операции. Нужно убедиться, что не будет бесконечного ожидания освобождения ресурсов. Какой именно момент нужно ограничить здесь?"
     modes:
       highlight:
         code: |
@@ -150,7 +150,7 @@ questions:
             end
           end
         correct_lines: [3]
-        hint: "Два разных timeout-параметра в PostgreSQL — они про разные фазы выполнения запроса. Какой именно момент нужно ограничить здесь?"
+        hint: "Два разных timeout-параметра в PostgreSQL — они про разные фазы выполнения запроса."
 
       fill:
         code: |
@@ -219,7 +219,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Проблемный параметр."
+    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Нужно исключить проблемный параметр."
     modes:
       highlight:
         code: |
@@ -289,7 +289,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, performance]
-    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Какой метод неправильный?"
+    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Какой метод здесь нужен?"
     modes:
       highlight:
         code: |
@@ -364,7 +364,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Параметр, который делает миграцию опасной."
+    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Нужно исключить параметр, который делает миграцию опасной."
     modes:
       highlight:
         code: |
@@ -453,7 +453,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [schema, locking]
-    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Неправильный метод."
+    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Какой метод нужен?"
     modes:
       highlight:
         code: |
@@ -519,7 +519,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, migrations]
-    text: "Нужно поменять DEFAULT у столбца. Что можно улучшить?"
+    text: "Нужно поменять DEFAULT у столбца. Что лучше использовать?"
     modes:
       highlight:
         code: |
@@ -722,7 +722,7 @@ questions:
           end
         options:
           - 'type: :string'
-          - :string
+          - ':string'
           - 'as: :string'
           - 'column_type: :string'
         answer: :string
@@ -825,7 +825,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, performance]
-    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. В чём ошибка?"
+    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Что здесь нужно использовать?"
     modes:
       highlight:
         code: |

@@ -1,5 +1,6 @@
 <template>
   <button
+    v-if="currentUser"
     class="bookmark-btn"
     :class="{ 'bookmark-btn--active': isBookmarked }"
     :title="isBookmarked ? 'Убрать из избранного' : 'В избранное'"
@@ -13,13 +14,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 
 const props = defineProps({
   questionId: { type: Number, required: true },
   initial:    { type: Boolean, default: false },
 })
+
+const page = usePage()
+const currentUser = computed(() => page.props.currentUser)
 
 const isBookmarked = ref(props.initial)
 

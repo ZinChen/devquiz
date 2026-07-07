@@ -114,7 +114,7 @@
                   v-model="selectAnswer"
                   class="code-select"
                 >
-                  <option value="" disabled>___</option>
+                  <option value="" disabled></option>
                   <option v-for="opt in selectOptions" :key="opt" :value="opt">{{ opt }}</option>
                 </select></span><span
                 v-else
@@ -520,7 +520,7 @@ onMounted(focusActive)
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
-  padding: 0 0.4rem;
+  padding: 0 0.4rem 0 0;
   outline: none;
   vertical-align: baseline;
   transition: border-color 0.15s, box-shadow 0.15s;

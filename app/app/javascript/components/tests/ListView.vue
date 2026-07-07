@@ -27,7 +27,7 @@
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
         <div
-          v-if="test.hasCodeChallenge"
+          v-if="test.hasCodeChallenge && currentUser"
           class="challenge-modes-indicator"
           title="Режимы кодовых задач"
         >
@@ -47,12 +47,14 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 
 const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
 defineEmits(['clear-filters', 'toggle-tag'])
+
+const currentUser = computed(() => usePage().props.currentUser)
 
 const CHALLENGE_MODES = ['highlight', 'fill', 'select', 'fix']
 const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', select: 'Select', fix: 'Fix' }
