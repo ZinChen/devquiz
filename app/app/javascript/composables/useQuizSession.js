@@ -52,6 +52,7 @@ export function useQuizSession(test, questionsSource) {
   function initCodeAnswer(q) {
     if (challengeMode.value === 'highlight') return []
     if (challengeMode.value === 'fix') return q.modes?.fix?.code ?? ''
+    if (challengeMode.value === 'select') return ''
     return q.modes?.fill?.prefill ?? ''
   }
 
@@ -143,6 +144,7 @@ export function useQuizSession(test, questionsSource) {
         const original = q.modes?.fix?.code ?? ''
         return typeof a === 'string' && a.trim() !== original.trim()
       }
+      if (challengeMode.value === 'select') return typeof a === 'string' && a.trim().length > 0
       const prefill = q.modes?.fill?.prefill ?? ''
       return typeof a === 'string' && a.trim().length > 0 && a.trim() !== prefill.trim()
     }

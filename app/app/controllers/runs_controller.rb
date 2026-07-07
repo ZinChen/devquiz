@@ -106,16 +106,26 @@ class RunsController < ApplicationController
       permitted_classes: [ Symbol ]
     ) rescue {})
     {
-      slug:                   t.slug,
-      title:                  t.title,
-      description:            t.description,
-      tags:                   t.tag_list,
-      difficulty:             t.difficulty,
-      estimated_time:         t.estimated_time,
-      questions_count:        t.questions_count,
-      default_challenge_mode: yaml["default_challenge_mode"],
-      language:               yaml["language"] || "ruby"
+      slug:                      t.slug,
+      title:                     t.title,
+      description:               t.description,
+      tags:                      t.tag_list,
+      difficulty:                t.difficulty,
+      estimated_time:            t.estimated_time,
+      questions_count:           t.questions_count,
+      default_challenge_mode:    yaml["default_challenge_mode"],
+      language:                  yaml["language"] || "ruby",
+      completed_challenge_modes: current_user ? user_completed_modes(t.slug) : []
     }
+  end
+
+  def user_completed_modes(slug)
+    return [] unless current_user
+    TestAttempt
+      .where(user_id: current_user.id, test_slug: slug)
+      .where.not(challenge_mode: [ nil, "" ])
+      .distinct
+      .pluck(:challenge_mode)
   end
 
   def attempt_props(attempt)

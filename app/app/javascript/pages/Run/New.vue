@@ -31,6 +31,7 @@
         v-model:challengeMode="challengeMode"
         :hasCodeChallenge="hasCodeChallenge"
         :locked="sessionStarted"
+        :completedChallengeModes="test.completedChallengeModes || []"
         @reset="resetChallenge"
       />
     </div>

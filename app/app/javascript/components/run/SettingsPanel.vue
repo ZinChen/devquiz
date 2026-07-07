@@ -22,21 +22,27 @@
     <template v-if="hasCodeChallenge">
       <div class="settings-panel__divider"></div>
       <h3 class="settings-panel__title">Режим кодовых задач</h3>
-      <div class="challenge-toggle-wrap">
+      <div
+        class="challenge-toggle-wrap"
+        :style="{ '--modes-count': visibleChallengeModeOptions.length }"
+      >
         <div class="challenge-toggle-labels">
           <span
-            v-for="opt in challengeModeOptions" :key="opt.value"
+            v-for="opt in visibleChallengeModeOptions" :key="opt.value"
             class="challenge-toggle-label"
             :class="{ 'challenge-toggle-label--active': challengeMode === opt.value }"
           >{{ opt.label }}</span>
         </div>
-        <div class="challenge-toggle" :class="{ 'challenge-toggle--locked': locked }">
+        <div
+          class="challenge-toggle"
+          :class="{ 'challenge-toggle--locked': locked }"
+        >
           <div
             class="challenge-toggle__thumb"
             :style="{ transform: `translateX(${activeIndex * 100}%)` }"
           ></div>
           <button
-            v-for="opt in challengeModeOptions" :key="opt.value"
+            v-for="opt in visibleChallengeModeOptions" :key="opt.value"
             type="button"
             class="challenge-toggle__btn"
             :class="{ 'challenge-toggle__btn--active': challengeMode === opt.value }"
@@ -60,10 +66,11 @@
 
 <script setup>
 const props = defineProps({
-  mode:             String,
-  challengeMode:    { type: String, default: 'highlight' },
-  hasCodeChallenge: { type: Boolean, default: false },
-  locked:           { type: Boolean, default: false },
+  mode:                    String,
+  challengeMode:           { type: String, default: 'highlight' },
+  hasCodeChallenge:        { type: Boolean, default: false },
+  locked:                  { type: Boolean, default: false },
+  completedChallengeModes: { type: Array, default: () => [] },
 })
 
 defineEmits(['update:mode', 'update:challengeMode', 'reset'])
@@ -71,15 +78,26 @@ defineEmits(['update:mode', 'update:challengeMode', 'reset'])
 const challengeModeOptions = [
   { value: 'highlight', icon: '🔍', label: 'Highlight', hint: 'Кликни на проблемную строку' },
   { value: 'fill',      icon: '✏️', label: 'Fill',      hint: 'Введи пропущенный код вместо ___' },
+  { value: 'select',    icon: '☑️', label: 'Select',    hint: 'Выбери правильный вариант вместо ___' },
   { value: 'fix',       icon: '🔧', label: 'Fix',       hint: 'Отредактируй и исправь баг' },
 ]
 
+const GATED_PREREQUISITES = ['highlight', 'fill', 'select']
+
 import { computed } from 'vue'
+
+const visibleChallengeModeOptions = computed(() => {
+  const unlocked = GATED_PREREQUISITES.every(m => props.completedChallengeModes.includes(m))
+  return unlocked
+    ? challengeModeOptions
+    : challengeModeOptions.filter(o => o.value !== 'fix')
+})
+
 const currentChallengeHint = computed(
-  () => challengeModeOptions.find(o => o.value === props.challengeMode)?.hint ?? ''
+  () => visibleChallengeModeOptions.value.find(o => o.value === props.challengeMode)?.hint ?? ''
 )
 const activeIndex = computed(
-  () => challengeModeOptions.findIndex(o => o.value === props.challengeMode)
+  () => visibleChallengeModeOptions.value.findIndex(o => o.value === props.challengeMode)
 )
 </script>
 
@@ -136,7 +154,7 @@ const activeIndex = computed(
 
 .challenge-toggle-labels {
   display: flex;
-  max-width: 156px;
+  max-width: calc(var(--modes-count, 3) * 52px);
 }
 
 .challenge-toggle-label {
@@ -158,7 +176,7 @@ const activeIndex = computed(
   background: #F3F4F6;
   border-radius: 999px;
   padding: 2px;
-  max-width: 156px;
+  max-width: calc(var(--modes-count, 3) * 52px);
   width: 100%;
 }
 
@@ -166,7 +184,7 @@ const activeIndex = computed(
   position: absolute;
   top: 2px;
   left: 2px;
-  width: calc(33.333% - 1.33px);
+  width: calc((100% / var(--modes-count, 3)) - 1.33px);
   height: calc(100% - 4px);
   background: #fff;
   border-radius: 999px;
@@ -205,7 +223,7 @@ const activeIndex = computed(
   align-items: center;
   justify-content: space-between;
   margin-top: 0.25rem;
-  max-width: 156px;
+  max-width: calc(var(--modes-count, 3) * 52px);
 }
 
 .challenge-toggle__locked-hint {

@@ -103,8 +103,8 @@ function onTagClick(e, tag) {
   emit('toggle-tag', tag)
 }
 
-const CHALLENGE_MODES = ['highlight', 'fill', 'fix']
-const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', fix: 'Fix' }
+const CHALLENGE_MODES = ['highlight', 'fill', 'select', 'fix']
+const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', select: 'Select', fix: 'Fix' }
 
 const duplicateTitles = computed(() => {
   const counts = {}
