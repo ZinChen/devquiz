@@ -2,7 +2,10 @@
   <AppLayout>
     <div class="result-wrap">
       <div class="result-summary">
-        <p class="result-summary__label">Тест завершён: {{ test.title }}</p>
+        <p class="result-summary__label">
+          Тест завершён: {{ test.title }}
+          <span v-if="challengeModeLabel" class="result-summary__mode-badge">{{ challengeModeLabel }}</span>
+        </p>
         <div class="result-summary__score" :style="{ color: scoreColor }">
           {{ attempt.score.toFixed(0) }}%
         </div>
@@ -97,7 +100,7 @@
                     :style="tok.color ? { color: tok.color } : {}"
                   >{{ tok.content }}</span></template></template><template v-else>{{ item.code }}</template></code></pre>
             <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
-              <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
+              <div class="result-code-answer result-code-answer--diff" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
                 <code v-if="item.selectedAnswer?.length" class="result-code-answer__value result-code-answer__value--diff"><span
                     v-for="(line, li) in item.selectedAnswer" :key="li"
@@ -114,7 +117,7 @@
                       >{{ tok.text }}</span></template></span></code>
                 <code v-else class="result-code-answer__value">(пусто)</code>
               </div>
-              <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
+              <div v-if="!item.correct" class="result-code-answer result-code-answer--diff result-code-answer--correct">
                 <span class="result-code-answer__label">Правильный ответ:</span>
                 <code class="result-code-answer__value result-code-answer__value--diff"><span
                     v-for="(line, li) in item.correctAnswer" :key="li"
@@ -236,6 +239,9 @@ const scoreColor = computed(() => {
   return '#EF4444'
 })
 
+const CHALLENGE_MODE_LABELS = { highlight: 'Highlight', select: 'Select', fill: 'Fill', fix: 'Fix' }
+const challengeModeLabel = computed(() => CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null)
+
 function formatTime(seconds) {
   if (!seconds) return '—'
   const m = Math.floor(seconds / 60)
@@ -324,6 +330,18 @@ function optionLetterStyle(item, optId) {
 .result-summary__label {
   color: #6B7280;
   margin-bottom: 0.25rem;
+}
+
+.result-summary__mode-badge {
+  display: inline-block;
+  margin-left: 0.375rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: #EEF0FF;
+  color: #4F46E5;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .result-summary__score {
@@ -619,13 +637,25 @@ function optionLetterStyle(item, optId) {
 }
 
 .result-code-answer--correct {
-  border-color: #D1FAE5;
+  background: #D1FAE5;
   color: #065F46;
 }
 
 .result-code-answer--wrong {
-  border-color: #FEE2E2;
+  background: #FEE2E2;
   color: #991B1B;
+}
+
+/* fix mode contains its own added/removed diff colors, so the answer
+   wrapper is outlined instead of filled to avoid clashing backgrounds */
+.result-code-answer--diff.result-code-answer--correct {
+  background: transparent;
+  border-color: #D1FAE5;
+}
+
+.result-code-answer--diff.result-code-answer--wrong {
+  background: transparent;
+  border-color: #FEE2E2;
 }
 
 .result-code-answer__label {

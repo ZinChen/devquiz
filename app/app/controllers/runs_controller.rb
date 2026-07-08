@@ -135,7 +135,8 @@ class RunsController < ApplicationController
       correct_count:   attempt.correct_count,
       total_questions: attempt.total_questions,
       time_spent:      attempt.time_spent,
-      completed_at:    attempt.completed_at
+      completed_at:    attempt.completed_at,
+      challenge_mode:  attempt.challenge_mode.presence
     }
   end
 
