@@ -275,7 +275,7 @@ questions:
           end
         answer: |
           class AddRiskReviewStateToAccounts < ActiveRecord::Migration[7.0]
-            def up
+            def change
               add_column :accounts, :risk_review_state, :string,
                         default: "not_required",
                         comment: "Current AML/KYC review state"

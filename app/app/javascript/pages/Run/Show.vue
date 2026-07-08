@@ -72,9 +72,8 @@
               <span v-if="!item.correct" class="result-code-legend__item result-code-legend__item--wrong">ваш выбор</span>
             </div>
           </template>
-          <!-- fill / fix: show typed answer vs correct -->
-          <template v-else>
-            <pre v-if="item.challengeMode === 'fix'" class="result-code-block"><code>{{ item.code }}</code></pre>
+          <!-- fill / select: show typed answer vs correct -->
+          <template v-if="item.challengeMode !== 'fix'">
             <div class="result-code-answers">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
@@ -83,6 +82,30 @@
               <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
                 <span class="result-code-answer__label">Правильный ответ:</span>
                 <code class="result-code-answer__value">{{ item.correctAnswer }}</code>
+              </div>
+            </div>
+          </template>
+
+          <!-- fix: show original code + unified diff of typed answer vs correct -->
+          <template v-else>
+            <pre class="result-code-block"><code>{{ item.code }}</code></pre>
+            <div class="result-code-answers">
+              <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
+                <span class="result-code-answer__label">Ваш ответ:</span>
+                <code v-if="item.selectedAnswer?.length" class="result-code-answer__value result-code-answer__value--diff"><span
+                    v-for="(line, li) in item.selectedAnswer" :key="li"
+                    class="result-diff-line"
+                    :class="`result-diff-line--${line.type}`"
+                  >{{ line.type === 'removed' ? '−' : '+' }} {{ line.content }}</span></code>
+                <code v-else class="result-code-answer__value">(пусто)</code>
+              </div>
+              <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
+                <span class="result-code-answer__label">Правильный ответ:</span>
+                <code class="result-code-answer__value result-code-answer__value--diff"><span
+                    v-for="(line, li) in item.correctAnswer" :key="li"
+                    class="result-diff-line"
+                    :class="`result-diff-line--${line.type}`"
+                  >{{ line.type === 'removed' ? '−' : '+' }} {{ line.content }}</span></code>
               </div>
             </div>
           </template>
@@ -554,8 +577,8 @@ function optionLetterStyle(item, optId) {
 
 .result-code-answer {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.875rem;
@@ -577,7 +600,33 @@ function optionLetterStyle(item, optId) {
 }
 
 .result-code-answer__value {
+  display: block;
   font-family: 'Fira Code', 'Cascadia Code', monospace;
   font-size: 0.875rem;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.result-code-answer__value--diff {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-diff-line {
+  display: block;
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+}
+
+.result-diff-line--added {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065F46;
+}
+
+.result-diff-line--removed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #991B1B;
+  text-decoration: line-through;
+  text-decoration-color: rgba(153, 27, 27, 0.5);
 }
 </style>

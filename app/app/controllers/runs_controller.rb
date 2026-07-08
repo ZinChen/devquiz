@@ -157,14 +157,29 @@ class RunsController < ApplicationController
 
       if q["type"] == "code_challenge"
         mode_data = q.dig("modes", challenge_mode) || {}
-        base.merge(
-          challenge_mode:  challenge_mode,
-          code:            mode_data["code"],
-          language:        q["language"] || "ruby",
-          correct_answer:  Array(mode_data["answer"]).first || mode_data["correct_lines"]&.join(","),
-          insert_text:     mode_data["insert_text"],
-          selected_answer: ans.selected_options.first.to_s
-        )
+        original_code   = mode_data["code"]
+        correct_answer  = Array(mode_data["answer"]).first || mode_data["correct_lines"]&.join(",")
+        selected_answer = ans.selected_options.first.to_s
+
+        if challenge_mode == "fix"
+          base.merge(
+            challenge_mode:  challenge_mode,
+            code:            original_code,
+            language:        q["language"] || "ruby",
+            correct_answer:  diff_lines(original_code, correct_answer),
+            insert_text:     mode_data["insert_text"],
+            selected_answer: diff_lines(original_code, selected_answer)
+          )
+        else
+          base.merge(
+            challenge_mode:  challenge_mode,
+            code:            original_code,
+            language:        q["language"] || "ruby",
+            correct_answer:  correct_answer,
+            insert_text:     mode_data["insert_text"],
+            selected_answer: selected_answer
+          )
+        end
       else
         base.merge(
           options:          q["options"].map { |o| o.slice("id", "text", "explanation") },
@@ -173,6 +188,70 @@ class RunsController < ApplicationController
         )
       end
     end.compact
+  end
+
+  # Line-based diff between `original` and `changed` using LCS, returning
+  # only the lines that were added or removed (no unchanged context),
+  # each tagged with its type and original indentation preserved.
+  def diff_lines(original, changed)
+    original_lines = original.to_s.split("\n", -1)
+    changed_lines   = changed.to_s.split("\n", -1)
+
+    lcs = longest_common_subsequence(original_lines, changed_lines)
+
+    result = []
+    oi = 0
+    ci = 0
+    lcs.each do |line|
+      while oi < original_lines.size && original_lines[oi] != line
+        result << { type: "removed", content: original_lines[oi] }
+        oi += 1
+      end
+      while ci < changed_lines.size && changed_lines[ci] != line
+        result << { type: "added", content: changed_lines[ci] }
+        ci += 1
+      end
+      oi += 1
+      ci += 1
+    end
+    while oi < original_lines.size
+      result << { type: "removed", content: original_lines[oi] }
+      oi += 1
+    end
+    while ci < changed_lines.size
+      result << { type: "added", content: changed_lines[ci] }
+      ci += 1
+    end
+
+    result
+  end
+
+  def longest_common_subsequence(a, b)
+    n = a.size
+    m = b.size
+    dp = Array.new(n + 1) { Array.new(m + 1, 0) }
+
+    (n - 1).downto(0) do |i|
+      (m - 1).downto(0) do |j|
+        dp[i][j] = a[i] == b[j] ? dp[i + 1][j + 1] + 1 : [ dp[i + 1][j], dp[i][j + 1] ].max
+      end
+    end
+
+    result = []
+    i = 0
+    j = 0
+    while i < n && j < m
+      if a[i] == b[j]
+        result << a[i]
+        i += 1
+        j += 1
+      elsif dp[i + 1][j] >= dp[i][j + 1]
+        i += 1
+      else
+        j += 1
+      end
+    end
+    result
   end
 
   def grade_code_challenge(question, selected_arr, mode)
