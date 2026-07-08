@@ -191,18 +191,19 @@ class RunsController < ApplicationController
   end
 
   # Line-based diff between `original` and `changed` using LCS. Returns only
-  # the lines of `changed` that differ from `original` (no unchanged
-  # context), each as a line of tokens: { text:, changed: true|false }.
-  # Lines that replace a removed original line get a word-level diff so only
-  # the changed words are marked; purely new lines are marked as a whole.
+  # the lines that differ (no unchanged context), each either:
+  #   { kind: "removed", content: }         — a line only `original` had
+  #   { kind: "modified", tokens: [{text:, type: "context"|"added"}] } — a
+  #     line of `changed`, word-diffed against its removed counterpart when
+  #     replacing one line for one line; words unique to `changed` are
+  #     tagged type: "added".
   def diff_lines(original, changed)
     original_lines = original.to_s.split("\n", -1)
     changed_lines   = changed.to_s.split("\n", -1)
 
     lcs = longest_common_subsequence(original_lines, changed_lines)
 
-    removed_runs = []
-    added_lines  = []
+    result = []
     oi = 0
     ci = 0
     lcs.each do |line|
@@ -216,8 +217,7 @@ class RunsController < ApplicationController
         run_added << changed_lines[ci]
         ci += 1
       end
-      removed_runs << run_removed unless run_removed.empty?
-      added_lines.concat(pair_changed_lines(run_removed, run_added))
+      result.concat(diff_run(run_removed, run_added))
       oi += 1
       ci += 1
     end
@@ -232,27 +232,34 @@ class RunsController < ApplicationController
       run_added << changed_lines[ci]
       ci += 1
     end
-    added_lines.concat(pair_changed_lines(run_removed, run_added))
+    result.concat(diff_run(run_removed, run_added))
 
-    added_lines
+    result.reject { |line| line[:kind] == "modified" && line[:tokens].none? { |t| t[:type] == "added" } }
   end
 
   # Within a run of consecutive removed/added lines, pairs up removed[i]
   # with added[i] (line replacement) and returns a word-level diff for each
-  # pair; leftover added lines with no counterpart are marked as a whole.
-  def pair_changed_lines(removed, added)
-    added.each_with_index.map do |line, idx|
-      if idx < removed.size
-        word_diff_tokens(removed[idx], line)
-      else
-        [ { text: line, changed: true } ]
-      end
-    end
+  # pair; leftover removed lines are kept as whole "removed" lines, leftover
+  # added lines with no counterpart are marked as a whole "modified" line.
+  def diff_run(removed, added)
+    paired = [ removed.size, added.size ].min
+    lines  = (0...paired).map { |i| { kind: "modified", tokens: word_diff_tokens(removed[i], added[i]) } }
+    lines += removed[paired..].to_a.map { |line| { kind: "removed", content: line } }
+    lines += added[paired..].to_a.map { |line|
+      type = line.strip.empty? ? "context" : "added"
+      { kind: "modified", tokens: [ { text: line, type: type } ] }
+    }
+    lines
   end
 
+  # Splits a line into words, runs of whitespace, and individual punctuation
+  # characters, so a diff at a single identifier (e.g. find_each -> in_batches)
+  # doesn't drag along neighbouring parens/colons into the "added" tokens.
+  WORD_TOKEN_PATTERN = /[a-zA-Z0-9_]+|\s+|./
+
   def word_diff_tokens(original_line, changed_line)
-    original_words = original_line.split(/(\s+)/)
-    changed_words   = changed_line.split(/(\s+)/)
+    original_words = original_line.scan(WORD_TOKEN_PATTERN)
+    changed_words   = changed_line.scan(WORD_TOKEN_PATTERN)
     lcs = longest_common_subsequence(original_words, changed_words)
 
     tokens = []
@@ -261,19 +268,23 @@ class RunsController < ApplicationController
     lcs.each do |word|
       oi += 1 while oi < original_words.size && original_words[oi] != word
       while ci < changed_words.size && changed_words[ci] != word
-        tokens << { text: changed_words[ci], changed: true }
+        tokens << { text: changed_words[ci], type: added_token_type(changed_words[ci]) }
         ci += 1
       end
-      tokens << { text: word, changed: false }
+      tokens << { text: word, type: "context" }
       oi += 1
       ci += 1
     end
     while ci < changed_words.size
-      tokens << { text: changed_words[ci], changed: true }
+      tokens << { text: changed_words[ci], type: added_token_type(changed_words[ci]) }
       ci += 1
     end
 
     tokens
+  end
+
+  def added_token_type(text)
+    text.strip.empty? ? "context" : "added"
   end
 
   def longest_common_subsequence(a, b)

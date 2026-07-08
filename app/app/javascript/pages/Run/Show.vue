@@ -74,7 +74,7 @@
           </template>
           <!-- fill / select: show typed answer vs correct -->
           <template v-if="item.challengeMode !== 'fix'">
-            <div class="result-code-answers">
+            <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
                 <code class="result-code-answer__value">{{ item.selectedAnswer || '(пусто)' }}</code>
@@ -86,17 +86,25 @@
             </div>
           </template>
 
-          <!-- fix: show original code + unified diff of typed answer vs correct -->
+          <!-- fix: show original code + word-level diff of typed answer vs correct -->
           <template v-else>
             <pre class="result-code-block"><code>{{ item.code }}</code></pre>
-            <div class="result-code-answers">
+            <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
                 <code v-if="item.selectedAnswer?.length" class="result-code-answer__value result-code-answer__value--diff"><span
                     v-for="(line, li) in item.selectedAnswer" :key="li"
                     class="result-diff-line"
-                    :class="`result-diff-line--${line.type}`"
-                  >{{ line.type === 'removed' ? '−' : '+' }} {{ line.content }}</span></code>
+                  ><span
+                      v-if="line.kind === 'removed'"
+                      class="result-diff-token result-diff-token--removed"
+                    >{{ line.content }}</span><template
+                      v-else
+                    ><span
+                        v-for="(tok, ti) in line.tokens" :key="ti"
+                        class="result-diff-token"
+                        :class="{ 'result-diff-token--added': tok.type === 'added' }"
+                      >{{ tok.text }}</span></template></span></code>
                 <code v-else class="result-code-answer__value">(пусто)</code>
               </div>
               <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
@@ -104,8 +112,16 @@
                 <code class="result-code-answer__value result-code-answer__value--diff"><span
                     v-for="(line, li) in item.correctAnswer" :key="li"
                     class="result-diff-line"
-                    :class="`result-diff-line--${line.type}`"
-                  >{{ line.type === 'removed' ? '−' : '+' }} {{ line.content }}</span></code>
+                  ><span
+                      v-if="line.kind === 'removed'"
+                      class="result-diff-token result-diff-token--removed"
+                    >{{ line.content }}</span><template
+                      v-else
+                    ><span
+                        v-for="(tok, ti) in line.tokens" :key="ti"
+                        class="result-diff-token"
+                        :class="{ 'result-diff-token--added': tok.type === 'added' }"
+                      >{{ tok.text }}</span></template></span></code>
               </div>
             </div>
           </template>
@@ -177,6 +193,16 @@ const tokenCache = computed(() => {
   })
   return cache
 })
+
+function syncAnswerScroll(e) {
+  const source = e.target
+  if (!source.classList?.contains('result-code-answer__value')) return
+  const group = source.closest('.result-code-answers')
+  if (!group) return
+  group.querySelectorAll('.result-code-answer__value').forEach(el => {
+    if (el !== source) el.scrollLeft = source.scrollLeft
+  })
+}
 
 const openDetails = reactive({})
 function toggleDetails(questionId) {
@@ -581,16 +607,17 @@ function optionLetterStyle(item, optId) {
   gap: 0.25rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
+  border: 2px solid transparent;
   font-size: 0.875rem;
 }
 
 .result-code-answer--correct {
-  background: #D1FAE5;
+  border-color: #D1FAE5;
   color: #065F46;
 }
 
 .result-code-answer--wrong {
-  background: #FEE2E2;
+  border-color: #FEE2E2;
   color: #991B1B;
 }
 
@@ -605,6 +632,7 @@ function optionLetterStyle(item, optId) {
   font-size: 0.875rem;
   white-space: pre;
   overflow-x: auto;
+  color: #374151;
 }
 
 .result-code-answer__value--diff {
@@ -614,19 +642,15 @@ function optionLetterStyle(item, optId) {
 
 .result-diff-line {
   display: block;
-  border-radius: 0.25rem;
-  padding: 0 0.25rem;
 }
 
-.result-diff-line--added {
-  background: rgba(16, 185, 129, 0.15);
-  color: #065F46;
+.result-diff-token--added {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 0.2rem;
 }
 
-.result-diff-line--removed {
-  background: rgba(239, 68, 68, 0.15);
-  color: #991B1B;
-  text-decoration: line-through;
-  text-decoration-color: rgba(153, 27, 27, 0.5);
+.result-diff-token--removed {
+  background: rgba(239, 68, 68, 0.25);
+  border-radius: 0.2rem;
 }
 </style>
