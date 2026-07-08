@@ -73,7 +73,7 @@
             </div>
           </template>
           <!-- fill / select: show typed answer vs correct -->
-          <template v-if="item.challengeMode !== 'fix'">
+          <template v-else-if="item.challengeMode !== 'fix'">
             <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
@@ -88,7 +88,14 @@
 
           <!-- fix: show original code + word-level diff of typed answer vs correct -->
           <template v-else>
-            <pre class="result-code-block"><code>{{ item.code }}</code></pre>
+            <pre class="result-code-block"><code><template
+                v-if="tokenCache[item.questionId]"
+              ><template
+                  v-for="(lineTokens, li) in tokenCache[item.questionId]" :key="li"
+                ><template v-if="li > 0">{{ '\n' }}</template><span
+                    v-for="(tok, ti) in lineTokens" :key="ti"
+                    :style="tok.color ? { color: tok.color } : {}"
+                  >{{ tok.content }}</span></template></template><template v-else>{{ item.code }}</template></code></pre>
             <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
