@@ -725,7 +725,7 @@ questions:
           - ':string'
           - 'as: :string'
           - 'column_type: :string'
-        answer: :string
+        answer: ':string'
       fix:
         code: |
           class RemoveLegacyTokenFromUsers < ActiveRecord::Migration[7.0]
@@ -751,7 +751,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "CHECK constraint на большой имеет здесь опасный для производительности параметр."
+    text: "CHECK constraint на большой таблице имеет опасный для производительности параметр. Какой?"
     modes:
       highlight:
         code: |

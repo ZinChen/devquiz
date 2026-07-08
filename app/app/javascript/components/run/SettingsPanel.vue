@@ -77,8 +77,8 @@ defineEmits(['update:mode', 'update:challengeMode', 'reset'])
 
 const challengeModeOptions = [
   { value: 'highlight', icon: '🔍', label: 'Highlight', hint: 'Кликни на проблемную строку' },
-  { value: 'fill',      icon: '✏️', label: 'Fill',      hint: 'Введи пропущенный код вместо ___' },
   { value: 'select',    icon: '☑️', label: 'Select',    hint: 'Выбери правильный вариант вместо ___' },
+  { value: 'fill',      icon: '✏️', label: 'Fill',      hint: 'Введи пропущенный код вместо ___' },
   { value: 'fix',       icon: '🔧', label: 'Fix',       hint: 'Отредактируй и исправь баг' },
 ]
 

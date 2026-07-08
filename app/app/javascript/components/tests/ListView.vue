@@ -32,11 +32,17 @@
           title="Режимы кодовых задач"
         >
           <span
-            v-for="mode in CHALLENGE_MODES" :key="mode"
+            v-for="mode in BASE_CHALLENGE_MODES" :key="mode"
             class="challenge-mode-dot"
             :class="{ 'challenge-mode-dot--done': test.completedChallengeModes?.includes(mode) }"
             :title="MODE_LABELS[mode]"
           ></span>
+          <span
+            v-if="allBaseModesDone(test)"
+            class="challenge-mode-star"
+            :class="{ 'challenge-mode-star--done': test.completedChallengeModes?.includes('fix') }"
+            :title="test.completedChallengeModes?.includes('fix') ? MODE_LABELS.fix : 'Пройди спец режим Fix'"
+          >★</span>
         </div>
       </div>
     </Link>
@@ -56,8 +62,12 @@ defineEmits(['clear-filters', 'toggle-tag'])
 
 const currentUser = computed(() => usePage().props.currentUser)
 
-const CHALLENGE_MODES = ['highlight', 'fill', 'select', 'fix']
-const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', select: 'Select', fix: 'Fix' }
+const BASE_CHALLENGE_MODES = ['highlight', 'select', 'fill']
+const MODE_LABELS = { highlight: 'Highlight', select: 'Select', fill: 'Fill', fix: 'Fix' }
+
+function allBaseModesDone(test) {
+  return BASE_CHALLENGE_MODES.every(mode => test.completedChallengeModes?.includes(mode))
+}
 
 const duplicateTitles = computed(() => {
   const counts = {}
@@ -164,5 +174,17 @@ const duplicateTitles = computed(() => {
 
 .challenge-mode-dot--done {
   background: #4F63F5;
+}
+
+.challenge-mode-star {
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  color: #E5E7EB;
+  transition: color 0.15s;
+}
+
+.challenge-mode-star--done {
+  color: #F59E0B;
 }
 </style>

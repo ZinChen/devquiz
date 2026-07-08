@@ -203,11 +203,13 @@ function onLinesMouseMove(e) {
 }
 
 function onLineClick(i, e) {
-  const el   = e.currentTarget
-  const relY = e.clientY - el.getBoundingClientRect().top
-  const half = el.getBoundingClientRect().height / 2
-  if (relY < half * 0.25 || relY > half * 1.75) {
-    // near boundary — handled by gap button
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  const relX = e.clientX - rect.left
+  const relY = e.clientY - rect.top
+  const half = rect.height / 2
+  if (relX <= GAP_STRIP_WIDTH && (relY < half * 0.25 || relY > half * 1.75)) {
+    // near top/bottom boundary of the left strip — handled by gap button
     return
   }
   toggleLine(i + 1)
