@@ -19,7 +19,8 @@ class ApplicationController < ActionController::Base
       id:         current_user.id,
       name:       current_user.name,
       email:      current_user.email,
-      avatar_url: current_user.avatar_url
+      avatar_url: current_user.avatar_url,
+      providers:  current_user.connected_providers
     }
   end
 

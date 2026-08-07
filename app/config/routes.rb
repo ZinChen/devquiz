@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   get    "/login",                   to: "sessions#new",    as: :login
   get    "/auth/:provider/callback", to: "sessions#create"
   post   "/auth/:provider/callback", to: "sessions#create"
+  get    "/auth/failure",            to: "sessions#failure"
   delete "/logout",                  to: "sessions#destroy", as: :logout
 
   resources :tests, only: [ :index, :show ], param: :slug do

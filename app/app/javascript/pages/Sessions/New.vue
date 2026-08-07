@@ -23,6 +23,10 @@
             Google
           </a>
         </div>
+
+        <p class="login-card__hint">
+          Если у GitHub и Google одинаковая почта, вы попадёте в один и тот же профиль.
+        </p>
       </div>
     </div>
   </AppLayout>
@@ -63,6 +67,14 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.login-card__hint {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 1.25rem;
 }
 
 .btn-github {
