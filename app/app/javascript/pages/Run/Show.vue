@@ -2,7 +2,10 @@
   <AppLayout>
     <div class="result-wrap">
       <div class="result-summary">
-        <p class="result-summary__label">Тест завершён: {{ test.title }}</p>
+        <p class="result-summary__label">
+          Тест завершён: {{ test.title }}
+          <span v-if="challengeModeLabel" class="result-summary__mode-badge">{{ challengeModeLabel }}</span>
+        </p>
         <div class="result-summary__score" :style="{ color: scoreColor }">
           {{ attempt.score.toFixed(0) }}%
         </div>
@@ -12,7 +15,14 @@
         <p class="result-summary__time">Время: {{ formatTime(attempt.timeSpent) }}</p>
 
         <div class="result-summary__actions">
-          <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary">
+          <Link
+            v-if="suggestedNextMode"
+            :href="`/tests/${test.slug}/run/new?mode=${suggestedNextMode}`"
+            class="btn btn-primary"
+          >
+            Пройти в режиме {{ CHALLENGE_MODE_LABELS[suggestedNextMode] }}
+          </Link>
+          <Link :href="`/tests/${test.slug}/run/new`" :class="suggestedNextMode ? 'btn btn-ghost' : 'btn btn-primary'">
             Пройти снова
           </Link>
           <Link href="/" class="btn btn-ghost">Все тесты</Link>
@@ -72,10 +82,9 @@
               <span v-if="!item.correct" class="result-code-legend__item result-code-legend__item--wrong">ваш выбор</span>
             </div>
           </template>
-          <!-- fill / fix: show typed answer vs correct -->
-          <template v-else>
-            <pre v-if="item.challengeMode === 'fix'" class="result-code-block"><code>{{ item.code }}</code></pre>
-            <div class="result-code-answers">
+          <!-- fill / select: show typed answer vs correct -->
+          <template v-else-if="item.challengeMode !== 'fix'">
+            <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
               <div class="result-code-answer" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
                 <span class="result-code-answer__label">Ваш ответ:</span>
                 <code class="result-code-answer__value">{{ item.selectedAnswer || '(пусто)' }}</code>
@@ -83,6 +92,53 @@
               <div v-if="!item.correct" class="result-code-answer result-code-answer--correct">
                 <span class="result-code-answer__label">Правильный ответ:</span>
                 <code class="result-code-answer__value">{{ item.correctAnswer }}</code>
+              </div>
+            </div>
+          </template>
+
+          <!-- fix: show original code + word-level diff of typed answer vs correct -->
+          <template v-else>
+            <pre class="result-code-block"><code><template
+                v-if="tokenCache[item.questionId]"
+              ><template
+                  v-for="(lineTokens, li) in tokenCache[item.questionId]" :key="li"
+                ><template v-if="li > 0">{{ '\n' }}</template><span
+                    v-for="(tok, ti) in lineTokens" :key="ti"
+                    :style="tok.color ? { color: tok.color } : {}"
+                  >{{ tok.content }}</span></template></template><template v-else>{{ item.code }}</template></code></pre>
+            <div class="result-code-answers" @scroll.capture="syncAnswerScroll">
+              <div class="result-code-answer result-code-answer--diff" :class="item.correct ? 'result-code-answer--correct' : 'result-code-answer--wrong'">
+                <span class="result-code-answer__label">Ваш ответ:</span>
+                <code v-if="item.selectedAnswer?.length" class="result-code-answer__value result-code-answer__value--diff"><span
+                    v-for="(line, li) in item.selectedAnswer" :key="li"
+                    class="result-diff-line"
+                  ><span
+                      v-if="line.kind === 'removed'"
+                      class="result-diff-token result-diff-token--removed"
+                    >{{ line.content }}</span><template
+                      v-else
+                    ><span
+                        v-for="(tok, ti) in line.tokens" :key="ti"
+                        class="result-diff-token"
+                        :class="{ 'result-diff-token--added': tok.type === 'added' }"
+                      >{{ tok.text }}</span></template></span></code>
+                <code v-else class="result-code-answer__value">(пусто)</code>
+              </div>
+              <div v-if="!item.correct" class="result-code-answer result-code-answer--diff result-code-answer--correct">
+                <span class="result-code-answer__label">Правильный ответ:</span>
+                <code class="result-code-answer__value result-code-answer__value--diff"><span
+                    v-for="(line, li) in item.correctAnswer" :key="li"
+                    class="result-diff-line"
+                  ><span
+                      v-if="line.kind === 'removed'"
+                      class="result-diff-token result-diff-token--removed"
+                    >{{ line.content }}</span><template
+                      v-else
+                    ><span
+                        v-for="(tok, ti) in line.tokens" :key="ti"
+                        class="result-diff-token"
+                        :class="{ 'result-diff-token--added': tok.type === 'added' }"
+                      >{{ tok.text }}</span></template></span></code>
               </div>
             </div>
           </template>
@@ -134,6 +190,7 @@ import { computed, reactive, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
+import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 
 const props = defineProps({
   test:           Object,
@@ -154,6 +211,16 @@ const tokenCache = computed(() => {
   })
   return cache
 })
+
+function syncAnswerScroll(e) {
+  const source = e.target
+  if (!source.classList?.contains('result-code-answer__value')) return
+  const group = source.closest('.result-code-answers')
+  if (!group) return
+  group.querySelectorAll('.result-code-answer__value').forEach(el => {
+    if (el !== source) el.scrollLeft = source.scrollLeft
+  })
+}
 
 const openDetails = reactive({})
 function toggleDetails(questionId) {
@@ -178,6 +245,17 @@ const scoreColor = computed(() => {
   if (props.attempt.score >= 80) return '#10B981'
   if (props.attempt.score >= 50) return '#F59E0B'
   return '#EF4444'
+})
+
+const challengeModeLabel = computed(() => CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null)
+
+const PASS_THRESHOLD = 70
+
+const suggestedNextMode = computed(() => {
+  if (!props.attempt.challengeMode) return null
+  if (props.attempt.score < PASS_THRESHOLD) return null
+  const next = nextChallengeMode(props.test.completedChallengeModes || [])
+  return next && next !== props.attempt.challengeMode ? next : null
 })
 
 function formatTime(seconds) {
@@ -268,6 +346,18 @@ function optionLetterStyle(item, optId) {
 .result-summary__label {
   color: #6B7280;
   margin-bottom: 0.25rem;
+}
+
+.result-summary__mode-badge {
+  display: inline-block;
+  margin-left: 0.375rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: #EEF0FF;
+  color: #4F46E5;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .result-summary__score {
@@ -554,10 +644,11 @@ function optionLetterStyle(item, optId) {
 
 .result-code-answer {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
+  border: 2px solid transparent;
   font-size: 0.875rem;
 }
 
@@ -571,13 +662,48 @@ function optionLetterStyle(item, optId) {
   color: #991B1B;
 }
 
+/* fix mode contains its own added/removed diff colors, so the answer
+   wrapper is outlined instead of filled to avoid clashing backgrounds */
+.result-code-answer--diff.result-code-answer--correct {
+  background: transparent;
+  border-color: #D1FAE5;
+}
+
+.result-code-answer--diff.result-code-answer--wrong {
+  background: transparent;
+  border-color: #FEE2E2;
+}
+
 .result-code-answer__label {
   font-weight: 500;
   flex-shrink: 0;
 }
 
 .result-code-answer__value {
+  display: block;
   font-family: 'Fira Code', 'Cascadia Code', monospace;
   font-size: 0.875rem;
+  white-space: pre;
+  overflow-x: auto;
+  color: #374151;
+}
+
+.result-code-answer__value--diff {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-diff-line {
+  display: block;
+}
+
+.result-diff-token--added {
+  background: rgba(16, 185, 129, 0.25);
+  border-radius: 0.2rem;
+}
+
+.result-diff-token--removed {
+  background: rgba(239, 68, 68, 0.25);
+  border-radius: 0.2rem;
 }
 </style>

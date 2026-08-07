@@ -71,10 +71,37 @@ body {
   background: #FECACA;
 }
 
+.tag-badge--code {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.tag-badge--code:hover {
+  background: #A7F3D0;
+}
+
+.tag-badge--code.tag-badge--active {
+  background: #10B981;
+  color: #fff;
+}
+
+.tag-badge--code.tag-badge--active:hover {
+  background: #059669;
+}
+
+.tag-badge--code.tag-badge--excluded {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
 .tag-filter {
   background: #F3F4F6;
   color: #6B7280;
   border: none;
+}
+
+.tag-filter:hover {
+  background: #E5E7EB;
 }
 
 .tag-filter--active {

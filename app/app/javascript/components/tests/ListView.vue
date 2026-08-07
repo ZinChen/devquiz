@@ -19,7 +19,7 @@
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag) }"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--code': tag === 'code' }"
           @click.prevent.stop="$emit('toggle-tag', tag)"
         >{{ tag }}</button>
       </div>
@@ -27,16 +27,22 @@
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
         <div
-          v-if="test.hasCodeChallenge"
+          v-if="test.hasCodeChallenge && currentUser"
           class="challenge-modes-indicator"
           title="Режимы кодовых задач"
         >
           <span
-            v-for="mode in CHALLENGE_MODES" :key="mode"
+            v-for="mode in BASE_CHALLENGE_MODES" :key="mode"
             class="challenge-mode-dot"
             :class="{ 'challenge-mode-dot--done': test.completedChallengeModes?.includes(mode) }"
             :title="MODE_LABELS[mode]"
           ></span>
+          <span
+            v-if="allBaseModesDone(test)"
+            class="challenge-mode-star"
+            :class="{ 'challenge-mode-star--done': test.completedChallengeModes?.includes('fix') }"
+            :title="test.completedChallengeModes?.includes('fix') ? MODE_LABELS.fix : 'Пройди спец режим Fix'"
+          >★</span>
         </div>
       </div>
     </Link>
@@ -47,15 +53,22 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
+import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
 const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
 defineEmits(['clear-filters', 'toggle-tag'])
 
-const CHALLENGE_MODES = ['highlight', 'fill', 'fix']
-const MODE_LABELS = { highlight: 'Highlight', fill: 'Fill', fix: 'Fix' }
+const currentUser = computed(() => usePage().props.currentUser)
+
+const BASE_CHALLENGE_MODES = CHALLENGE_MODE_ORDER.filter(m => m !== 'fix')
+const MODE_LABELS = CHALLENGE_MODE_LABELS
+
+function allBaseModesDone(test) {
+  return isChallengeModeUnlocked('fix', test.completedChallengeModes || [])
+}
 
 const duplicateTitles = computed(() => {
   const counts = {}
@@ -162,5 +175,17 @@ const duplicateTitles = computed(() => {
 
 .challenge-mode-dot--done {
   background: #4F63F5;
+}
+
+.challenge-mode-star {
+  display: block;
+  font-size: 10px;
+  line-height: 1;
+  color: #E5E7EB;
+  transition: color 0.15s;
+}
+
+.challenge-mode-star--done {
+  color: #F59E0B;
 }
 </style>

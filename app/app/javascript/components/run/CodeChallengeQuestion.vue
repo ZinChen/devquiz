@@ -97,6 +97,32 @@
       </div>
     </template>
 
+    <!-- ── select mode ────────────────────────────────────────────── -->
+    <template v-else-if="mode === 'select'">
+      <div class="code-block-inner-wrap">
+        <pre class="code-block-inner"><code><template
+            v-for="(line, li) in fillTokenLines"
+            :key="li"
+          ><template v-if="li > 0">{{ '\n' }}</template><template
+              v-for="(tok, ti) in line"
+              :key="ti"
+            ><span
+                v-if="tok.type === 'blank'"
+                class="code-blank-wrap"
+              ><select
+                  ref="selectInputEl"
+                  v-model="selectAnswer"
+                  class="code-select"
+                >
+                  <option value="" disabled></option>
+                  <option v-for="opt in selectOptions" :key="opt" :value="opt">{{ opt }}</option>
+                </select></span><span
+                v-else
+                :style="tok.color ? { color: tok.color } : {}"
+              >{{ tok.content }}</span></template></template></code></pre>
+      </div>
+    </template>
+
     <!-- ── fix mode ───────────────────────────────────────────────── -->
     <template v-else-if="mode === 'fix'">
       <p class="code-challenge__hint">Исправь код ниже</p>
@@ -177,11 +203,13 @@ function onLinesMouseMove(e) {
 }
 
 function onLineClick(i, e) {
-  const el   = e.currentTarget
-  const relY = e.clientY - el.getBoundingClientRect().top
-  const half = el.getBoundingClientRect().height / 2
-  if (relY < half * 0.25 || relY > half * 1.75) {
-    // near boundary — handled by gap button
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  const relX = e.clientX - rect.left
+  const relY = e.clientY - rect.top
+  const half = rect.height / 2
+  if (relX <= GAP_STRIP_WIDTH && (relY < half * 0.25 || relY > half * 1.75)) {
+    // near top/bottom boundary of the left strip — handled by gap button
     return
   }
   toggleLine(i + 1)
@@ -272,6 +300,18 @@ const fillTokenLines = computed(() => {
   })
 })
 
+// ── select ───────────────────────────────────────────────────────────
+const selectInputEl = ref(null)
+
+const selectAnswer = computed({
+  get: () => typeof props.answers[props.question.id] === 'string'
+    ? props.answers[props.question.id]
+    : '',
+  set: val => { props.answers[props.question.id] = val },
+})
+
+const selectOptions = computed(() => modeData.value.options ?? [])
+
 // ── fix ──────────────────────────────────────────────────────────────
 const fixAnswer = computed({
   get: () => typeof props.answers[props.question.id] === 'string'
@@ -285,6 +325,9 @@ function focusActive() {
   nextTick(() => {
     if (props.mode === 'fill') {
       const el = Array.isArray(fillInputEl.value) ? fillInputEl.value[0] : fillInputEl.value
+      el?.focus({ preventScroll: true })
+    } else if (props.mode === 'select') {
+      const el = Array.isArray(selectInputEl.value) ? selectInputEl.value[0] : selectInputEl.value
       el?.focus({ preventScroll: true })
     }
   })
@@ -468,6 +511,31 @@ onMounted(focusActive)
 
 .code-blank::placeholder {
   color: #9CA3AF;
+}
+
+/* select mode */
+.code-select {
+  background: #fff;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  color: #374151;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0 0.4rem 0 0;
+  outline: none;
+  vertical-align: baseline;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  max-width: 100%;
+}
+
+.code-select:invalid {
+  color: #9CA3AF;
+}
+
+.code-select:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
 

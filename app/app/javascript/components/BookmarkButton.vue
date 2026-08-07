@@ -23,7 +23,9 @@ const props = defineProps({
   initial:    { type: Boolean, default: false },
 })
 
-const currentUser = computed(() => usePage().props.currentUser)
+const page = usePage()
+const currentUser = computed(() => page.props.currentUser)
+
 const isBookmarked = ref(props.initial)
 
 async function toggle() {

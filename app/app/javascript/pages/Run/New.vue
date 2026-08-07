@@ -6,6 +6,19 @@
         <Link :href="`/tests/${test.slug}`" class="run-breadcrumbs__link">← {{ test.title }}</Link>
       </nav>
       <div class="run-header__right">
+        <span v-if="hasCodeChallenge" class="run-header__mode-badge-wrap">
+          <span class="run-header__mode-badge">
+            {{ CHALLENGE_MODE_LABELS[challengeMode] }}
+            <button
+              type="button"
+              class="run-header__mode-badge-icon"
+              @click.stop="modeTooltipOpen = !modeTooltipOpen"
+            >i</button>
+          </span>
+          <div v-if="modeTooltipOpen" class="run-header__mode-tooltip">
+            Режим кода: {{ CHALLENGE_MODE_HINTS[challengeMode] }}
+          </div>
+        </span>
         <div class="run-header__progress">
           {{ answeredCount }} / {{ questions.length }}
           <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
@@ -31,6 +44,7 @@
         v-model:challengeMode="challengeMode"
         :hasCodeChallenge="hasCodeChallenge"
         :locked="sessionStarted"
+        :completedChallengeModes="test.completedChallengeModes || []"
         @reset="resetChallenge"
       />
     </div>
@@ -57,18 +71,24 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import SettingsPanel from '@/components/run/SettingsPanel.vue'
 import OneByOneMode from '@/components/run/OneByOneMode.vue'
 import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
 import { useQuizSession } from '@/composables/useQuizSession.js'
+import { CHALLENGE_MODE_LABELS, CHALLENGE_MODE_HINTS } from '@/composables/challengeModes.js'
 
 const props = defineProps({ test: Object, questions: Array, bookmarkedIds: { type: Array, default: () => [] } })
 
-const settingsOpen = ref(false)
-const mode         = ref(localStorage.getItem('devquiz_mode') || 'all')
+const settingsOpen     = ref(false)
+const modeTooltipOpen  = ref(false)
+const mode             = ref(localStorage.getItem('devquiz_mode') || 'all')
+
+function closeModeTooltip() { modeTooltipOpen.value = false }
+onMounted(() => document.addEventListener('click', closeModeTooltip))
+onUnmounted(() => document.removeEventListener('click', closeModeTooltip))
 
 watch(mode, val => localStorage.setItem('devquiz_mode', val))
 
@@ -133,6 +153,62 @@ const hasCodeChallenge = computed(() =>
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.run-header__mode-badge-wrap {
+  position: relative;
+}
+
+.run-header__mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: #EEF0FF;
+  color: #4F46E5;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.run-header__mode-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #b9b6f8;
+  font-size: 0.625rem;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.run-header__mode-badge-icon:hover {
+  background: #4338CA;
+  color: #fff;
+}
+
+.run-header__mode-tooltip {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #1F2937;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .run-header__progress {

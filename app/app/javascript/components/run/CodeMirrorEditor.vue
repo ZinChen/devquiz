@@ -6,9 +6,21 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { EditorView, minimalSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
+import { keymap } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { indentLess } from '@codemirror/commands'
 import { tags } from '@lezer/highlight'
 import { loadLang } from '@/composables/useCodeMirrorLang.js'
+
+function insertTwoSpaces(view) {
+  view.dispatch(view.state.replaceSelection('  '))
+  return true
+}
+
+const tabKeymap = keymap.of([
+  { key: 'Tab', run: insertTwoSpaces },
+  { key: 'Shift-Tab', run: indentLess },
+])
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -85,6 +97,7 @@ async function createView() {
 
   const extensions = [
     minimalSetup,
+    tabKeymap,
     baseTheme,
     syntaxHighlighting(githubLight),
     EditorView.updateListener.of(update => {

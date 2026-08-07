@@ -1,8 +1,10 @@
 class TestsController < ApplicationController
+  CODE_TAG = "code"
+
   def index
     tests_list = TestMetadatum.active.order(attempts_count: :desc).to_a
     total = tests_list.size
-    tag_counts = tests_list.flat_map(&:tag_list).tally
+    tag_counts = tests_list.flat_map { |t| tags_for(t) }.tally
     visible_tags = tag_counts
       .reject { |_, count| count == total }
       .sort_by { |_, count| -count }
@@ -38,7 +40,7 @@ class TestsController < ApplicationController
       slug:                      t.slug,
       title:                     t.title,
       description:               t.description,
-      tags:                      t.tag_list,
+      tags:                      tags_for(t),
       difficulty:                t.difficulty,
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
@@ -50,5 +52,11 @@ class TestsController < ApplicationController
       has_code_challenge:        t.has_code_challenge?,
       completed_challenge_modes: completed_modes
     }
+  end
+
+  # Synthetic tag, not stored in the yaml/db: derived from has_code_challenge
+  # so it can't drift out of sync with the actual test content.
+  def tags_for(t)
+    t.has_code_challenge? ? [ *t.tag_list, CODE_TAG ] : t.tag_list
   end
 end
