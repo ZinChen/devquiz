@@ -153,15 +153,15 @@ questions:
     explanation: Учитывает только категорию A, игнорируя условие для B.
   - id: d
     text: SELECT SUM(IF(category = 'A', sales, IF(category = 'B', sales/2, 0))) FROM purchases
-    correct: true
-    explanation: Работает в MySQL, используя вложенные IF вместо CASE.
+    correct: false
+    explanation: Функции IF() в PostgreSQL нет — это синтаксис MySQL. Здесь нужен CASE.
   - id: e
     text: SELECT SUM(DECODE(category, 'A', sales, 'B', sales/2, 0)) FROM purchases
-    correct: true
-    explanation: Работает в Oracle, используя DECODE вместо CASE.
+    correct: false
+    explanation: DECODE() — функция Oracle, в PostgreSQL она не определена.
   difficulty: medium
   topics: [queries]
-  explanation: CASE позволяет реализовать условную логику внутри SUM. Несколько вариантов корректны в разных СУБД.
+  explanation: 'CASE позволяет реализовать условную логику внутри SUM. Аналоги из других СУБД — IF() в MySQL и DECODE() в Oracle — в PostgreSQL недоступны.'
   extended_explanation: |-
     ## Почему первый вариант правильный
     Это стандартный ANSI SQL:
@@ -408,11 +408,11 @@ questions:
     explanation: UPDATE не используется для изменения структуры таблицы.
   - id: e
     text: alter table public.table_1 add (user_id int, salary float, department_id int)
-    correct: true
-    explanation: Корректно в Oracle и некоторых других СУБД — ADD с несколькими колонками в скобках.
+    correct: false
+    explanation: Синтаксис Oracle. PostgreSQL не принимает список колонок в скобках после ADD.
   difficulty: medium
   topics: [schema]
-  explanation: 'Синтаксис добавления столбцов зависит от СУБД: либо несколько ADD, либо ADD (колонки через запятую).'
+  explanation: 'В PostgreSQL несколько столбцов добавляются повторением ADD через запятую: ALTER TABLE t ADD col1 int, ADD col2 float. Форма ADD (col1, col2) — синтаксис Oracle.'
   extended_explanation: |-
     ## Почему оба варианта могут быть правильными
     Разные СУБД поддерживают разный синтаксис:

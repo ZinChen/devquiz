@@ -7,8 +7,10 @@ Rails.application.configure do
   config.action_controller.perform_caching = true
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
-  # config.assume_ssl = true
-  config.force_ssl = true
+  # Behind a TLS-terminating proxy (Caddy), requests reach Rails over plain HTTP.
+  # Without assume_ssl, force_ssl would redirect them back to https and loop forever.
+  config.assume_ssl = ENV["ASSUME_SSL"] == "true"
+  config.force_ssl = ENV.fetch("FORCE_SSL", "true") == "true"
 
   config.log_tags  = [ :request_id ]
   config.logger    = ActiveSupport::TaggedLogging.logger(STDOUT)

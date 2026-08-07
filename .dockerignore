@@ -1,0 +1,59 @@
+# Build context is the repository root — this file is the one Docker applies.
+# (app/.dockerignore is NOT used: Docker only reads .dockerignore at the context root.)
+
+# Ignore git directory.
+/.git/
+/.gitignore
+
+# Ignore bundler config.
+/app/.bundle
+
+# Ignore all environment files.
+/app/.env*
+
+# Ignore all default key files.
+/app/config/master.key
+/app/config/credentials/*.key
+
+# Ignore all logfiles and tempfiles.
+/app/log/*
+/app/tmp/*
+!/app/log/.keep
+!/app/tmp/.keep
+
+# Ignore pidfiles, but keep the directory.
+/app/tmp/pids/*
+!/app/tmp/pids/.keep
+
+# Ignore storage (uploaded files in development and any SQLite databases).
+/app/storage/*
+!/app/storage/.keep
+/app/tmp/storage/*
+!/app/tmp/storage/.keep
+
+# Ignore node modules and precompiled assets (rebuilt inside the image).
+/app/node_modules/
+/app/app/assets/builds/*
+!/app/app/assets/builds/.keep
+/app/public/assets
+/app/public/vite
+/app/public/vite-dev
+/app/public/vite-test
+
+# Ignore CI service files.
+/.github
+
+# Ignore Kamal files.
+/app/config/deploy*.yml
+/app/.kamal
+
+# Ignore development files
+/.devcontainer
+/app/.devcontainer
+
+# Ignore Docker-related files
+/.dockerignore
+/Dockerfile*
+
+# Ignore local tooling
+/mise.toml

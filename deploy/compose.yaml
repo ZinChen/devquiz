@@ -1,0 +1,145 @@
+# Production + staging stack for zinchenlab.ru
+# Lives on the VDS at /opt/devquiz/compose.yaml next to a .env file (chmod 600).
+#
+# Caddy terminates TLS for both hostnames and proxies to the app containers.
+# Thruster (the image's CMD) still runs inside each container, serving public/
+# and forwarding to Puma — it just no longer handles certificates.
+#
+# Memory ceiling on a 1 vCPU / 2 GB box (limits below, plus ~300M for the OS
+# and docker daemon): caddy ~40M · postgres 256M · app 500M · app-dev 400M.
+# Expect real usage well under that; check with `docker stats` before tuning.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Paths are relative to --project-directory (/opt/devquiz), set by ./dc.
+      - ./repo/deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - app
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Consumed by the init script on first boot only.
+      DEV_DB_USER: ${DEV_DB_USER}
+      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD}
+      DEV_DB_NAME: ${DEV_DB_NAME}
+    # Defaults assume a much larger box: 128MB of shared buffers and room for
+    # 100 backends. Two Rails apps at 3 threads each need ~12 connections.
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c max_connections=20
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=512MB
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./repo/deploy/init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { memory: 256M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # Not published: reachable only on the compose network.
+
+  app:
+    image: ghcr.io/zinchen/devquiz:latest
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      RAILS_LOG_TO_STDOUT: "true"
+      # Caddy terminates TLS, so Rails must trust X-Forwarded-Proto.
+      ASSUME_SSL: "true"
+      FORCE_SSL: "true"
+      # One worker: with a single vCPU a second one adds no parallelism (the GVL
+      # and the CPU both serialise anyway) while costing ~250MB. Raise this only
+      # after `docker stats` shows CPU, not memory, as the constraint.
+      WEB_CONCURRENCY: "1"
+      RAILS_MAX_THREADS: "3"
+      MALLOC_ARENA_MAX: "2"
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # TLS_DOMAIN is deliberately unset: Caddy owns certificates now.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { memory: 500M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  app-dev:
+    image: ghcr.io/zinchen/devquiz:dev
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: postgres://${DEV_DB_USER}:${DEV_DB_PASSWORD}@db:5432/${DEV_DB_NAME}
+      # Must differ from production: a shared value would make session cookies
+      # forged on staging valid against the live site.
+      SECRET_KEY_BASE: ${DEV_SECRET_KEY_BASE}
+      RAILS_LOG_TO_STDOUT: "true"
+      RAILS_LOG_LEVEL: debug
+      ASSUME_SSL: "true"
+      FORCE_SSL: "true"
+      # One worker: staging carries no real traffic and RAM is the scarce resource.
+      WEB_CONCURRENCY: "1"
+      RAILS_MAX_THREADS: "2"
+      MALLOC_ARENA_MAX: "2"
+      GITHUB_CLIENT_ID: ${DEV_GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${DEV_GITHUB_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${DEV_GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${DEV_GOOGLE_CLIENT_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { memory: 400M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "2" }
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

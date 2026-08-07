@@ -13,11 +13,11 @@ development:
 
 test:
   <<: *default
-  host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
-  port: <%= ENV.fetch("DB_PORT") { 5432 } %>
-  username: <%= ENV["DB_USERNAME"] %>
-  password: <%= ENV["DB_PASSWORD"] %>
-  database: devquiz_test
+  # url задан явно, иначе DATABASE_URL из .env уводит тесты в dev-базу:
+  # Rails отдаёт ему приоритет над database.yml в любом окружении.
+  # TEST_DATABASE_URL выигрывает, когда задан (CI поднимает свой Postgres);
+  # локально его нет, и адрес собирается из DB_*.
+  url: <%= ENV["TEST_DATABASE_URL"].presence || "postgres://#{ENV['DB_USERNAME']}:#{ENV['DB_PASSWORD']}@#{ENV.fetch('DB_HOST') { 'localhost' }}:#{ENV.fetch('DB_PORT') { 5432 }}/devquiz_test" %>
 
 production:
   <<: *default

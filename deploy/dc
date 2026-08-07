@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Thin wrapper around docker compose for this deployment.
+#
+# The compose file is tracked in git under repo/deploy/, while .env and backups
+# live outside the clone so a `git reset --hard` can never touch them. That
+# split makes every invocation long; this script supplies the flags.
+#
+# Installed at /opt/devquiz/dc. Use it exactly like `docker compose`:
+#   ./dc ps
+#   ./dc logs -f caddy
+#   ./dc up -d
+#   ./dc exec app ./bin/rails console
+set -euo pipefail
+
+ROOT="/opt/devquiz"
+
+exec docker compose \
+  --project-name devquiz \
+  --project-directory "${ROOT}" \
+  --env-file "${ROOT}/.env" \
+  --file "${ROOT}/repo/deploy/compose.yaml" \
+  "$@"

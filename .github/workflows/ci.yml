@@ -3,11 +3,51 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
+  changes:
+    name: Detect what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'app/**'
+              - 'Dockerfile'
+              - '.dockerignore'
+              - '.github/workflows/**'
+
+  # Runs on every push: quiz content is data, and a malformed file is skipped
+  # silently by YamlSyncService rather than failing loudly.
+  validate-content:
+    name: Validate quiz YAML
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: app
+          bundler-cache: true
+
+      - name: Validate YAML test files
+        run: bundle exec rake yaml_sync:validate
+
   rubocop:
     name: Rubocop
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     defaults:
@@ -27,7 +67,8 @@ jobs:
 
   rspec:
     name: RSpec (models, services, requests)
-    needs: rubocop
+    needs: [changes, rubocop]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -41,7 +82,7 @@ jobs:
 
     env:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost/devquiz_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost/devquiz_test
 
     defaults:
       run:
@@ -75,7 +116,12 @@ jobs:
 
   e2e:
     name: E2E (system tests)
-    needs: rubocop
+    # Runs even for content-only pushes: system specs drive real quizzes through
+    # a browser, which is the only check that catches broken content end to end.
+    # always() is required because rubocop is skipped on those pushes, and a
+    # skipped dependency would otherwise skip this job too.
+    needs: [changes, rubocop, validate-content]
+    if: always() && needs.validate-content.result == 'success' && needs.rubocop.result != 'failure'
     runs-on: ubuntu-latest
 
     services:
@@ -89,7 +135,7 @@ jobs:
 
     env:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost/devquiz_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost/devquiz_test
 
     defaults:
       run:
@@ -127,12 +173,88 @@ jobs:
       - name: Run system specs
         run: bundle exec rspec spec/system
 
-  deploy:
-    name: Deploy to Render
+  build:
+    name: Build and push image
+    # Content lives inside the image, so a quiz-only change still needs a build.
+    # rspec is skipped on those pushes; require that nothing actually failed.
     needs: [rspec, e2e]
+    if: |
+      always() && github.event_name == 'push'
+      && needs.e2e.result == 'success'
+      && needs.rspec.result != 'failure'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      service: ${{ steps.meta.outputs.service }}
 
     steps:
-      - name: Trigger Render deploy
-        run: curl -fsSX POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # main -> :latest, consumed by the "app" service
+      # dev  -> :dev,    consumed by the "app-dev" service
+      # ghcr requires a lowercase image path; the owner is "ZinChen".
+      - name: Compute image metadata
+        id: meta
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "tag=latest"   >> "$GITHUB_OUTPUT"
+            echo "service=app"  >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev"          >> "$GITHUB_OUTPUT"
+            echo "service=app-dev"  >> "$GITHUB_OUTPUT"
+          fi
+          echo "repo=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.repo }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.repo }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to VDS
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Both stacks share one compose project, so only the service that changed
+      # is pulled and recreated; the other keeps running untouched.
+      #
+      # Deploy config (compose.yaml, Caddyfile) is tracked in the repo and
+      # refreshed from main only — a dev push must not reshape the production
+      # stack, it only swaps the app-dev image.
+      - name: Pull new image and restart the affected service
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VDS_HOST }}
+          username: ${{ secrets.VDS_USER }}
+          key: ${{ secrets.VDS_SSH_KEY }}
+          script: |
+            set -e
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              git -C /opt/devquiz/repo fetch --quiet origin main
+              git -C /opt/devquiz/repo reset --hard --quiet origin/main
+            fi
+            /opt/devquiz/dc pull ${{ needs.build.outputs.service }}
+            /opt/devquiz/dc up -d ${{ needs.build.outputs.service }}
+            docker image prune -f

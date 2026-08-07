@@ -235,13 +235,16 @@ questions:
         correct: false
       - id: b
         text: "Добавить колонку deleted_at, переопределить destroy, добавить default_scope где deleted_at IS NULL"
-        correct: true
+        correct: false
+        explanation: "Способ рабочий, но не единственный — вариант D полнее."
       - id: c
         text: "Через paranoia или discard gem"
         correct: false
+        explanation: "Способ рабочий, но не единственный — вариант D полнее."
       - id: d
         text: "B и C — оба верны"
         correct: true
+        explanation: "Soft delete реализуется и вручную через deleted_at с default_scope, и готовыми гемами paranoia/discard."
     explanation: "Soft delete: запись не удаляется из БД, устанавливается deleted_at timestamp. Gem paranoia/discard автоматизируют. Плюс: восстановление данных. Минус: усложняет запросы, нужен default_scope."
     difficulty: medium
     topics: [models, queries]

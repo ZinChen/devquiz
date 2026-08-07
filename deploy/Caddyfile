@@ -1,0 +1,34 @@
+# Terminates TLS for both environments and proxies to the Rails containers.
+# Certificates are obtained and renewed automatically; they live in the
+# caddy_data volume, so restarts do not re-request them.
+
+{
+	email calmiothemes@gmail.com
+}
+
+devquiz.zinchenlab.ru {
+	# Thruster inside the app container listens on 80 and proxies to Puma.
+	reverse_proxy app:80
+	encode zstd gzip
+	log {
+		output file /var/log/caddy/prod.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+	}
+}
+
+dev.devquiz.zinchenlab.ru {
+	reverse_proxy app-dev:80
+	encode zstd gzip
+
+	# Keeps the staging site out of search results.
+	header X-Robots-Tag "noindex, nofollow"
+
+	log {
+		output file /var/log/caddy/dev.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+	}
+}

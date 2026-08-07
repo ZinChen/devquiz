@@ -15,5 +15,10 @@ app/.byebug_history
 # macOS
 .DS_Store
 
+# Editor and assistant settings (personal, not shared)
+.vscode/
+.idea/
+.claude/
+
 # Mise (keep mise.toml, ignore local overrides)
 .mise.local.toml
