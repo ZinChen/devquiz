@@ -75,23 +75,18 @@ const props = defineProps({
 
 defineEmits(['update:mode', 'update:challengeMode', 'reset'])
 
-const challengeModeOptions = [
-  { value: 'highlight', icon: '🔍', label: 'Highlight', hint: 'Кликни на проблемную строку' },
-  { value: 'select',    icon: '☑️', label: 'Select',    hint: 'Выбери правильный вариант вместо ___' },
-  { value: 'fill',      icon: '✏️', label: 'Fill',      hint: 'Введи пропущенный код вместо ___' },
-  { value: 'fix',       icon: '🔧', label: 'Fix',       hint: 'Отредактируй и исправь баг' },
-]
-
-const GATED_PREREQUISITES = ['highlight', 'fill', 'select']
-
 import { computed } from 'vue'
+import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_HINTS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
-const visibleChallengeModeOptions = computed(() => {
-  const unlocked = GATED_PREREQUISITES.every(m => props.completedChallengeModes.includes(m))
-  return unlocked
-    ? challengeModeOptions
-    : challengeModeOptions.filter(o => o.value !== 'fix')
-})
+const challengeModeOptions = CHALLENGE_MODE_ORDER.map(value => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+  hint:  CHALLENGE_MODE_HINTS[value],
+}))
+
+const visibleChallengeModeOptions = computed(() =>
+  challengeModeOptions.filter(o => isChallengeModeUnlocked(o.value, props.completedChallengeModes))
+)
 
 const currentChallengeHint = computed(
   () => visibleChallengeModeOptions.value.find(o => o.value === props.challengeMode)?.hint ?? ''

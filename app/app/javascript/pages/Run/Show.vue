@@ -15,7 +15,14 @@
         <p class="result-summary__time">Время: {{ formatTime(attempt.timeSpent) }}</p>
 
         <div class="result-summary__actions">
-          <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary">
+          <Link
+            v-if="suggestedNextMode"
+            :href="`/tests/${test.slug}/run/new?mode=${suggestedNextMode}`"
+            class="btn btn-primary"
+          >
+            Пройти в режиме {{ CHALLENGE_MODE_LABELS[suggestedNextMode] }}
+          </Link>
+          <Link :href="`/tests/${test.slug}/run/new`" :class="suggestedNextMode ? 'btn btn-ghost' : 'btn btn-primary'">
             Пройти снова
           </Link>
           <Link href="/" class="btn btn-ghost">Все тесты</Link>
@@ -183,6 +190,7 @@ import { computed, reactive, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
+import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 
 const props = defineProps({
   test:           Object,
@@ -239,8 +247,16 @@ const scoreColor = computed(() => {
   return '#EF4444'
 })
 
-const CHALLENGE_MODE_LABELS = { highlight: 'Highlight', select: 'Select', fill: 'Fill', fix: 'Fix' }
 const challengeModeLabel = computed(() => CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null)
+
+const PASS_THRESHOLD = 70
+
+const suggestedNextMode = computed(() => {
+  if (!props.attempt.challengeMode) return null
+  if (props.attempt.score < PASS_THRESHOLD) return null
+  const next = nextChallengeMode(props.test.completedChallengeModes || [])
+  return next && next !== props.attempt.challengeMode ? next : null
+})
 
 function formatTime(seconds) {
   if (!seconds) return '—'

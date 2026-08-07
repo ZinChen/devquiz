@@ -1,5 +1,6 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
 
 export function useQuizSession(test, questionsSource) {
   const STORAGE_KEY = `devquiz_session_${test.slug}`
@@ -22,10 +23,15 @@ export function useQuizSession(test, questionsSource) {
 
   const savedSession = resolveSavedSession()
 
+  function resolveRequestedMode() {
+    const requested = new URLSearchParams(window.location.search).get('mode')
+    return CHALLENGE_MODE_ORDER.includes(requested) ? requested : null
+  }
+
   const questions      = ref(resolveQuestions())
   const answers        = ref({})
   const usedHints      = ref(new Set())
-  const challengeMode  = ref(savedSession?.challengeMode || localStorage.getItem('devquiz_challenge_mode') || DEFAULT_CHALLENGE_MODE)
+  const challengeMode  = ref(savedSession?.challengeMode || resolveRequestedMode() || DEFAULT_CHALLENGE_MODE)
   const startedAt      = ref(new Date().toISOString())
   const elapsed        = ref(0)
   const savedIndex     = ref(resolveSavedIndex())
@@ -57,7 +63,6 @@ export function useQuizSession(test, questionsSource) {
   }
 
   watch(challengeMode, val => {
-    localStorage.setItem('devquiz_challenge_mode', val)
     questions.value.forEach(q => {
       if (q.type === 'code_challenge') answers.value[q.id] = initCodeAnswer(q)
     })

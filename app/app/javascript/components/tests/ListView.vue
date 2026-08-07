@@ -19,7 +19,7 @@
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag) }"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--code': tag === 'code' }"
           @click.prevent.stop="$emit('toggle-tag', tag)"
         >{{ tag }}</button>
       </div>
@@ -56,17 +56,18 @@ import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
+import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
 const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
 defineEmits(['clear-filters', 'toggle-tag'])
 
 const currentUser = computed(() => usePage().props.currentUser)
 
-const BASE_CHALLENGE_MODES = ['highlight', 'select', 'fill']
-const MODE_LABELS = { highlight: 'Highlight', select: 'Select', fill: 'Fill', fix: 'Fix' }
+const BASE_CHALLENGE_MODES = CHALLENGE_MODE_ORDER.filter(m => m !== 'fix')
+const MODE_LABELS = CHALLENGE_MODE_LABELS
 
 function allBaseModesDone(test) {
-  return BASE_CHALLENGE_MODES.every(mode => test.completedChallengeModes?.includes(mode))
+  return isChallengeModeUnlocked('fix', test.completedChallengeModes || [])
 }
 
 const duplicateTitles = computed(() => {
