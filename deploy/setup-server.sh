@@ -31,6 +31,13 @@ if ! id -u "${DEPLOY_USER}" >/dev/null 2>&1; then
 fi
 usermod -aG sudo "${DEPLOY_USER}"
 
+# The account has no password (login is key-only), so `sudo` would otherwise
+# demand one that can never be entered. Key possession is already the sole
+# factor for reaching this account, so a second factor here adds no security.
+echo "${DEPLOY_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/90-${DEPLOY_USER}"
+chmod 440 "/etc/sudoers.d/90-${DEPLOY_USER}"
+visudo -cf "/etc/sudoers.d/90-${DEPLOY_USER}" >/dev/null
+
 # Carry root's authorized_keys over so you are not locked out.
 if [[ -f /root/.ssh/authorized_keys ]]; then
   install -d -m 700 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" "/home/${DEPLOY_USER}/.ssh"

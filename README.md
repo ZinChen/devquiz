@@ -2,7 +2,7 @@
 
 Платформа интерактивного тестирования для backend-разработчиков.
 
-**[devquiz-1kom.onrender.com](https://devquiz-1kom.onrender.com/)**
+**[devquiz.zinchenlab.ru](https://devquiz.zinchenlab.ru/)**
 
 ## Локальный запуск
 
@@ -108,4 +108,8 @@ git push origin v0.2.0
 gh release create v0.2.0 --generate-notes
 ```
 
-После этого GitHub Actions автоматически деплоит на Render.
+Деплой идёт автоматически при пуше в `main`: GitHub Actions собирает образ,
+кладёт его в ghcr и обновляет контейнер на VDS. Ветка `dev` выкатывается на
+стенд [dev.devquiz.zinchenlab.ru](https://dev.devquiz.zinchenlab.ru/).
+
+Настройка сервера и эксплуатация — [deploy/README.md](deploy/README.md).
