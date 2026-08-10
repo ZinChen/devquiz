@@ -236,6 +236,8 @@ function formatMarkdown(text) {
     .replace(/^## (.+)$/gm, '<h4 class="result-md-h4">$1</h4>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="result-md-list">$&</ul>')
+    .replace(/\s*(Источники:|Источник:)\s*/g, '<br><br>$1<br>')
+    .replace(/,\s*(?=https?:\/\/)/g, '<br>')
     .replace(/\n\n/g, '</p><p>')
     .replace(/^(?!<[hul])(.+)$/gm, (m) => m.startsWith('<') ? m : m)
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="result-link">$1</a>')

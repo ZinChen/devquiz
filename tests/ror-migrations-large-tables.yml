@@ -13,7 +13,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, indexes, locking]
-    text: "Индекс на большой таблице без простоя требует два условия."
+    text: "Миграция добавляет индексы на большую таблицу без простоя. На уровне самой миграции чего-то не хватает."
     modes:
       highlight:
         code: |
@@ -134,7 +134,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [locking, schema]
-    text: "В миграции необходимо добавить защиту от долгой операции. Нужно убедиться, что не будет бесконечного ожидания освобождения ресурсов. Какой именно момент нужно ограничить здесь?"
+    text: "Миграция изменяет схему и должна быть защищена от долгого простоя. Всё ли здесь ограничено так, как надо?"
     modes:
       highlight:
         code: |
@@ -150,7 +150,7 @@ questions:
             end
           end
         correct_lines: [3]
-        hint: "Два разных timeout-параметра в PostgreSQL — они про разные фазы выполнения запроса."
+        hint: "Ограничивать нужно не время выполнения запроса, а время ожидания блокировки перед ним — в PostgreSQL это разные timeout-параметры."
 
       fill:
         code: |
@@ -219,7 +219,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление нового столбца на 50 млн строк может надолго заблокировать таблицу. Нужно исключить проблемный параметр."
+    text: "Добавляется столбец на таблицу в 50 млн строк. Есть сомнения по поводу набора параметров."
     modes:
       highlight:
         code: |
@@ -289,7 +289,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, performance]
-    text: "Бэкфилл 10 млн строк должен идти батчами без загрузки моделей. Какой метод здесь нужен?"
+    text: "Реализован бэкфилл 10 млн строк батчами. Подходящий ли метод тут используется?"
     modes:
       highlight:
         code: |
@@ -364,7 +364,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "Добавление FK на большую таблицу может надолго заблокировать запись. Нужно исключить параметр, который делает миграцию опасной."
+    text: "Добавляется внешний ключ на большую таблицу. Один из параметров вызова выглядит подозрительно."
     modes:
       highlight:
         code: |
@@ -453,7 +453,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [schema, locking]
-    text: "Второй шаг добавления FK — валидация уже созданного ограничения. Какой метод нужен?"
+    text: "Второй шаг добавления внешнего ключа: валидация ранее созданного ограничения. Правильный ли метод тут вызывается?"
     modes:
       highlight:
         code: |
@@ -519,7 +519,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, migrations]
-    text: "Нужно поменять DEFAULT у столбца. Что лучше использовать?"
+    text: "Меняется значение по умолчанию у столбца. Подходящий ли способ тут выбран?"
     modes:
       highlight:
         code: |
@@ -597,7 +597,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [indexes, locking]
-    text: "Удаление индекса на большой таблице тоже может мешать продакшену. Чего не хватает?"
+    text: "Удаляется индекс с большой таблицы на проде. Похоже, вызов неполный."
     modes:
       highlight:
         code: |
@@ -686,7 +686,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, schema]
-    text: "Миграция удаляет старый текстовый столбец, но откат должен восстановить схему. Чего здесь не хватает?"
+    text: "Удаляется старый столбец через `change`. Достаточно ли тут информации для отката?"
     modes:
       highlight:
         code: |
@@ -751,7 +751,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [schema, locking]
-    text: "CHECK constraint на большой таблице имеет опасный для производительности параметр. Какой?"
+    text: "Добавляется CHECK constraint на большую таблицу. Есть вопрос к одному из параметров."
     modes:
       highlight:
         code: |
@@ -825,7 +825,7 @@ questions:
     default_mode: highlight
     difficulty: medium
     topics: [migrations, performance]
-    text: "В бэкфилле нужно вывести прогресс в стандартном формате миграций. Что здесь нужно использовать?"
+    text: "Бэкфилл выводит прогресс по ходу работы. Правильные ли методы тут используются?"
     modes:
       highlight:
         code: |
@@ -911,7 +911,7 @@ questions:
     default_mode: highlight
     difficulty: hard
     topics: [migrations, locking, indexes]
-    text: "Финальная проверка: прошлый запуск этой миграции уже падал по statement_timeout на середине построения индекса. Что нужно сделать перед повторным запуском?"
+    text: "Прошлый запуск этой миграции упал на середине построения индекса. Можно ли её просто перезапустить в таком виде?"
     modes:
       highlight:
         code: |
@@ -954,7 +954,7 @@ questions:
             end
           end
         options:
-          - 'remove_index :posts, :published_at, if_exists: true'
+          - 'remove_index :posts, :published_at'
           - 'add_index :posts, :published_at, algorithm: :concurrently, if_not_exists: true'
           - 'remove_index :posts, :published_at, algorithm: :concurrently'
           - 'remove_index :posts, :published_at, algorithm: :concurrently, if_exists: true'
@@ -979,4 +979,4 @@ questions:
             end
           end
 
-    explanation: "Если `CREATE INDEX CONCURRENTLY` прерывается (например, по `statement_timeout` или обрыву соединения), PostgreSQL не откатывает операцию целиком: в базе остаётся индекс в статусе `INVALID` — он не используется планировщиком, но занимает место и мешает создать индекс с тем же именем повторно. Поэтому перед повторной попыткой такой индекс нужно сначала удалить через `remove_index ..., if_exists: true`, и только потом снова вызывать `add_index` с `algorithm: :concurrently`. Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_index"
+    explanation: "Если `CREATE INDEX CONCURRENTLY` прерывается (например, по `statement_timeout` или обрыву соединения), PostgreSQL не откатывает операцию целиком: в базе остаётся индекс в статусе `INVALID` — он не используется планировщиком, но занимает место и мешает создать индекс с тем же именем повторно. Поэтому перед повторной попыткой такой индекс нужно сначала удалить, и только потом снова вызывать `add_index` с `algorithm: :concurrently`. Ключевая часть здесь — `if_exists: true`: миграция должна отрабатывать и когда недостроенного индекса нет (например, при первом запуске или если сбой случился раньше его создания), иначе `remove_index` сам упадёт. `algorithm: :concurrently` у `remove_index` — это про `DROP INDEX CONCURRENTLY`, который не берёт `ACCESS EXCLUSIVE` лок; для INVALID-индекса это не критично, но остаётся хорошей привычкой на больших таблицах в проде. Источники: https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY, https://www.postgresql.org/docs/current/sql-dropindex.html, https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_index"
