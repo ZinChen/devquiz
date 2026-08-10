@@ -6,7 +6,7 @@
         <Link :href="`/tests/${test.slug}`" class="run-breadcrumbs__link">← {{ test.title }}</Link>
       </nav>
       <div class="run-header__right">
-        <span v-if="hasCodeChallenge" class="run-header__mode-badge-wrap">
+        <span v-if="hasCodeChallenge" class="run-header__mode-badge-wrap" :class="{ 'run-header__mode-badge-wrap--open': modeTooltipOpen }">
           <span class="run-header__mode-badge">
             {{ CHALLENGE_MODE_LABELS[challengeMode] }}
             <button
@@ -15,7 +15,7 @@
               @click.stop="modeTooltipOpen = !modeTooltipOpen"
             >i</button>
           </span>
-          <div v-if="modeTooltipOpen" class="run-header__mode-tooltip">
+          <div class="run-header__mode-tooltip">
             Режим кода: {{ CHALLENGE_MODE_HINTS[challengeMode] }}
           </div>
         </span>
@@ -209,6 +209,24 @@ const hasCodeChallenge = computed(() =>
   font-weight: 400;
   line-height: 1.4;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .run-header__mode-badge-wrap:has(.run-header__mode-badge-icon:hover) .run-header__mode-tooltip,
+  .run-header__mode-badge-wrap:has(.run-header__mode-badge-icon:focus-visible) .run-header__mode-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@media (hover: none) {
+  .run-header__mode-badge-wrap--open .run-header__mode-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 .run-header__progress {
