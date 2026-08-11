@@ -8,6 +8,14 @@ RSpec.describe "Navigation", type: :system, js: true do
     @test_meta = create(:test_metadatum, title: "Ruby основы", slug: "ror-basics")
   end
 
+  # Гость без выбранных тем видит поверх главной экран выбора — он перехватывает
+  # клики. Здесь проверяется навигация, поэтому закрываем его.
+  def dismiss_tag_onboarding
+    return unless page.has_css?(".onboarding", wait: 2)
+    find(".onboarding__close").click
+    expect(page).to have_no_css(".onboarding")
+  end
+
   describe "главная страница" do
     it "загружается и показывает список тестов" do
       visit root_path
@@ -17,6 +25,7 @@ RSpec.describe "Navigation", type: :system, js: true do
 
     it "переход на страницу теста по клику" do
       visit root_path
+      dismiss_tag_onboarding
       find("a", text: "Ruby основы").click
       expect(page).to have_current_path(%r{/tests/ror-basics})
       expect(page).to have_text("Ruby основы")

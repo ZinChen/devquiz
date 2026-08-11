@@ -1,7 +1,7 @@
 slug: ror-migrations-large-tables
 title: "Rails: Миграции"
 description: "Безопасные миграции в продакшне: нулевое время простоя, DDL-локи, CONCURRENTLY, бэкфилл и PostgreSQL-специфика."
-tags: [rails, migrations, postgresql, locking, zero-downtime, advanced, claude-gen]
+tags: [rails, migrations, postgresql, locking, zero-downtime, claude-gen]
 difficulty: advanced
 estimated_time: 25
 default_challenge_mode: highlight

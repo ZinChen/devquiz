@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -68,6 +68,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
     t.datetime "completed_at"
     t.integer "correct_count", default: 0
     t.datetime "created_at", null: false
+    t.string "guest_token"
     t.decimal "score", precision: 5, scale: 2, default: "0.0"
     t.datetime "started_at"
     t.string "test_slug", null: false
@@ -76,6 +77,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
     t.datetime "updated_at", null: false
     t.integer "user_id"
     t.index ["completed_at"], name: "index_test_attempts_on_completed_at"
+    t.index ["guest_token"], name: "index_test_attempts_on_guest_token", where: "(user_id IS NULL)"
     t.index ["test_slug"], name: "index_test_attempts_on_test_slug"
     t.index ["user_id"], name: "index_test_attempts_on_user_id"
   end
@@ -110,6 +112,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_07_100000) do
     t.datetime "created_at", null: false
     t.string "email"
     t.string "name"
+    t.jsonb "preferred_tags"
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
   end

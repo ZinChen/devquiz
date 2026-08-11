@@ -38,22 +38,39 @@
 
     <div class="tag-filters-row">
       <div class="tag-filters">
+        <TagTip v-for="tag in visibleTags" :key="tag" :text="tagDescriptions[tag] || ''">
+          <button
+            @click="onTagClick($event, tag)"
+            @mousedown="lp.start($event, tag)"
+            @mouseup="lp.cancel()"
+            @mouseleave="lp.cancel()"
+            @touchstart.passive="lp.start($event, tag)"
+            @touchend="lp.cancel()"
+            @touchcancel="lp.cancel()"
+            class="badge badge-sm transition-all tag-filter-btn"
+            :class="[
+              excludedTags.includes(tag) ? 'tag-filter--excluded' : selectedTags.includes(tag) ? 'tag-filter--active' : 'tag-filter',
+              tagCount(tag) === 0 && !excludedTags.includes(tag) ? 'tag-filter--disabled' : 'cursor-pointer'
+            ]"
+          >
+            {{ tag }} <span v-if="!excludedTags.includes(tag)" class="tag-count">{{ tagCount(tag) }}</span>
+          </button>
+        </TagTip>
+
         <button
-          v-for="tag in allTags" :key="tag"
-          @click="onTagClick($event, tag)"
-          @mousedown="lp.start($event, tag)"
-          @mouseup="lp.cancel()"
-          @mouseleave="lp.cancel()"
-          @touchstart.passive="lp.start($event, tag)"
-          @touchend="lp.cancel()"
-          @touchcancel="lp.cancel()"
-          class="badge badge-sm transition-all tag-filter-btn"
-          :class="[
-            excludedTags.includes(tag) ? 'tag-filter--excluded' : selectedTags.includes(tag) ? 'tag-filter--active' : 'tag-filter',
-            tagCount(tag) === 0 && !excludedTags.includes(tag) ? 'tag-filter--disabled' : 'cursor-pointer'
-          ]"
+          v-if="hasHiddenTags || showOtherTags"
+          @click="toggleOtherTags"
+          class="badge badge-sm tag-filter tag-filter--other cursor-pointer"
         >
-          {{ tag }} <span v-if="!excludedTags.includes(tag)" class="tag-count">{{ tagCount(tag) }}</span>
+          {{ showOtherTags ? 'Скрыть другие теги' : 'Другие теги' }}
+        </button>
+
+        <button
+          @click="editingTags = true"
+          class="badge badge-sm tag-filter tag-filter--edit cursor-pointer"
+          title="Выбрать интересные темы"
+        >
+          Изменить
         </button>
       </div>
 
@@ -69,6 +86,23 @@
     </div>
 
     <component :is="activeViewComponent" :tests="filteredTests" :selected-tags="selectedTags" :excluded-tags="excludedTags" @clear-filters="clearFilters" @toggle-tag="toggleTag" @exclude-tag="toggleExcludeTag" />
+
+    <TagPickerDialog
+      v-if="showTagOnboarding"
+      :categories="tagCategories"
+      :descriptions="tagDescriptions"
+      @done="onOnboardingDone"
+    />
+
+    <TagPickerDialog
+      v-if="editingTags"
+      editing
+      :categories="tagCategories"
+      :descriptions="tagDescriptions"
+      :initial-tags="localPreferred || []"
+      @done="onPreferencesEdited"
+      @close="editingTags = false"
+    />
   </AppLayout>
 </template>
 
@@ -89,14 +123,42 @@ function useLongPress(onLong, delay = 500) {
 import AppLayout from '@/components/AppLayout.vue'
 import GridView from '@/components/tests/GridView.vue'
 import ListView from '@/components/tests/ListView.vue'
+import TagPickerDialog from '@/components/tests/TagPickerDialog.vue'
+import TagTip from '@/components/TagTip.vue'
 import { useTestFilters } from '@/composables/useTestFilters'
 
 const props = defineProps({
-  tests:   Array,
-  allTags: Array,
+  tests:          Array,
+  allTags:        Array,
+  preferredTags:   { type: Array,  default: null },
+  tagCategories:   { type: Array,  default: () => [] },
+  tagDescriptions: { type: Object, default: () => ({}) },
+  showTagOnboarding: { type: Boolean, default: false },
 })
 
-const { searchQuery, selectedTags, excludedTags, filterDifficulty, tagCountCache, clearFilters, toggleTag, toggleExcludeTag, toggleDifficulty } = useTestFilters()
+const {
+  searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags,
+  clearFilters, seedFromPreferences, applyPreferences,
+  toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags
+} = useTestFilters()
+
+seedFromPreferences(props.preferredTags)
+
+// Выбор из онбординга применяется сразу, не дожидаясь перезагрузки пропсов:
+// оверлей растворяется над уже готовой главной.
+const localPreferred = ref(props.preferredTags)
+
+function onOnboardingDone(tags) {
+  localPreferred.value = tags
+  applyPreferences(tags)
+}
+
+const editingTags = ref(false)
+
+function onPreferencesEdited(tags) {
+  editingTags.value = false
+  onOnboardingDone(tags)
+}
 
 const lp = useLongPress(tag => toggleExcludeTag(tag))
 
@@ -161,21 +223,46 @@ const baseFilteredTests = computed(() => {
   return result
 })
 
+// Выбор тегов работает по ИЛИ: теги — это темы, которые пользователь хочет
+// видеть, а не последовательное сужение выдачи. Исключения остаются жёсткими:
+// исключённый тег убирает тест независимо от остальных выбранных.
 const filteredTests = computed(() => {
   let result = baseFilteredTests.value
   if (selectedTags.value.length > 0)
-    result = result.filter(t => selectedTags.value.every(tag => t.tags?.includes(tag)))
+    result = result.filter(t => selectedTags.value.some(tag => t.tags?.includes(tag)))
   if (excludedTags.value.length > 0)
     result = result.filter(t => excludedTags.value.every(tag => !t.tags?.includes(tag)))
   return result
 })
 
+// Подтеги уже лежат в предпочтениях: выбор категории добавляет их целиком,
+// а снятые вручную оттуда исключены. Дорисовывать потомков из таксономии
+// нельзя — точечно снятый тег вернулся бы в список.
+const preferredWithChildren = computed(() => {
+  const prefs = localPreferred.value
+  if (!Array.isArray(prefs) || prefs.length === 0) return null
+  return new Set(prefs)
+})
+
+// Список тегов сужается до предпочтений, пока не нажаты "Другие теги".
+// Выбранное вручную показываем всегда, иначе тег нельзя было бы снять.
+const visibleTags = computed(() => {
+  const allowed = preferredWithChildren.value
+  if (!allowed || showOtherTags.value) return props.allTags
+
+  return props.allTags.filter(tag =>
+    allowed.has(tag) || selectedTags.value.includes(tag) || excludedTags.value.includes(tag)
+  )
+})
+
+const hasHiddenTags = computed(() =>
+  preferredWithChildren.value !== null && visibleTags.value.length < props.allTags.length
+)
+
+// При ИЛИ-логике счётчик показывает, сколько тестов добавится с этим тегом,
+// поэтому он не зависит от уже выбранного и кэшировать его не нужно.
 function tagCount(tag) {
-  if (selectedTags.value.includes(tag)) {
-    return tagCountCache.value[tag] ?? 0
-  }
-  const combined = [...selectedTags.value, tag]
-  return baseFilteredTests.value.filter(t => combined.every(s => t.tags?.includes(s))).length
+  return baseFilteredTests.value.filter(t => t.tags?.includes(tag)).length
 }
 </script>
 

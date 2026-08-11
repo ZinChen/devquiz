@@ -14,7 +14,12 @@ class TestsController < ApplicationController
 
     render inertia: "Tests/Index", props: {
       tests:    tests_list.map { |t| test_props(t, completed_modes_by_slug[t.slug] || []) },
-      all_tags: visible_tags
+      all_tags: visible_tags,
+      # nil (а не []) означает, что экран выбора ещё не показывали.
+      preferred_tags:      preferred_tags,
+      tag_categories:      TagTaxonomy.categories,
+      tag_descriptions:    TagTaxonomy.descriptions,
+      show_tag_onboarding: show_tag_onboarding?
     }
   end
 
@@ -24,6 +29,13 @@ class TestsController < ApplicationController
   end
 
   private
+
+  # Экран выбора тем показывается всем, кто ещё не выбирал, включая гостей:
+  # выбор гостя хранится в куке и переносится в профиль при первом входе.
+  # Закрыть его можно крестиком, Esc или кликом по фону.
+  def show_tag_onboarding?
+    preferred_tags.nil?
+  end
 
   def user_completed_modes(slugs)
     return {} unless current_user
