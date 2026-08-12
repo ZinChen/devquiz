@@ -13,6 +13,9 @@ Rails.application.routes.draw do
     resources :attempts, only: [ :index ], controller: "test_attempts"
   end
 
+  get    "/settings/tags",    to: "preferences#edit",   as: :settings_tags
+  patch  "/preferences/tags", to: "preferences#update", as: :preferences_tags
+
   post   "/bookmarks",     to: "bookmarks#create"
   delete "/bookmarks",     to: "bookmarks#destroy"
 

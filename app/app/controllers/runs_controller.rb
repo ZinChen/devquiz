@@ -22,6 +22,7 @@ class RunsController < ApplicationController
 
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
+      guest_token:     current_user ? nil : guest_token!,
       test_slug:       @meta.slug,
       total_questions: @meta.questions_count,
       started_at:      Time.parse(params[:started_at]),

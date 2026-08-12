@@ -110,6 +110,35 @@ body {
   border: none;
 }
 
+/* После --active, иначе выбранный тег не темнел бы при наведении. */
+.tag-filter--active:hover {
+  background: #4338CA;
+}
+
+/* Раскрывает теги за пределами выбранных предпочтений. */
+.tag-filter--other {
+  background: transparent;
+  color: #4F63F5;
+  border: 1px dashed #C7CDF9;
+}
+
+.tag-filter--other:hover {
+  background: #EEF0FE;
+}
+
+/* Открывает диалог выбора тем. */
+.tag-filter--edit {
+  background: transparent;
+  color: #6B7280;
+  border: 1px solid #D1D5DB;
+}
+
+.tag-filter--edit:hover {
+  color: #4F63F5;
+  border-color: #C7CDF9;
+  background: #EEF0FE;
+}
+
 .card-bordered {
   border: 1px solid #F3F4F6;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
