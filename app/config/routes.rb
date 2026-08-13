@@ -13,6 +13,10 @@ Rails.application.routes.draw do
     resources :attempts, only: [ :index ], controller: "test_attempts"
   end
 
+  # Разовое прохождение теста из перетащенного файла: без записи в БД.
+  post   "/preview",       to: "previews#create", as: :preview
+  post   "/preview/grade", to: "previews#grade",  as: :preview_grade
+
   get    "/settings/tags",    to: "preferences#edit",   as: :settings_tags
   patch  "/preferences/tags", to: "preferences#update", as: :preferences_tags
 

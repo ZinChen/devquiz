@@ -1,6 +1,17 @@
 <template>
   <AppLayout>
     <div class="result-wrap">
+      <div v-if="preview" class="result-preview-note">
+        <span class="result-preview-note__icon" aria-hidden="true">i</span>
+        <div>
+          <p class="result-preview-note__title">Тест из файла — результат нигде не сохранён</p>
+          <p class="result-preview-note__text">
+            Эта попытка не попала ни в вашу историю, ни в статистику теста.
+            Чтобы результат не потерялся, скачайте отчёт.
+          </p>
+        </div>
+      </div>
+
       <div class="result-summary">
         <p class="result-summary__label">
           Тест завершён: {{ test.title }}
@@ -14,7 +25,16 @@
         </p>
         <p class="result-summary__time">Время: {{ formatTime(attempt.timeSpent) }}</p>
 
-        <div class="result-summary__actions">
+        <div v-if="preview" class="result-summary__actions">
+          <button type="button" class="btn btn-primary" @click="downloadReport">
+            Сохранить результат
+          </button>
+          <button type="button" class="btn btn-ghost" @click="$emit('retry')">
+            Пройти снова
+          </button>
+          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+        </div>
+        <div v-else class="result-summary__actions">
           <Link
             v-if="suggestedNextMode"
             :href="`/tests/${test.slug}/run/new?mode=${suggestedNextMode}`"
@@ -191,12 +211,30 @@ import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
+import { buildReport, reportFilename } from '@/composables/quizReport.js'
 
 const props = defineProps({
   test:           Object,
   attempt:        Object,
   answersDetail:  Array,
+  // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
+  // вместо ссылок на /tests/:slug показываем скачивание отчёта.
+  preview:        { type: Boolean, default: false },
 })
+
+defineEmits(['retry'])
+
+function downloadReport() {
+  const blob = new Blob([buildReport(props)], { type: 'text/markdown;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = reportFilename(props.test.title)
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 const { ready, init, tokenize } = useShiki()
 onMounted(() => init())
@@ -333,6 +371,48 @@ function optionLetterStyle(item, optId) {
 .result-wrap {
   max-width: 42rem;
   margin: 0 auto;
+}
+
+.result-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #FDE68A;
+  border-radius: var(--rounded-box, 0.75rem);
+  background: #FFFBEB;
+}
+
+.result-preview-note__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+  border-radius: 50%;
+  background: #F59E0B;
+  color: #fff;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+}
+
+.result-preview-note__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #92400E;
+  margin-bottom: 0.125rem;
+}
+
+.result-preview-note__text {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #B45309;
 }
 
 .result-summary {

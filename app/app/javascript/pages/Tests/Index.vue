@@ -18,10 +18,14 @@
       </div>
     </template>
 
+    <TestDropZone>
     <div class="page-header">
       <div class="page-header__left">
         <h1 class="page-header__title">Тесты для разработчиков</h1>
-        <p class="page-header__subtitle">Ruby on Rails, PostgreSQL и не только</p>
+        <p class="page-header__subtitle">
+          Ruby on Rails, PostgreSQL и не только
+          <span class="page-header__drop-hint">— или перетащите сюда свой .yml, чтобы пройти его разово</span>
+        </p>
       </div>
       <div class="page-header__views hidden">
         <button
@@ -86,6 +90,7 @@
     </div>
 
     <component :is="activeViewComponent" :tests="filteredTests" :selected-tags="selectedTags" :excluded-tags="excludedTags" @clear-filters="clearFilters" @toggle-tag="toggleTag" @exclude-tag="toggleExcludeTag" />
+    </TestDropZone>
 
     <TagPickerDialog
       v-if="showTagOnboarding"
@@ -124,6 +129,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import GridView from '@/components/tests/GridView.vue'
 import ListView from '@/components/tests/ListView.vue'
 import TagPickerDialog from '@/components/tests/TagPickerDialog.vue'
+import TestDropZone from '@/components/tests/TestDropZone.vue'
 import TagTip from '@/components/TagTip.vue'
 import { useTestFilters } from '@/composables/useTestFilters'
 
@@ -287,6 +293,16 @@ function tagCount(tag) {
 
 .page-header__subtitle {
   color: #6B7280;
+}
+
+.page-header__drop-hint {
+  color: #9CA3AF;
+}
+
+@media (max-width: 640px) {
+  .page-header__drop-hint {
+    display: none;
+  }
 }
 
 .page-header__views {
