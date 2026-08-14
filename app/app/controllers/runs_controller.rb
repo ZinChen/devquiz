@@ -3,6 +3,17 @@ class RunsController < ApplicationController
 
   def new
     questions = questions_with_db_ids
+    weak_only = params[:only] == "weak"
+
+    # Работа над ошибками: тот же тест, но только из слабых вопросов. Если
+    # прорабатывать уже нечего, молча ведём обычное прохождение целиком.
+    if weak_only
+      weak_ids  = weak_questions(test_slug: @meta.slug).question_ids.to_set
+      filtered  = questions.select { |q| weak_ids.include?(q["id"].to_s) }
+      questions = filtered if filtered.any?
+      weak_only = filtered.any?
+    end
+
     bookmarked_ids = current_user ? current_user.bookmarks
       .joins(:question)
       .where(questions: { test_slug: @meta.slug })
@@ -11,7 +22,8 @@ class RunsController < ApplicationController
     render inertia: "Run/New", props: {
       test:          test_props(@meta),
       questions:     questions,
-      bookmarked_ids: bookmarked_ids
+      bookmarked_ids: bookmarked_ids,
+      weak_only:     weak_only
     }
   end
 
@@ -20,11 +32,17 @@ class RunsController < ApplicationController
     used_hint_ids   = Array(params[:used_hints]).map(&:to_s).to_set
     challenge_mode  = params[:challenge_mode].presence || "fill"
 
+    # В работе над ошибками проходится подмножество вопросов, поэтому знаменатель
+    # берётся по фактически заданным, а не по размеру теста — иначе 100% верных
+    # ответов дали бы score вроде 25%.
+    weak_only       = params[:weak_only].to_s == "true"
+    total_questions = weak_only ? answers_data.size : @meta.questions_count
+
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
       guest_token:     current_user ? nil : guest_token!,
       test_slug:       @meta.slug,
-      total_questions: @meta.questions_count,
+      total_questions: total_questions,
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
       time_spent:      params[:time_spent].to_i,
@@ -51,10 +69,12 @@ class RunsController < ApplicationController
       )
     end
 
-    score = @meta.questions_count > 0 ? (correct_count.to_f / @meta.questions_count * 100).round(2) : 0
+    score = total_questions > 0 ? (correct_count.to_f / total_questions * 100).round(2) : 0
 
     attempt.update!(correct_count: correct_count, score: score)
-    update_test_stats(@meta, score, attempt)
+    # Разбор ошибок — это тренировка по неполному тесту, в общую статистику
+    # и в рекорд теста такие попытки не идут.
+    update_test_stats(@meta, score, attempt) unless weak_only
 
     redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
@@ -66,7 +86,8 @@ class RunsController < ApplicationController
     render inertia: "Run/Show", props: {
       test:           test_props(@meta),
       attempt:        attempt_props(attempt),
-      answers_detail: answers_detail(attempt, questions_map)
+      answers_detail: answers_detail(attempt, questions_map),
+      weak_topics:    weak_topics(attempt, questions_map)
     }
   end
 
@@ -144,6 +165,71 @@ class RunsController < ApplicationController
 
       QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode)
     end
+  end
+
+  RECOMMENDED_TESTS_PER_TAG = 3
+  WEAK_QUESTIONS_LIMIT      = 5
+
+  # Слабые темы считаются по неверно отвеченным вопросам. Часть вопросов
+  # размечена полем topics (mvc, indexes, locking…) — оно точнее и идёт
+  # первым; для неразмеченных остаются теги теста целиком.
+  def weak_topics(attempt, questions_map)
+    wrong_ids = attempt.test_attempt_answers.reject(&:correct).map(&:question_id)
+    return blank_weak_topics if wrong_ids.empty?
+
+    # topics вопроса (mvc, indexes) точнее тегов теста (ruby, rails), но
+    # размечены не везде и в tags тестов не встречаются — поэтому показываем
+    # их, а тесты ищем по обоим наборам сразу.
+    question_topics = wrong_ids.flat_map { |id| Array(questions_map[id]&.fetch("topics", nil)) }.map(&:to_s).uniq
+    shown_tags      = question_topics.presence || @meta.tag_list
+    search_tags     = (question_topics + @meta.tag_list).uniq
+    return blank_weak_topics if search_tags.empty?
+
+    {
+      tags:                  TopicDictionary.decorate(shown_tags).map { |t| t.to_h },
+      recommended_tests:     recommended_tests(search_tags),
+      recent_mistakes:       recent_mistakes(questions_map),
+      has_weak_in_this_test: weak_questions(test_slug: @meta.slug).any?
+    }
+  end
+
+  def blank_weak_topics
+    { tags: [], recommended_tests: [], recent_mistakes: [], has_weak_in_this_test: false }
+  end
+
+  def recommended_tests(search_tags)
+    tag_conditions = search_tags.map { "tags LIKE ?" }.join(" OR ")
+    tag_values     = search_tags.map { |t| "%#{t}%" }
+
+    TestMetadatum.active
+      .where.not(slug: @meta.slug)
+      .where(tag_conditions, *tag_values)
+      .limit(RECOMMENDED_TESTS_PER_TAG * 2)
+      .map { |t| { slug: t.slug, title: t.title, tags: t.tag_list & search_tags } }
+      .select { |t| t[:tags].any? }
+      .first(RECOMMENDED_TESTS_PER_TAG)
+  end
+
+  # Вопросы, которые стоит проработать — см. WeakQuestions: учитываются
+  # только недавние попытки, решённые вопросы из списка уходят.
+  def recent_mistakes(questions_map)
+    questions_cache = { @meta.slug => questions_map }
+
+    weak_questions.entries.first(WEAK_QUESTIONS_LIMIT).map do |entry|
+      cache = questions_cache[entry.test_slug] ||= YamlSyncService.load_questions(entry.test_slug).index_by { |q| q["id"] }
+      text  = cache[entry.question_id]&.fetch("text", nil) || entry.question_id
+
+      {
+        question_id: entry.question_id,
+        test_slug:   entry.test_slug,
+        text:        text.to_s.truncate(140),
+        wrong_count: entry.wrong_count
+      }
+    end
+  end
+
+  def weak_questions(test_slug: nil)
+    WeakQuestions.for(user: current_user, guest_token: guest_token, test_slug: test_slug)
   end
 
   def update_test_stats(meta, new_score, attempt)

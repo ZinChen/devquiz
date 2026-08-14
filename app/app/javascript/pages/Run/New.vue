@@ -37,6 +37,11 @@
       </div>
     </div>
 
+    <div v-if="weakOnly" class="run-weak-banner">
+      Работа над ошибками: только вопросы, где вы ошибались — {{ questions.length }} из {{ test.questionsCount }}.
+      Результат не идёт в статистику теста.
+    </div>
+
     <div class="run-settings-wrap">
       <SettingsPanel
         v-if="settingsOpen"
@@ -80,7 +85,12 @@ import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
 import { useQuizSession } from '@/composables/useQuizSession.js'
 import { CHALLENGE_MODE_LABELS, CHALLENGE_MODE_HINTS } from '@/composables/challengeModes.js'
 
-const props = defineProps({ test: Object, questions: Array, bookmarkedIds: { type: Array, default: () => [] } })
+const props = defineProps({
+  test:          Object,
+  questions:     Array,
+  bookmarkedIds: { type: Array, default: () => [] },
+  weakOnly:      { type: Boolean, default: false },
+})
 
 const settingsOpen     = ref(false)
 const modeTooltipOpen  = ref(false)
@@ -131,6 +141,17 @@ const hasCodeChallenge = computed(() =>
 
 .run-settings-wrap {
   margin-bottom: 0;
+}
+
+.run-weak-banner {
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 1rem;
+  border: 1px solid #FDE68A;
+  border-radius: var(--rounded-box, 0.75rem);
+  background: #FFFBEB;
+  color: #92400E;
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
 .run-breadcrumbs {

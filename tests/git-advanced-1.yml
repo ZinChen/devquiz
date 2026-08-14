@@ -214,7 +214,7 @@ questions:
     correct: true
     explanation: GitHub Flow основан на одной основной ветке и автоматическом деплое после merge.
   difficulty: medium
-  topics: [git]
+  topics: [git, architecture]
   explanation: GitHub Flow предполагает работу с одной основной веткой (main) и автоматический деплой после слияния.
   extended_explanation: |-
     GitHub Flow — это легковесный подход:
@@ -346,7 +346,7 @@ questions:
     correct: false
     explanation: LFS не реализует дельта-сжатие, он хранит полные версии файлов на сервере.
   difficulty: medium
-  topics: [git]
+  topics: [git, performance]
   explanation: Git LFS хранит в репозитории только указатели на файлы, а сами файлы — на отдельном сервере, что уменьшает размер репозитория и ускоряет клонирование.
   extended_explanation: |-
     Git LFS (Large File Storage) работает следующим образом:
@@ -431,7 +431,7 @@ questions:
     correct: true
     explanation: filter-branch переписывает всю историю, удаляя файл из всех коммитов.
   difficulty: medium
-  topics: [git]
+  topics: [git, security]
   explanation: git filter-branch --index-filter применяет команду к индексу каждого коммита, удаляя файл из всей истории.
   extended_explanation: |-
     Для полного удаления файла из истории нужен filter-branch:
@@ -574,7 +574,7 @@ questions:
     correct: true
     explanation: "-s создает подписанный GPG тег, push отправляет конкретный тег на удаленный репозиторий."
   difficulty: medium
-  topics: [git]
+  topics: [git, security]
   explanation: git tag -s создает подписанный GPG-ключом тег, git push origin v3.0.0 отправляет его на удаленный репозиторий.
   extended_explanation: |-
     ### Типы тегов в Git

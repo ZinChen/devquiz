@@ -5,7 +5,13 @@ import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
 // `onSubmit` перехватывает отправку: разовый тест из файла отдаёт ответы сам,
 // потому что попытку негде создавать и редиректить некуда.
 export function useQuizSession(test, questionsSource, { onSubmit = null, storageKey = null } = {}) {
-  const STORAGE_KEY = storageKey ?? `devquiz_session_${test.slug}`
+  // Работа над ошибками: бэкенд отдал только слабые вопросы, о чём нужно
+  // сказать при отправке — там от этого зависит знаменатель score.
+  const weakOnly = new URLSearchParams(window.location.search).get('only') === 'weak'
+
+  // У разбора ошибок свой набор вопросов, поэтому и черновик сессии отдельный:
+  // на общем ключе незаконченная тренировка подменяла бы обычное прохождение.
+  const STORAGE_KEY = storageKey ?? `devquiz_session_${test.slug}${weakOnly ? '_weak' : ''}`
   const DEFAULT_CHALLENGE_MODE = test.defaultChallengeMode || 'highlight'
 
   function resolveQuestions() {
@@ -197,6 +203,7 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
       time_spent:     elapsed.value,
       challenge_mode: challengeMode.value,
       used_hints:     [...usedHints.value],
+      weak_only:      weakOnly,
     }
 
     if (onSubmit) return onSubmit(payload)

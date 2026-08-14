@@ -88,7 +88,8 @@ class QuizDefinition
       "extended_explanation" => truncate(q["extended_explanation"].to_s).presence,
       "recommendation"       => truncate(q["recommendation"].to_s).presence,
       "difficulty"           => q["difficulty"].to_s.presence,
-      "language"             => q["language"].to_s.presence
+      "language"             => q["language"].to_s.presence,
+      "topics"               => Array(q["topics"]).map(&:to_s).first(10)
     }
 
     type == "code_challenge" ? base.merge(validate_modes(q, label)) : base.merge(validate_options(q, label))

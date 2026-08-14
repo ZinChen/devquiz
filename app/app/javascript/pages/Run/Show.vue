@@ -49,6 +49,45 @@
         </div>
       </div>
 
+      <div v-if="!preview && hasWeakTopics" class="weak-topics">
+        <h3 class="weak-topics__title">Подтяни эти темы</h3>
+        <div class="weak-topics__tags">
+          <span
+            v-for="topic in weakTopics.tags" :key="topic.slug"
+            class="weak-topics__tag"
+            :style="topic.color ? { background: `${topic.color}1A`, color: topic.color } : {}"
+            :title="topic.description || ''"
+          >{{ topic.label }}</span>
+        </div>
+
+        <div v-if="weakTopics.recommendedTests?.length" class="weak-topics__tests">
+          <Link
+            v-for="rt in weakTopics.recommendedTests" :key="rt.slug"
+            :href="`/tests/${rt.slug}`"
+            class="weak-topics__test-link"
+          >
+            {{ rt.title }}
+          </Link>
+        </div>
+
+        <div v-if="weakTopics.recentMistakes?.length" class="weak-topics__mistakes">
+          <p class="weak-topics__mistakes-title">Вы часто ошибаетесь здесь</p>
+          <ul class="weak-topics__mistakes-list">
+            <li v-for="m in weakTopics.recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
+              <Link :href="`/tests/${m.testSlug}`" class="weak-topics__mistake-link">{{ m.text }}</Link>
+              <span class="weak-topics__mistake-count">×{{ m.wrongCount }}</span>
+            </li>
+          </ul>
+          <Link
+            v-if="weakTopics.hasWeakInThisTest"
+            :href="`/tests/${test.slug}/run/new?only=weak`"
+            class="weak-topics__practice-btn"
+          >
+            Работа над ошибками
+          </Link>
+        </div>
+      </div>
+
       <h2 class="result-breakdown-title">Разбор ответов</h2>
 
       <div
@@ -217,10 +256,13 @@ const props = defineProps({
   test:           Object,
   attempt:        Object,
   answersDetail:  Array,
+  weakTopics:     { type: Object, default: () => ({}) },
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
 })
+
+const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
 
 defineEmits(['retry'])
 
@@ -469,6 +511,124 @@ function optionLetterStyle(item, optId) {
   font-weight: 600;
   font-size: 1.125rem;
   margin-bottom: 1rem;
+}
+
+.weak-topics {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.weak-topics__title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #92400E;
+  margin-bottom: 0.625rem;
+}
+
+.weak-topics__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.weak-topics__tag {
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.weak-topics__tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.weak-topics__test-link {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.weak-topics__test-link:hover {
+  background: #FEF3C7;
+}
+
+.weak-topics__mistakes {
+  border-top: 1px solid #FDE68A;
+  padding-top: 0.625rem;
+}
+
+.weak-topics__mistakes-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #92400E;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.375rem;
+}
+
+.weak-topics__mistakes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.weak-topics__mistakes-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.weak-topics__mistake-link {
+  color: #78350F;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weak-topics__mistake-link:hover {
+  text-decoration: underline;
+}
+
+.weak-topics__mistake-count {
+  flex-shrink: 0;
+  color: #B45309;
+  font-weight: 600;
+}
+
+.weak-topics__practice-btn {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 0.5rem;
+  background: #B45309;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.weak-topics__practice-btn:hover {
+  background: #92400E;
 }
 
 .result-item {

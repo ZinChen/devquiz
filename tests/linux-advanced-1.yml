@@ -308,7 +308,7 @@ questions:
     correct: true
     explanation: На 8-ядерной системе нагрузка > 8 указывает на перегрузку CPU.
   difficulty: medium
-  topics: [linux]
+  topics: [linux, performance]
   explanation: На сервере с 8 ядрами значения 14.20, 15.00, 14.80 означают, что в среднем более 14 процессов ожидают процессорного времени одновременно, что указывает на серьёзную перегрузку CPU.
   extended_explanation: |-
     Load average:
@@ -354,7 +354,7 @@ questions:
     correct: false
     explanation: Трассирует системные вызовы, создаёт огромную нагрузку, не для продакшена.
   difficulty: medium
-  topics: [linux]
+  topics: [linux, performance]
   explanation: "`perf top` — это профилировщик, который в реальном времени показывает, какие функции ядра и пользовательского пространства потребляют больше всего процессорного времени. Идеально подходит для выявления нагрузки, вызванной ядром."
   extended_explanation: |-
     Альтернативные инструменты:

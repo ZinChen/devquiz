@@ -201,7 +201,7 @@ questions:
     correct: false
     explanation: Потеря метрик не упоминается как симптом.
   difficulty: medium
-  topics: [go]
+  topics: [go, concurrency]
   explanation: Рост числа акторов-отправителей увеличивает нагрузку на центральный агрегатор, который не успевает обрабатывать сообщения.
   extended_explanation: В архитектуре с одним агрегатором все акторы отправляют данные в одну точку. При увеличении числа отправителей очередь сообщений у агрегатора растёт, что приводит к увеличению задержек. Решение — горизонтальное масштабирование агрегаторов или использование брокеров сообщений.
   recommendation: При росте числа отправителей рассмотреть шардирование агрегаторов или использование очередей.
@@ -230,7 +230,7 @@ questions:
     correct: false
     explanation: Это тоже верно, но основной акцент на поведении транзакций и SQL.
   difficulty: medium
-  topics: [go]
+  topics: [go, transactions]
   explanation: Моки не могут воспроизвести всё поведение реальной БД, включая транзакционную изоляцию и особенности SQL-диалекта.
   extended_explanation: |-
     Моки полезны для изоляции логики, но не заменяют интеграционные тесты. Реальные базы данных:
@@ -292,7 +292,7 @@ questions:
     correct: true
     explanation: Клиент передаёт поток сообщений, сервер возвращает один ответ.
   difficulty: medium
-  topics: [go]
+  topics: [go, api-design]
   explanation: Client streaming RPC позволяет клиенту отправить несколько сообщений, а серверу — вернуть один ответ после обработки всего потока.
   extended_explanation: |-
     gRPC определяет четыре типа вызовов:
@@ -328,7 +328,7 @@ questions:
     correct: false
     explanation: time.After не предоставляет механизма отмены операций и не интегрируется с отменой по сигналу, что делает код менее надёжным.
   difficulty: medium
-  topics: [go]
+  topics: [go, concurrency]
   explanation: Каждый запрос должен иметь свой context с таймаутом, но через context следует передавать только сквозные данные (отмена, deadline, trace ID), а не параметры бизнес-логики.
   extended_explanation: |-
     Правильный подход разделяет ответственность:
@@ -369,7 +369,7 @@ questions:
     correct: false
     explanation: Негибко, не адаптируется под реальную нагрузку.
   difficulty: medium
-  topics: [go]
+  topics: [go, performance]
   explanation: sync.Pool позволяет переиспользовать временные объекты, уменьшая аллокации и нагрузку на сборщик мусора.
   extended_explanation: "`sync.Pool` хранит временные объекты, которые можно извлекать и возвращать. При высокой нагрузке пул расширяется, при простое — очищается. Это идеально для буферов, которые часто создаются и уничтожаются."
   recommendation: |-
@@ -443,7 +443,7 @@ questions:
     correct: false
     explanation: Goroutine может быть значительно больше.
   difficulty: medium
-  topics: [go]
+  topics: [go, concurrency]
   explanation: Goroutine выполняется на M (OS thread), который должен быть привязан к P (логическому процессору), чтобы выполнять Go-код.
   extended_explanation: |-
     В планировщике Go:
@@ -480,7 +480,7 @@ questions:
     correct: false
     explanation: GOMAXPROCS определяет количество P, а goroutine может быть больше.
   difficulty: medium
-  topics: [go]
+  topics: [go, concurrency]
   explanation: GOMAXPROCS задаёт количество процессоров (P), которые планировщик может использовать для параллельного выполнения goroutines.
   extended_explanation: |-
     - По умолчанию GOMAXPROCS равно количеству ядер CPU.
@@ -525,7 +525,7 @@ questions:
     correct: false
     explanation: Собственное время 47 (1.9%) — значительно меньше.
   difficulty: medium
-  topics: [go]
+  topics: [go, performance]
   explanation: runtime.mapaccess1_fast64 имеет наибольшее собственное (298) и общее (345) время, что указывает на частые обращения к map.
   extended_explanation: |-
     В профиле pprof:

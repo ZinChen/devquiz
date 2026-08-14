@@ -301,7 +301,7 @@ questions:
     correct: false
     explanation: Дублирование кода (нарушение DRY).
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: Расчет налога — отдельная ответственность, не связанная напрямую с управлением заказом. Лучше вынести в отдельный класс.
   extended_explanation: |-
     - Класс `Order` отвечает за состав заказа и общую стоимость
@@ -343,7 +343,7 @@ questions:
     correct: false
     explanation: Нарушает SRP и OCP.
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: Клиенты не должны зависеть от методов, которые они не используют. Email поддерживает вложения, а SMS и Push — нет.
   extended_explanation: |-
     - **Notifiable**: обязательный метод `отправить()` для всех
@@ -426,7 +426,7 @@ questions:
     correct: false
     explanation: Паттерны ослабляют связанность.
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: Жесткое связывание (high coupling) возникает, когда классы знают детали реализации друг друга и напрямую зависят от конкретных классов.
   extended_explanation: |-
     Факторы, ухудшающие связанность:
@@ -640,7 +640,7 @@ questions:
     correct: false
     explanation: 'Неверно: ООБД как раз ориентированы на сложные объекты и структуры.'
   difficulty: medium
-  topics: [oop]
+  topics: [oop, schema]
   explanation: ООБД хранят объекты напрямую, в том же виде, что и в языке программирования, что устраняет необходимость в преобразовании объектно-реляционного отображения (ORM).
   extended_explanation: |-
     Объектно-ориентированные базы данных (ООБД) имеют следующие ключевые особенности:

@@ -34,7 +34,7 @@ questions:
     correct: false
     explanation: "--no-cache отключает кэширование, что замедляет сборку, а не ускоряет."
   difficulty: medium
-  topics: [docker]
+  topics: [docker, performance]
   explanation: Многоступенчатая сборка позволяет изолировать изменения в слоях приложения от базового образа, сохраняя кэш для неизмененных частей.
   extended_explanation: |-
     - Базовый образ обновляется редко → его слой можно закэшировать
@@ -87,7 +87,7 @@ questions:
     correct: false
     explanation: Multi-stage builds могут помочь, но проблема именно в порядке инструкций.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, performance]
   explanation: Если скопировать весь код до установки зависимостей, любое изменение кода инвалидирует слой COPY, и RUN npm install будет выполняться при каждой сборке.
   extended_explanation: |-
     - Docker кэширует слои последовательно
@@ -166,7 +166,7 @@ questions:
     correct: false
     explanation: Volumes не связаны с сетью.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, security]
   explanation: Для полной изоляции внутренних контейнеров от внешней сети нужно создавать внутреннюю сеть с опцией --internal.
   extended_explanation: |-
     - Обычная bridge-сеть дает контейнерам доступ в интернет через NAT
@@ -205,7 +205,7 @@ questions:
     correct: false
     explanation: Перезагрузка без диагностики не решит проблему, а только скроет симптомы.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, performance]
   explanation: docker stats показывает потребление ресурсов, docker top — процессы внутри контейнера. Это позволяет диагностировать проблему без входа в контейнер.
   extended_explanation: |-
     - Контейнер нельзя остановить и нельзя войти внутрь
@@ -245,7 +245,7 @@ questions:
     correct: true
     explanation: CAP_SYS_ADMIN дает множество привилегий, включая изменение параметров ядра через sysctl.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, security]
   explanation: CAP_SYS_ADMIN — очень мощная capability, которая дает контейнеру множество привилегий, включая изменение параметров ядра, даже при включенном userns-remap.
   extended_explanation: |-
     - userns-remap изолирует на уровне пользователей
@@ -402,7 +402,7 @@ questions:
     correct: false
     explanation: Это удобство, но не безопасность.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, security]
   explanation: USER в Dockerfile гарантирует, что и сборка, и запуск выполняются от непривилегированного пользователя, что повышает безопасность.
   extended_explanation: |-
     - USER влияет на все последующие инструкции (RUN, CMD, ENTRYPOINT)
@@ -441,7 +441,7 @@ questions:
     correct: false
     explanation: Может дать дополнительные права, но не полный доступ к хосту, как --privileged.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, security]
   explanation: "--privileged дает контейнеру все привилегии и доступ ко всем устройствам хоста, что объясняет все три аномалии."
   extended_explanation: |-
     - --privileged отключает почти все ограничения Docker
@@ -520,7 +520,7 @@ questions:
     correct: true
     explanation: Горизонтальное масштабирование распределяет нагрузку между несколькими экземплярами.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, performance]
   explanation: Добавление реплик распределяет нагрузку между несколькими экземплярами контейнера, что не требует изменения кода.
   extended_explanation: |-
     - Проблема: приложение не справляется с ростом нагрузки
@@ -559,7 +559,7 @@ questions:
     correct: false
     explanation: Read-only не скрывает секреты от root на хосте.
   difficulty: medium
-  topics: [docker]
+  topics: [docker, security]
   explanation: Read-only монтирование предотвращает изменение секретов внутри контейнера, что повышает безопасность.
   extended_explanation: |-
     - Секреты должны оставаться неизменными
