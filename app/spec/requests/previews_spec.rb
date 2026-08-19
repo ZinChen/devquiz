@@ -41,6 +41,15 @@ RSpec.describe "Previews", type: :request do
     end
   end
 
+  describe "GET /preview" do
+    it "возвращает на список тестов с объяснением" do
+      get "/preview"
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to match(/перетаскиванием/)
+    end
+  end
+
   describe "POST /preview/grade" do
     def grade(answers, extra = {})
       post "/preview/grade", params: { test: definition, answers: answers }.merge(extra)

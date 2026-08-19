@@ -16,6 +16,13 @@ class PreviewsController < ApplicationController
     }
   end
 
+  # Открыть /preview напрямую или перезагрузить страницу прохождения нельзя:
+  # определение теста было только в теле POST-запроса. Возвращаем на список,
+  # объяснив, почему тест пропал.
+  def show
+    redirect_to root_path, alert: "Тест из файла открывается только перетаскиванием — перетащите файл ещё раз."
+  end
+
   def grade
     answers_data   = params[:answers]&.to_unsafe_h || {}
     challenge_mode = challenge_mode_param
