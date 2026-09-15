@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# Готовит PR из dev в main для указанного milestone.
+#
+# Смысл не в экономии набора команд, а в проверках, которые легко забыть:
+# незапушенные коммиты, красный CI на стенде и, главное, сборка Closes #N
+# по всем открытым issue milestone — иначе после merge они останутся
+# открытыми, и release notes выйдут пустыми.
+#
+#   bin/release-pr "v0.5 — Weak topics"
+#   bin/release-pr v0.5            # достаточно префикса
+#   bin/release-pr v0.5 --dry-run  # показать, что будет, и выйти
+
+set -euo pipefail
+
+REPO="ZinChen/devquiz"
+BASE="main"
+HEAD="dev"
+
+die() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
+info() { printf '\033[36m%s\033[0m\n' "$*"; }
+warn() { printf '\033[33m%s\033[0m\n' "$*"; }
+
+[ $# -ge 1 ] || die "Укажите milestone: bin/release-pr \"v0.5 — Weak topics\""
+
+QUERY="$1"
+DRY_RUN=""
+[ "${2:-}" = "--dry-run" ] && DRY_RUN=1
+
+command -v gh >/dev/null || die "Нужен gh CLI"
+
+# Milestone ищем по префиксу, чтобы не набирать тире и название целиком.
+MILESTONE=$(gh api "repos/$REPO/milestones?state=all" \
+  --jq '.[] | .title' | grep -F -m1 -- "$QUERY" || true)
+[ -n "$MILESTONE" ] || die "Milestone, начинающийся с «${QUERY}», не найден"
+
+info "Milestone: $MILESTONE"
+
+# --- проверки состояния веток ---
+
+CURRENT=$(git rev-parse --abbrev-ref HEAD)
+[ "$CURRENT" = "$HEAD" ] || die "Нужно быть в ветке $HEAD (сейчас $CURRENT)"
+
+[ -z "$(git status --porcelain)" ] || die "Есть незакоммиченные изменения"
+
+git fetch --quiet origin "$HEAD" "$BASE"
+
+UNPUSHED=$(git rev-list --count "origin/$HEAD..$HEAD")
+[ "$UNPUSHED" = "0" ] || die "$UNPUSHED коммит(ов) не отправлено — сначала git push origin $HEAD"
+
+AHEAD=$(git rev-list --count "origin/$BASE..origin/$HEAD")
+[ "$AHEAD" != "0" ] || die "В $HEAD нет коммитов сверх $BASE — выпускать нечего"
+
+info "Коммитов к вливанию: $AHEAD"
+
+# --- CI на стенде ---
+
+CI_STATUS=$(gh run list --repo "$REPO" --branch "$HEAD" --limit 1 \
+  --json conclusion,status --jq '.[0] | .conclusion // .status' 2>/dev/null || echo "")
+
+case "$CI_STATUS" in
+  success)               info "CI на $HEAD: зелёный" ;;
+  in_progress|queued)    warn "CI на $HEAD ещё идёт — стоит дождаться" ;;
+  "")                    warn "Статус CI получить не удалось" ;;
+  *)                     warn "CI на $HEAD: $CI_STATUS" ;;
+esac
+
+# --- issues milestone ---
+
+OPEN_ISSUES=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
+  --state open --limit 100 --json number --jq '.[].number')
+
+CLOSED_COUNT=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
+  --state closed --limit 100 --json number --jq 'length')
+
+if [ -z "$OPEN_ISSUES" ] && [ "$CLOSED_COUNT" = "0" ]; then
+  die "В milestone «${MILESTONE}» нет ни одного issue"
+fi
+
+# Открытые закроются по merge через Closes #N; закрытые уже учтены в
+# release notes, повторять их не нужно.
+BODY=""
+if [ -n "$OPEN_ISSUES" ]; then
+  info "Закроются по merge:"
+  while read -r n; do
+    [ -n "$n" ] || continue
+    title=$(gh issue view "$n" --repo "$REPO" --json title --jq .title)
+    printf '  #%s %s\n' "$n" "$title"
+    BODY="${BODY}Closes #${n}"$'\n'
+  done <<< "$OPEN_ISSUES"
+else
+  warn "Открытых issue нет — все уже закрыты"
+fi
+
+[ "$CLOSED_COUNT" = "0" ] || info "Уже закрыто в milestone: $CLOSED_COUNT"
+
+if [ -n "$DRY_RUN" ]; then
+  echo
+  info "--dry-run: PR не создаётся"
+  printf 'Заголовок: %s\n' "$MILESTONE"
+  printf 'Тело:\n%s' "${BODY:-(пусто)}"
+  exit 0
+fi
+
+# --- PR ---
+
+EXISTING=$(gh pr list --repo "$REPO" --base "$BASE" --head "$HEAD" \
+  --state open --json url --jq '.[0].url // ""')
+
+if [ -n "$EXISTING" ]; then
+  warn "PR уже открыт: $EXISTING"
+  exit 0
+fi
+
+URL=$(gh pr create --repo "$REPO" --base "$BASE" --head "$HEAD" \
+  --title "$MILESTONE" --body "${BODY:-Релиз $MILESTONE}")
+
+info "PR создан: $URL"
+echo
+echo "Дальше:"
+echo "  1. Смержить PR — issues закроются автоматически"
+echo "  2. Убедиться, что issues закрылись"
+echo "  3. Закрыть milestone — тег и релиз создадутся сами"
