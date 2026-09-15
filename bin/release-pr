@@ -56,7 +56,8 @@ info "Коммитов к вливанию: $AHEAD"
 # --- CI на стенде ---
 
 CI_STATUS=$(gh run list --repo "$REPO" --branch "$HEAD" --limit 1 \
-  --json conclusion,status --jq '.[0] | .conclusion // .status' 2>/dev/null || echo "")
+  --json conclusion,status \
+  --jq '.[0] | if (.conclusion // "") == "" then .status else .conclusion end' 2>/dev/null || echo "")
 
 case "$CI_STATUS" in
   success)               info "CI на $HEAD: зелёный" ;;
