@@ -419,11 +419,19 @@ const scoreColor = computed(() => {
   return '#EF4444'
 })
 
-const challengeModeLabel = computed(() => CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null)
+// Режим прохождения пишется в попытку всегда, даже когда в тесте нет ни
+// одного code_challenge. Для такого теста он ничего не значит: показывать
+// бейдж «Highlight» и звать пройти в режиме Fix было бы враньём.
+const hasCodeChallenge = computed(() => props.test.hasCodeChallenge !== false)
+
+const challengeModeLabel = computed(() =>
+  hasCodeChallenge.value ? CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null : null
+)
 
 const PASS_THRESHOLD = 70
 
 const suggestedNextMode = computed(() => {
+  if (!hasCodeChallenge.value) return null
   if (!props.attempt.challengeMode) return null
   if (props.attempt.score < PASS_THRESHOLD) return null
   const next = nextChallengeMode(props.test.completedChallengeModes || [])

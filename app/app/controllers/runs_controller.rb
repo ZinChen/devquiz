@@ -130,6 +130,7 @@ class RunsController < ApplicationController
       difficulty:                t.difficulty,
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
+      has_code_challenge:        t.has_code_challenge?,
       default_challenge_mode:    yaml["default_challenge_mode"],
       language:                  yaml["language"] || "ruby",
       completed_challenge_modes: current_user ? user_completed_modes(t.slug) : []
