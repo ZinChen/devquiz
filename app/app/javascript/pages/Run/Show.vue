@@ -83,12 +83,23 @@
           <section class="weak-topics__section">
             <h3 class="weak-topics__subtitle">Слабые темы</h3>
             <div class="weak-topics__tags">
+              <!-- Фон кодирует число ошибок, точка слева — саму тему: два разных
+                   признака, поэтому цвет темы не спорит с градацией. -->
               <span
                 v-for="topic in weakTopics.tags" :key="topic.slug"
                 class="weak-topics__tag"
-                :style="topic.color ? { background: `${topic.color}1A`, color: topic.color } : {}"
-                :title="topic.description || ''"
-              >{{ topic.label }}</span>
+                :class="`weak-topics__tag--${topic.level}`"
+                :title="topicTitle(topic)"
+              >
+                <span
+                  v-if="topic.color"
+                  class="weak-topics__tag-dot"
+                  :style="{ background: topic.color }"
+                  aria-hidden="true"
+                ></span>
+                {{ topic.label }}
+                <span v-if="topic.wrongCount > 1" class="weak-topics__tag-count">{{ topic.wrongCount }}</span>
+              </span>
             </div>
           </section>
 
@@ -107,10 +118,22 @@
         </div>
       </template>
 
-      <h2 class="result-breakdown-title">Разбор ответов</h2>
+      <div class="weak-header">
+        <h2 class="result-breakdown-title">Разбор ответов</h2>
+        <!-- Подпись называет действие по клику, а не текущее состояние:
+             «Только неправильные» в роли статуса читалась бы двояко. -->
+        <button
+          v-if="wrongCount && wrongCount < answersDetail.length"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          @click="onlyWrong = !onlyWrong"
+        >
+          {{ onlyWrong ? `Все ответы (${answersDetail.length})` : `Только неправильные (${wrongCount})` }}
+        </button>
+      </div>
 
       <div
-        v-for="(item, idx) in answersDetail" :key="item.questionId"
+        v-for="(item, idx) in visibleAnswers" :key="item.questionId"
         :id="`question-${item.questionId}`"
         class="result-item"
         :class="{ 'result-item--highlight': highlightedQuestion === item.questionId }"
@@ -266,7 +289,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted, onUnmounted } from 'vue'
+import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
@@ -285,11 +308,25 @@ const props = defineProps({
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
 
+const onlyWrong = ref(false)
+
+const wrongCount = computed(() => props.answersDetail?.filter(a => !a.correct).length ?? 0)
+
+const visibleAnswers = computed(() =>
+  onlyWrong.value ? props.answersDetail.filter(a => !a.correct) : props.answersDetail
+)
+
 // Подсветка гасится по таймеру, поэтому его надо снимать при уходе со страницы.
 const highlightedQuestion = ref(null)
 let highlightTimer
 
-function scrollToQuestion(questionId) {
+async function scrollToQuestion(questionId) {
+  // Фильтр мог скрыть карточку — тогда ждём перерисовку, иначе скроллить некуда.
+  if (!document.getElementById(`question-${questionId}`)) {
+    onlyWrong.value = false
+    await nextTick()
+  }
+
   const el = document.getElementById(`question-${questionId}`)
   if (!el) return
 
@@ -300,6 +337,15 @@ function scrollToQuestion(questionId) {
 }
 
 onUnmounted(() => clearTimeout(highlightTimer))
+
+// В тултипе описание темы и число ошибок: на самом теге число показано
+// только при повторных промахах, чтобы не зашумлять строку единицами.
+function topicTitle(topic) {
+  const parts = []
+  if (topic.description) parts.push(topic.description)
+  if (topic.wrongCount > 0) parts.push(`Ошибок: ${topic.wrongCount}`)
+  return parts.join(' • ')
+}
 
 // «2 раза», но «5 раз» и «11 раз» — вторая форма нужна для 5..20 и хвостов 0, 5-9.
 function timesLabel(count) {
@@ -600,14 +646,50 @@ function optionLetterStyle(item, optId) {
   gap: 0.375rem;
 }
 
-/* Фон и цвет обычно приходят из словаря тем; эти — запасные для незнакомого тега. */
+/* Насыщенность фона растёт с числом ошибок: серый — разовый промах,
+   красный — тема, где ошиблись трижды и больше. */
 .weak-topics__tag {
-  padding: 0.125rem 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem;
   border-radius: 999px;
   background: #F3F4F6;
   color: #4B5563;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+.weak-topics__tag--none,
+.weak-topics__tag--low {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.weak-topics__tag--medium {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.weak-topics__tag--high {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+/* Цвет темы из словаря — отдельный от градации признак. */
+.weak-topics__tag-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weak-topics__tag-count {
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 0.6875rem;
+  font-weight: 700;
 }
 
 .weak-topics__tests {

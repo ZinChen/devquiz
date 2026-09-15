@@ -32,6 +32,32 @@ RSpec.describe "Слабые темы после теста", type: :request do
     expect(topic["color"]).to be_present
   end
 
+  # q1 и q2 в ror-basics.yml оба помечены topics: [mvc].
+  it "считает ошибки по теме и повышает уровень" do
+    complete_test({ "q1" => [ "wrong" ], "q2" => [ "wrong" ] })
+
+    topic = response.parsed_body["props"]["weak_topics"]["tags"].first
+    expect(topic["wrong_count"]).to eq(2)
+    expect(topic["level"]).to eq("medium")
+  end
+
+  it "помечает разовый промах низким уровнем" do
+    complete_test({ "q1" => [ "wrong" ], "q2" => [ "b" ] })
+
+    topic = response.parsed_body["props"]["weak_topics"]["tags"].first
+    expect(topic["wrong_count"]).to eq(1)
+    expect(topic["level"]).to eq("low")
+  end
+
+  it "ставит вперёд тему с наибольшим числом ошибок" do
+    complete_test({ "q1" => [ "wrong" ], "q2" => [ "wrong" ], "q5" => [ "wrong" ] })
+
+    tags = response.parsed_body["props"]["weak_topics"]["tags"]
+    counts = tags.map { |t| t["wrong_count"] }
+    expect(counts).to eq(counts.sort.reverse)
+  end
+
+  # Запасные теги теста не привязаны к вопросам, поэтому счётчика у них нет.
   it "откатывается на теги теста, если у вопросов нет topics" do
     allow(YamlSyncService).to receive(:load_questions).and_wrap_original do |original, slug|
       original.call(slug).map { |q| q.except("topics") }

@@ -9,6 +9,30 @@
       </div>
     </div>
 
+    <template v-if="weakTopics.length">
+      <h2 class="dashboard-section-title">Ваши слабые темы</h2>
+      <div class="weak-summary">
+        <!-- Фон кодирует число ошибок, точка слева — саму тему. -->
+        <Link
+          v-for="topic in weakTopics" :key="topic.slug"
+          :href="`/practice/topic/${topic.slug}`"
+          class="weak-summary__tag"
+          :class="`weak-summary__tag--${topic.level}`"
+          :title="topicTitle(topic)"
+        >
+          <span
+            v-if="topic.color"
+            class="weak-summary__dot"
+            :style="{ background: topic.color }"
+            aria-hidden="true"
+          ></span>
+          {{ topic.label }}
+          <span v-if="topic.wrongCount > 1" class="weak-summary__count">{{ topic.wrongCount }}</span>
+        </Link>
+      </div>
+      <p class="weak-summary__hint">Нажмите на тему, чтобы повторить вопросы, где вы ошибались.</p>
+    </template>
+
     <h2 class="dashboard-section-title">История прохождений</h2>
 
     <div v-if="attempts.length" class="attempts-list">
@@ -33,6 +57,21 @@
         К тестам
       </Link>
     </div>
+
+    <template v-if="recommendedTests.length">
+      <h2 class="dashboard-section-title">Рекомендуемые тесты</h2>
+      <div class="recommended-tests">
+        <Link
+          v-for="t in recommendedTests" :key="t.slug"
+          :href="`/tests/${t.slug}`"
+          class="recommended-tests__item"
+        >
+          <span class="recommended-tests__title">{{ t.title }}</span>
+          <span v-if="t.topics?.length" class="recommended-tests__topics">{{ t.topics.join(', ') }}</span>
+          <span v-if="t.completed" class="recommended-tests__badge">пройден</span>
+        </Link>
+      </div>
+    </template>
 
     <h2 class="dashboard-section-title">Избранные вопросы</h2>
 
@@ -77,15 +116,31 @@ import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 
 const props = defineProps({
-  attempts:  Array,
-  stats:     Object,
-  bookmarks: { type: Array, default: () => [] },
+  attempts:         Array,
+  stats:            Object,
+  bookmarks:        { type: Array, default: () => [] },
+  weakTopics:       { type: Array, default: () => [] },
+  recommendedTests: { type: Array, default: () => [] },
 })
 
 const bookmarks = ref(props.bookmarks)
 
+// В тултипе описание темы и число ошибок: на самом теге число показано
+// только при повторных промахах, чтобы не зашумлять строку единицами.
+function topicTitle(topic) {
+  const parts = []
+  if (topic.description) parts.push(topic.description)
+  // Из каких тестов набралась тема — иначе непонятно, откуда она взялась.
+  if (topic.sources?.length) {
+    parts.push(topic.sources.map(s => `${s.title}: ${s.wrongCount}`).join(', '))
+  } else if (topic.wrongCount > 0) {
+    parts.push(`Ошибок: ${topic.wrongCount}`)
+  }
+  return parts.join(' • ')
+}
+
 const summaryCards = computed(() => [
-  { label: 'Попыток',           value: props.stats.totalAttempts },
+  { label: 'Всего попыток',           value: props.stats.totalAttempts },
   { label: 'Средний балл',      value: props.stats.avgScore.toFixed(1) + '%' },
   { label: 'Лучший результат',  value: props.stats.bestScore.toFixed(0) + '%' },
   { label: 'Тестов пройдено',   value: props.stats.testsCompleted },
@@ -297,5 +352,118 @@ function formatDate(d) {
   border-top: 1px solid #F3F4F6;
   padding-top: 0.6rem;
   margin-top: 0.25rem;
+}
+
+/* Слабые темы и рекомендации: та же карточка и та же градация,
+   что в отчёте после теста, чтобы язык интерфейса не разъезжался. */
+.weak-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.weak-summary__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: #F3F4F6;
+  color: #4B5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.weak-summary__tag--low {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.weak-summary__tag--medium {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.weak-summary__tag--high {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+.weak-summary__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weak-summary__count {
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.recommended-tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.recommended-tests__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  color: #374151;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.recommended-tests__item:hover {
+  background: #F7F8FA;
+  border-color: #4F63F5;
+  color: #4F63F5;
+}
+
+/* Уже пройденные показываем последними и помечаем, чтобы не выглядели новыми. */
+.recommended-tests__badge {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: #F3F4F6;
+  color: #9CA3AF;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.weak-summary__tag {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.weak-summary__tag:hover {
+  filter: brightness(0.95);
+}
+
+.weak-summary__hint {
+  margin: -1.5rem 0 2rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+.recommended-tests__topics {
+  color: #9CA3AF;
+  font-size: 0.75rem;
 }
 </style>

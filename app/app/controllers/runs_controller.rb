@@ -180,13 +180,17 @@ class RunsController < ApplicationController
     # topics вопроса (mvc, indexes) точнее тегов теста (ruby, rails), но
     # размечены не везде и в tags тестов не встречаются — поэтому показываем
     # их, а тесты ищем по обоим наборам сразу.
-    question_topics = wrong_ids.flat_map { |id| Array(questions_map[id]&.fetch("topics", nil)) }.map(&:to_s).uniq
+    #
+    # Считаем до uniq: сколько неверных вопросов пришлось на тему — по этому
+    # числу тема красится и сортируется в отчёте.
+    topic_counts    = wrong_ids.flat_map { |id| Array(questions_map[id]&.fetch("topics", nil)) }.map(&:to_s).tally
+    question_topics = topic_counts.keys
     shown_tags      = question_topics.presence || @meta.tag_list
     search_tags     = (question_topics + @meta.tag_list).uniq
     return blank_weak_topics if search_tags.empty?
 
     {
-      tags:                  TopicDictionary.decorate(shown_tags).map { |t| t.to_h },
+      tags:                  weak_tags(shown_tags, topic_counts),
       recommended_tests:     recommended_tests(search_tags),
       recent_mistakes:       recent_mistakes(questions_map),
       has_weak_in_this_test: weak_questions(test_slug: @meta.slug).any?
@@ -195,6 +199,29 @@ class RunsController < ApplicationController
 
   def blank_weak_topics
     { tags: [], recommended_tests: [], recent_mistakes: [], has_weak_in_this_test: false }
+  end
+
+  # Порог, с которого тема считается проблемной, а не разовым промахом.
+  WEAK_TAG_HIGH_LEVEL   = 3
+  WEAK_TAG_MEDIUM_LEVEL = 2
+
+  # Темы с числом ошибок и уровнем: самые частые первыми, чтобы взгляд
+  # цеплялся за главное. Запасные теги теста счётчика не имеют — они не
+  # привязаны к конкретным вопросам, поэтому идут нейтральным уровнем.
+  def weak_tags(shown_tags, topic_counts)
+    TopicDictionary.decorate(shown_tags).map { |topic|
+      count = topic_counts[topic.slug].to_i
+      topic.to_h.merge(wrong_count: count, level: weak_tag_level(count))
+    }.sort_by { |t| -t[:wrong_count] }
+  end
+
+  def weak_tag_level(count)
+    case count
+    when 0                          then "none"
+    when WEAK_TAG_HIGH_LEVEL..      then "high"
+    when WEAK_TAG_MEDIUM_LEVEL      then "medium"
+    else                                 "low"
+    end
   end
 
   def recommended_tests(search_tags)

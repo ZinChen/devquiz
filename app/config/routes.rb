@@ -26,6 +26,11 @@ Rails.application.routes.draw do
   post   "/bookmarks",     to: "bookmarks#create"
   delete "/bookmarks",     to: "bookmarks#destroy"
 
+  # Тренировка по слабой теме: вопросы собираются из разных тестов, поэтому
+  # маршрут не вложен в /tests/:slug.
+  get  "/practice/topic/:topic",       to: "topic_practices#show",  as: :topic_practice
+  post "/practice/topic/:topic/grade", to: "topic_practices#grade", as: :topic_practice_grade
+
   get "/dashboard", to: "dashboard#index", as: :dashboard
   get "/stats",     to: "stats#index",     as: :stats
 
