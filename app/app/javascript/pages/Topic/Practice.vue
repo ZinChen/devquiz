@@ -103,6 +103,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
+import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 
 const props = defineProps({
@@ -145,37 +146,17 @@ async function submit() {
   })
 
   try {
-    const response = await fetch(`/practice/topic/${props.topic.slug}/grade`, {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-      },
-      body: JSON.stringify({ answers: payload }),
-    })
-    const data = await response.json()
+    // Через axios, а не fetch: его интерцептор уже приводит ключи ответа
+    // к camelCase и подставляет CSRF-токен.
+    const { data } = await axios.post(`/practice/topic/${props.topic.slug}/grade`, { answers: payload })
     result.value = {
-      details:      data.details.map(camelizeDetail),
-      correctCount: data.correct_count,
+      details:      data.details,
+      correctCount: data.correctCount,
       total:        data.total,
     }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } finally {
     submitting.value = false
-  }
-}
-
-// Ответ приходит из json-эндпоинта, минуя общий camelize для Inertia-пропсов.
-function camelizeDetail(d) {
-  return {
-    questionId:   d.question_id,
-    questionText: d.question_text,
-    correct:      d.correct,
-    explanation:  d.explanation,
-    options:      d.options,
-    correctIds:   d.correct_ids,
-    selectedOptions: d.selected_options,
-    testSlug:     d.test_slug,
   }
 }
 

@@ -64,6 +64,16 @@
           <span class="attempt-row__score" :style="{ color: scoreColor(a.score) }">{{ a.score.toFixed(0) }}%</span>
         </div>
       </Link>
+
+      <button
+        v-if="hasMoreAttemptsRef"
+        type="button"
+        class="load-more"
+        :disabled="loadingAttempts"
+        @click="loadMoreAttempts"
+      >
+        {{ loadingAttempts ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
+      </button>
     </div>
 
     <div v-else class="dashboard-empty">
@@ -138,6 +148,16 @@
         </div>
         <p v-if="b.explanation" class="bookmark-card__explanation">{{ b.explanation }}</p>
       </div>
+
+      <button
+        v-if="hasMoreBookmarksRef"
+        type="button"
+        class="load-more"
+        :disabled="loadingBookmarks"
+        @click="loadMoreBookmarks"
+      >
+        {{ loadingBookmarks ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
+      </button>
     </div>
 
     <div v-else class="dashboard-empty dashboard-empty--sm">
@@ -154,14 +174,54 @@ import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 
 const props = defineProps({
-  attempts:         Array,
-  stats:            Object,
-  bookmarks:        { type: Array, default: () => [] },
-  weakTopics:       { type: Array, default: () => [] },
-  recommendedTests: { type: Array, default: () => [] },
+  attempts:           Array,
+  stats:              Object,
+  bookmarks:          { type: Array, default: () => [] },
+  weakTopics:         { type: Array, default: () => [] },
+  recommendedTests:   { type: Array, default: () => [] },
+  hasMoreAttempts:    { type: Boolean, default: false },
+  hasMoreBookmarks:   { type: Boolean, default: false },
+  pageSize:           { type: Number, default: 5 },
 })
 
 const bookmarks = ref(props.bookmarks)
+
+// Списки догружаются страницами, поэтому живут в локальном состоянии,
+// а не читаются из пропов напрямую.
+const attempts           = ref(props.attempts ?? [])
+const hasMoreAttemptsRef = ref(props.hasMoreAttempts)
+const hasMoreBookmarksRef = ref(props.hasMoreBookmarks)
+const loadingAttempts    = ref(false)
+const loadingBookmarks   = ref(false)
+
+async function loadMoreAttempts() {
+  if (loadingAttempts.value) return
+  loadingAttempts.value = true
+  try {
+    const { data } = await axios.get('/dashboard/attempts', {
+      params: { offset: attempts.value.length },
+    })
+    attempts.value = [...attempts.value, ...data.attempts]
+    hasMoreAttemptsRef.value = data.hasMore
+  } catch {} finally {
+    loadingAttempts.value = false
+  }
+}
+
+async function loadMoreBookmarks() {
+  if (loadingBookmarks.value) return
+  loadingBookmarks.value = true
+  try {
+    const { data } = await axios.get('/dashboard/bookmarks', {
+      params: { offset: bookmarks.value.length },
+    })
+    bookmarks.value = [...bookmarks.value, ...data.bookmarks]
+    hasMoreBookmarksRef.value = data.hasMore
+  } catch {} finally {
+    loadingBookmarks.value = false
+  }
+}
+
 
 // В тултипе описание темы и число ошибок: на самом теге число показано
 // только при повторных промахах, чтобы не зашумлять строку единицами.
@@ -584,5 +644,30 @@ function formatDate(d) {
 
 .bookmark-restore:hover {
   background: #EEF0FF;
+}
+
+/* Догрузка следующей страницы списка. */
+.load-more {
+  align-self: center;
+  margin-top: 0.25rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #4B5563;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.load-more:hover:not(:disabled) {
+  background: #F7F8FA;
+  border-color: #4F63F5;
+  color: #4F63F5;
+}
+
+.load-more:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 </style>
