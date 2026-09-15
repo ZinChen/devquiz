@@ -64,6 +64,22 @@ RSpec.describe "Слабые темы в кабинете", type: :request do
     expect(recommended.first["topics"]).to include("MVC & Request lifecycle")
   end
 
+  # Из этих двух полей собирается ссылка на страницу результата попытки.
+  it "отдаёт id и slug попытки для ссылки на результат" do
+    complete_test({ "q1" => [ "b" ], "q2" => [ "b" ] })
+
+    attempt = dashboard_props["attempts"].first
+    expect(attempt["id"]).to eq(TestAttempt.last.id)
+    expect(attempt["test_slug"]).to eq("ror-basics")
+  end
+
+  # Лучший балл почти всегда 100% и ничего не сообщал.
+  it "не отдаёт лучший балл" do
+    complete_test({ "q1" => [ "b" ], "q2" => [ "b" ] })
+
+    expect(dashboard_props["stats"]).not_to have_key("best_score")
+  end
+
   it "не рекомендует ничего без истории" do
     expect(dashboard_props["recommended_tests"]).to be_empty
   end

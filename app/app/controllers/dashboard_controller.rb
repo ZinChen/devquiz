@@ -29,7 +29,6 @@ class DashboardController < ApplicationController
       stats: {
         total_attempts:  attempts.count,
         avg_score:       attempts.average(:score).to_f.round(1),
-        best_score:      attempts.maximum(:score).to_f,
         tests_completed: slugs.count
       },
       weak_topics:       weak_topics.entries.map(&:to_h),
