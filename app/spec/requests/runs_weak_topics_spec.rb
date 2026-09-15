@@ -67,7 +67,7 @@ RSpec.describe "Слабые темы после теста", type: :request do
     expect(weak["has_weak_in_this_test"]).to be false
   end
 
-  describe "работа над ошибками" do
+  describe "тренировка по ошибкам" do
     def start_practice
       get "/tests/#{meta.slug}/run/new?only=weak", headers: { "X-Inertia" => "true" }
       response.parsed_body["props"]

@@ -49,50 +49,71 @@
         </div>
       </div>
 
-      <div v-if="!preview && hasWeakTopics" class="weak-topics">
-        <h3 class="weak-topics__title">Подтяни эти темы</h3>
-        <div class="weak-topics__tags">
-          <span
-            v-for="topic in weakTopics.tags" :key="topic.slug"
-            class="weak-topics__tag"
-            :style="topic.color ? { background: `${topic.color}1A`, color: topic.color } : {}"
-            :title="topic.description || ''"
-          >{{ topic.label }}</span>
-        </div>
-
-        <div v-if="weakTopics.recommendedTests?.length" class="weak-topics__tests">
-          <Link
-            v-for="rt in weakTopics.recommendedTests" :key="rt.slug"
-            :href="`/tests/${rt.slug}`"
-            class="weak-topics__test-link"
-          >
-            {{ rt.title }}
-          </Link>
-        </div>
-
-        <div v-if="weakTopics.recentMistakes?.length" class="weak-topics__mistakes">
-          <p class="weak-topics__mistakes-title">Вы часто ошибаетесь здесь</p>
-          <ul class="weak-topics__mistakes-list">
-            <li v-for="m in weakTopics.recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
-              <Link :href="`/tests/${m.testSlug}`" class="weak-topics__mistake-link">{{ m.text }}</Link>
-              <span class="weak-topics__mistake-count">×{{ m.wrongCount }}</span>
-            </li>
-          </ul>
+      <!-- От частного к общему: конкретные вопросы, затем их темы, затем куда идти дальше. -->
+      <template v-if="!preview && hasWeakTopics">
+        <div v-if="weakTopics.recentMistakes?.length" class="weak-header">
+          <h2 class="result-breakdown-title">Вопросы, где вы ошиблись</h2>
           <Link
             v-if="weakTopics.hasWeakInThisTest"
             :href="`/tests/${test.slug}/run/new?only=weak`"
-            class="weak-topics__practice-btn"
+            class="btn btn-primary btn-sm"
           >
-            Работа над ошибками
+            Тренировка по ошибкам
           </Link>
         </div>
-      </div>
+
+        <div class="weak-topics">
+          <ul v-if="weakTopics.recentMistakes?.length" class="weak-topics__mistakes-list">
+            <li v-for="m in weakTopics.recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
+              <!-- Вопрос этого теста уже отрисован ниже — скроллим к нему, а не уходим со страницы. -->
+              <a
+                v-if="m.testSlug === test.slug"
+                :href="`#question-${m.questionId}`"
+                class="weak-topics__mistake-link"
+                @click.prevent="scrollToQuestion(m.questionId)"
+              >{{ m.text }}</a>
+              <Link v-else :href="`/tests/${m.testSlug}`" class="weak-topics__mistake-link">{{ m.text }}</Link>
+              <!-- Одна ошибка — счётчик не несёт информации, показываем только повторные. -->
+              <span v-if="m.wrongCount > 1" class="weak-topics__mistake-count">
+                {{ m.wrongCount }} {{ timesLabel(m.wrongCount) }}
+              </span>
+            </li>
+          </ul>
+
+          <section class="weak-topics__section">
+            <h3 class="weak-topics__subtitle">Слабые темы</h3>
+            <div class="weak-topics__tags">
+              <span
+                v-for="topic in weakTopics.tags" :key="topic.slug"
+                class="weak-topics__tag"
+                :style="topic.color ? { background: `${topic.color}1A`, color: topic.color } : {}"
+                :title="topic.description || ''"
+              >{{ topic.label }}</span>
+            </div>
+          </section>
+
+          <section v-if="weakTopics.recommendedTests?.length" class="weak-topics__section">
+            <h3 class="weak-topics__subtitle">Рекомендуемые тесты</h3>
+            <div class="weak-topics__tests">
+              <Link
+                v-for="rt in weakTopics.recommendedTests" :key="rt.slug"
+                :href="`/tests/${rt.slug}`"
+                class="weak-topics__test-link"
+              >
+                {{ rt.title }}
+              </Link>
+            </div>
+          </section>
+        </div>
+      </template>
 
       <h2 class="result-breakdown-title">Разбор ответов</h2>
 
       <div
         v-for="(item, idx) in answersDetail" :key="item.questionId"
+        :id="`question-${item.questionId}`"
         class="result-item"
+        :class="{ 'result-item--highlight': highlightedQuestion === item.questionId }"
         :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
       >
         <div class="result-item__header">
@@ -245,7 +266,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
@@ -263,6 +284,29 @@ const props = defineProps({
 })
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
+
+// Подсветка гасится по таймеру, поэтому его надо снимать при уходе со страницы.
+const highlightedQuestion = ref(null)
+let highlightTimer
+
+function scrollToQuestion(questionId) {
+  const el = document.getElementById(`question-${questionId}`)
+  if (!el) return
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  highlightedQuestion.value = questionId
+  clearTimeout(highlightTimer)
+  highlightTimer = setTimeout(() => { highlightedQuestion.value = null }, 1600)
+}
+
+onUnmounted(() => clearTimeout(highlightTimer))
+
+// «2 раза», но «5 раз» и «11 раз» — вторая форма нужна для 5..20 и хвостов 0, 5-9.
+function timesLabel(count) {
+  const tail    = count % 10
+  const hundred = count % 100
+  return tail >= 2 && tail <= 4 && (hundred < 12 || hundred > 14) ? 'раза' : 'раз'
+}
 
 defineEmits(['retry'])
 
@@ -513,33 +557,55 @@ function optionLetterStyle(item, optId) {
   margin-bottom: 1rem;
 }
 
+/* Заголовок блока и кнопка тренировки по краям одной строки. */
+.weak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.weak-header .result-breakdown-title {
+  margin-bottom: 0;
+}
+
+/* Обычная карточка страницы — как .result-item, чтобы блок не выбивался. */
 .weak-topics {
-  background: #FFFBEB;
-  border: 1px solid #FDE68A;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   border-radius: var(--rounded-box, 0.75rem);
   padding: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
-.weak-topics__title {
+.weak-topics__section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #F3F4F6;
+}
+
+/* Заголовки второстепенных секций — мельче, чтобы список вопросов читался первым. */
+.weak-topics__subtitle {
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-size: 1rem;
-  color: #92400E;
-  margin-bottom: 0.625rem;
+  color: #6B7280;
+  margin-bottom: 0.5rem;
 }
 
 .weak-topics__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
-  margin-bottom: 0.75rem;
 }
 
+/* Фон и цвет обычно приходят из словаря тем; эти — запасные для незнакомого тега. */
 .weak-topics__tag {
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
-  background: #FEF3C7;
-  color: #92400E;
+  background: #F3F4F6;
+  color: #4B5563;
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -548,87 +614,60 @@ function optionLetterStyle(item, optId) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
 }
 
 .weak-topics__test-link {
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
   background: #fff;
-  border: 1px solid #FDE68A;
-  color: #92400E;
+  border: 1px solid #E5E7EB;
+  color: #374151;
   font-size: 0.8125rem;
   font-weight: 500;
   text-decoration: none;
 }
 
 .weak-topics__test-link:hover {
-  background: #FEF3C7;
-}
-
-.weak-topics__mistakes {
-  border-top: 1px solid #FDE68A;
-  padding-top: 0.625rem;
-}
-
-.weak-topics__mistakes-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #92400E;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.375rem;
+  background: #F7F8FA;
+  border-color: #4F63F5;
+  color: #4F63F5;
 }
 
 .weak-topics__mistakes-list {
-  list-style: none;
-  padding: 0;
+  list-style: disc;
+  padding-left: 1.125rem;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  /* Маркер красим через цвет самого li, текст ссылки перекрывает его своим. */
+  color: #D1D5DB;
 }
 
 .weak-topics__mistakes-list li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
   font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 0.3125rem;
+}
+
+.weak-topics__mistakes-list li:last-child {
+  margin-bottom: 0;
 }
 
 .weak-topics__mistake-link {
-  color: #78350F;
+  color: #374151;
   text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
 }
 
 .weak-topics__mistake-link:hover {
+  color: #4F63F5;
   text-decoration: underline;
 }
 
 .weak-topics__mistake-count {
-  flex-shrink: 0;
-  color: #B45309;
+  margin-left: 0.375rem;
+  color: #9CA3AF;
+  font-size: 0.75rem;
   font-weight: 600;
-}
-
-.weak-topics__practice-btn {
-  display: inline-block;
-  margin-top: 0.75rem;
-  padding: 0.4375rem 0.875rem;
-  border-radius: 0.5rem;
-  background: #B45309;
-  color: #fff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.weak-topics__practice-btn:hover {
-  background: #92400E;
+  white-space: nowrap;
 }
 
 .result-item {
@@ -638,6 +677,16 @@ function optionLetterStyle(item, optId) {
   border-radius: var(--rounded-box, 0.75rem);
   padding: 1.25rem;
   margin-bottom: 0.75rem;
+}
+
+/* Короткая вспышка после перехода из списка ошибок — чтобы было видно, куда привели. */
+.result-item--highlight {
+  animation: result-item-flash 1.6s ease-out;
+}
+
+@keyframes result-item-flash {
+  0%, 40% { box-shadow: 0 0 0 3px rgba(79, 99, 245, 0.35); }
+  100%    { box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
 }
 
 .result-item__header {

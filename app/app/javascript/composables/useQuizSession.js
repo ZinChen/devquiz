@@ -5,7 +5,7 @@ import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
 // `onSubmit` перехватывает отправку: разовый тест из файла отдаёт ответы сам,
 // потому что попытку негде создавать и редиректить некуда.
 export function useQuizSession(test, questionsSource, { onSubmit = null, storageKey = null } = {}) {
-  // Работа над ошибками: бэкенд отдал только слабые вопросы, о чём нужно
+  // Тренировка по ошибкам: бэкенд отдал только слабые вопросы, о чём нужно
   // сказать при отправке — там от этого зависит знаменатель score.
   const weakOnly = new URLSearchParams(window.location.search).get('only') === 'weak'
 

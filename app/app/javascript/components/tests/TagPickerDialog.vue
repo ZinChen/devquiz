@@ -13,7 +13,7 @@
         <button class="onboarding__close" aria-label="Закрыть" @click="dismiss">×</button>
 
         <h2 id="onboarding-title" class="onboarding__title">
-          {{ editing ? 'Мои темы' : 'Выбери нужные темы' }}
+          {{ editing ? 'Мои темы' : 'Какие темы выберем?' }}
         </h2>
         <p class="onboarding__subtitle">
           Эти темы и теги будут показаны на главной странице

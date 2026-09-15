@@ -5,7 +5,7 @@ class RunsController < ApplicationController
     questions = questions_with_db_ids
     weak_only = params[:only] == "weak"
 
-    # Работа над ошибками: тот же тест, но только из слабых вопросов. Если
+    # Тренировка по ошибкам: тот же тест, но только из слабых вопросов. Если
     # прорабатывать уже нечего, молча ведём обычное прохождение целиком.
     if weak_only
       weak_ids  = weak_questions(test_slug: @meta.slug).question_ids.to_set
@@ -32,7 +32,7 @@ class RunsController < ApplicationController
     used_hint_ids   = Array(params[:used_hints]).map(&:to_s).to_set
     challenge_mode  = params[:challenge_mode].presence || "fill"
 
-    # В работе над ошибками проходится подмножество вопросов, поэтому знаменатель
+    # В тренировке по ошибкам проходится подмножество вопросов, поэтому знаменатель
     # берётся по фактически заданным, а не по размеру теста — иначе 100% верных
     # ответов дали бы score вроде 25%.
     weak_only       = params[:weak_only].to_s == "true"

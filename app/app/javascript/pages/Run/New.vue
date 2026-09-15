@@ -38,7 +38,7 @@
     </div>
 
     <div v-if="weakOnly" class="run-weak-banner">
-      Работа над ошибками: только вопросы, где вы ошибались — {{ questions.length }} из {{ test.questionsCount }}.
+      Тренировка по ошибкам: только вопросы, где вы ошибались — {{ questions.length }} из {{ test.questionsCount }}.
       Результат не идёт в статистику теста.
     </div>
 
