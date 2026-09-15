@@ -51,6 +51,7 @@
 
       <div class="submit-row">
         <button
+          ref="submitBtn"
           type="submit"
           class="btn btn-primary all-at-once__submit-btn"
           :class="{ 'all-at-once__submit-btn--disabled': answeredCount < questions.length }"
@@ -91,6 +92,16 @@ const emit = defineEmits(['submit', 'index-change'])
 const questionEls   = ref([])
 const activeIndex   = ref(0)
 const focusedOptIdx = ref(0)
+const submitBtn     = ref(null)
+
+// Кнопка «Завершить» — такая же остановка в кольце, как вопросы: стрелка
+// вправо с последнего вопроса ведёт на неё, а с неё — на первый вопрос.
+function focusSubmit() {
+  const el = submitBtn.value
+  if (!el) return
+  el.focus()
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 
 function scrollTo(idx) {
   programmaticScroll = true
@@ -109,7 +120,35 @@ function currentQuestion() {
   return props.questions[activeIndex.value]
 }
 
+// Горячие клавиши висят на window, поэтому пробел и Enter перехватывались
+// даже когда фокус стоял на кнопке «Завершить тест»: preventDefault не давал
+// браузеру её нажать, а пробел вместо этого снимал ответ.
+//
+// Варианты ответа — label со скрытым input, фокус они не получают, так что
+// выбор ответа с клавиатуры это не задевает.
+const INTERACTIVE_TAGS = [ 'BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT' ]
+
+function isInteractiveTarget(target) {
+  if (!target) return false
+  return target.isContentEditable || INTERACTIVE_TAGS.includes(target.tagName)
+}
+
 function handleKeydown(e) {
+  // С кнопки «Завершить» кольцо продолжается: вправо — на первый вопрос,
+  // влево — обратно на последний. Enter и пробел не трогаем, они нажимают
+  // саму кнопку.
+  if (e.target === submitBtn.value) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      // Снимаем фокус, иначе следующая стрелка снова придёт «с кнопки».
+      e.target.blur()
+      scrollTo(e.key === 'ArrowRight' ? 0 : props.questions.length - 1)
+    }
+    return
+  }
+
+  if (isInteractiveTarget(e.target)) return
+
   const q = currentQuestion()
   if (!q) return
 
@@ -119,11 +158,13 @@ function handleKeydown(e) {
   if (e.key === 'ArrowRight') {
     if (isCodeInput) return
     e.preventDefault()
-    scrollTo((activeIndex.value + 1) % props.questions.length)
+    if (activeIndex.value === props.questions.length - 1) focusSubmit()
+    else scrollTo(activeIndex.value + 1)
   } else if (e.key === 'ArrowLeft') {
     if (isCodeInput) return
     e.preventDefault()
-    scrollTo((activeIndex.value - 1 + props.questions.length) % props.questions.length)
+    if (activeIndex.value === 0) focusSubmit()
+    else scrollTo(activeIndex.value - 1)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault()
     const opts = q.options
