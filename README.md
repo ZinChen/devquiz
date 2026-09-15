@@ -110,10 +110,17 @@ git checkout -b feature/6-weak-topics
 **1. Влить `dev` в `main`.**
 
 ```bash
-gh pr create --base main --head dev --title "v0.5 — Weak topics" --body "Closes #6"
+bin/release-pr v0.5            # достаточно префикса milestone
+bin/release-pr v0.5 --dry-run  # посмотреть, что получится, ничего не создавая
 ```
 
-Фраза `Closes #N` закроет issue после merge. Если issues закрываются отдельно, достаточно перечислить их в теле PR.
+Скрипт проверит, что ты в `dev`, всё закоммичено и отправлено, покажет статус CI и соберёт тело PR из открытых issue milestone. Фраза `Closes #N` в теле — то, из-за чего issues закроются после merge; если её забыть, они останутся открытыми, а release notes выйдут пустыми.
+
+То же самое руками:
+
+```bash
+gh pr create --base main --head dev --title "v0.5 — Weak topics" --body "Closes #6"
+```
 
 **2. Закрыть milestone** — на странице milestones или командой:
 
