@@ -19,19 +19,34 @@ jobs:
           MILESTONE_NUMBER: ${{ github.event.milestone.number }}
           MILESTONE_TITLE: ${{ github.event.milestone.title }}
         run: |
-          tag="v${MILESTONE_TITLE#v}"
+          set -euo pipefail
+
+          # Заголовок вида "v0.5 — Weak topics": тегом становится только
+          # версия. Пробелы и тире git в имени тега не принимает.
+          tag=$(printf '%s' "$MILESTONE_TITLE" | grep -oE '^v?[0-9]+(\.[0-9]+)*' | head -1)
+          if [ -z "$tag" ]; then
+            echo "Milestone '$MILESTONE_TITLE' не начинается с версии — релиз не создаётся."
+            exit 0
+          fi
+          tag="v${tag#v}"
+
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Релиз $tag уже существует — пропускаем."
+            exit 0
+          fi
 
           notes=$(gh issue list \
             --repo "${{ github.repository }}" \
             --milestone "$MILESTONE_TITLE" \
             --state closed \
+            --limit 100 \
             --json number,title \
             --jq '.[] | "- #\(.number) \(.title)"')
 
           gh release create "$tag" \
             --repo "${{ github.repository }}" \
             --target main \
-            --title "$tag" \
-            --notes "## Milestone: ${MILESTONE_TITLE}
+            --title "$MILESTONE_TITLE" \
+            --notes "## ${MILESTONE_TITLE}
 
           ${notes}"
