@@ -134,20 +134,32 @@ function isInteractiveTarget(target) {
 }
 
 function handleKeydown(e) {
-  // С кнопки «Завершить» кольцо продолжается: вправо — на первый вопрос,
-  // влево — обратно на последний. Enter и пробел не трогаем, они нажимают
-  // саму кнопку.
-  if (e.target === submitBtn.value) {
+  // Кнопка «Завершить» — остановка в том же кольце, что и вопросы.
+  const onSubmit = e.target === submitBtn.value
+
+  if (onSubmit) {
+    // Enter и пробел оставляем браузеру — они нажимают саму кнопку.
+    if (e.key === 'Enter' || e.key === ' ') return
+
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault()
       // Снимаем фокус, иначе следующая стрелка снова придёт «с кнопки».
       e.target.blur()
       scrollTo(e.key === 'ArrowRight' ? 0 : props.questions.length - 1)
+      return
     }
-    return
+
+    // Вверх-вниз правят ответ последнего вопроса: иначе, дойдя до кнопки,
+    // поменять его с клавиатуры было бы нельзя. Возвращаемся к нему и
+    // передаём событие общей ветке стрелок ниже.
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+
+    e.target.blur()
+    activeIndex.value = props.questions.length - 1
+    emit('index-change', activeIndex.value)
   }
 
-  if (isInteractiveTarget(e.target)) return
+  if (!onSubmit && isInteractiveTarget(e.target)) return
 
   const q = currentQuestion()
   if (!q) return
