@@ -184,10 +184,12 @@ if (programmaticScroll) {
     scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
     return
   }
+  // Активен первый вопрос, низ которого ещё на экране. По top >= 0 последний
+  // вопрос не выбирался никогда: под ним нет места, чтобы поднять его к верхней
+  // кромке, — и стрелки продолжали править ответ предыдущего вопроса.
   const idx = questionEls.value.findIndex(el => {
     if (!el) return false
-    const rect = el.getBoundingClientRect()
-    return rect.top >= 0 && rect.bottom > 0
+    return el.getBoundingClientRect().bottom > 0
   })
   if (idx !== -1 && idx !== activeIndex.value) {
     emit('index-change', idx)
