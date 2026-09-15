@@ -3,6 +3,7 @@
     <label
       v-for="(opt, oi) in question.options" :key="opt.id"
       class="option"
+      :class="{ 'option--cursor': question.type === 'multiple' && oi === focusedOptIdx }"
       :style="optionStyle(question, opt)"
       @click="question.type !== 'multiple' && $emit('pick', opt.id)"
     >
@@ -41,6 +42,9 @@ defineProps({
   optionStyle:      Function,
   optionLetterStyle: Function,
   optionLetter:     Function,
+  // Позиция курсора для выбора с клавиатуры. У multiple стрелки не меняют
+  // ответ, а двигают курсор — без подсветки это происходит вслепую.
+  focusedOptIdx:    { type: Number, default: -1 },
 })
 
 defineEmits(['pick'])
@@ -83,5 +87,12 @@ defineEmits(['pick'])
 
 .option__text {
   font-size: 0.875rem;
+}
+
+/* Клавиатурный курсор у вопросов с несколькими ответами: стрелки двигают
+   его, пробел отмечает вариант. */
+.option--cursor {
+  outline: 2px solid #C7CDFA;
+  outline-offset: 1px;
 }
 </style>

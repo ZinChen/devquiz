@@ -42,6 +42,7 @@
           v-else
           :question="q"
           :answers="answers"
+          :focusedOptIdx="idx === activeIndex ? focusedOptIdx : -1"
           :optionStyle="optionStyle"
           :optionLetterStyle="optionLetterStyle"
           :optionLetter="optionLetter"
@@ -104,7 +105,11 @@ function focusSubmit() {
 }
 
 function scrollTo(idx) {
-  programmaticScroll = true
+  // Позиция выбрана явно (стрелкой или кликом по сайдбару) — до следующего
+  // ручного скролла она главнее того, что видно на экране. Иначе у последнего
+  // вопроса выбор откатывался на предыдущий: страница упирается в конец,
+  // и первым «видимым» остаётся предыдущий вопрос.
+  pinnedIndex = idx
   emit('index-change', idx)
   activeIndex.value = idx
   focusedOptIdx.value = 0
@@ -114,6 +119,21 @@ function scrollTo(idx) {
 
 function onPick(q, optId) {
   props.answers[q.id] = optId
+}
+
+// Вопрос считается видимым, если на экране есть заметная его часть, —
+// торчащий из-за кромки край не в счёт.
+const VISIBLE_MARGIN = 80
+
+function isQuestionVisible(idx) {
+  const el = questionEls.value[idx]
+  if (!el) return false
+
+  const rect = el.getBoundingClientRect()
+  const top = Math.max(rect.top, 0)
+  const bottom = Math.min(rect.bottom, window.innerHeight)
+
+  return bottom - top >= Math.min(VISIBLE_MARGIN, rect.height)
 }
 
 function currentQuestion() {
@@ -179,6 +199,14 @@ function handleKeydown(e) {
     else scrollTo(activeIndex.value - 1)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault()
+
+    // Ответ не должен меняться у вопроса, которого не видно: сначала
+    // показываем его, менять будет уже следующее нажатие.
+    if (!isQuestionVisible(activeIndex.value)) {
+      scrollTo(activeIndex.value)
+      return
+    }
+
     const opts = q.options
     if (!opts?.length) return
     if (q.type === 'multiple') {
@@ -228,22 +256,31 @@ function handleKeydown(e) {
   }
 }
 
-let programmaticScroll = false
-let scrollEndTimer = null
+// Индекс, выбранный явно через scrollTo. Сбрасывается, как только
+// пользователь скроллит сам.
+let pinnedIndex = null
+
+function atPageBottom() {
+  return window.innerHeight + window.scrollY >= document.body.scrollHeight - 4
+}
 
 function handleScroll() {
-if (programmaticScroll) {
-    clearTimeout(scrollEndTimer)
-    scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
+  if (pinnedIndex !== null) {
+    // Плавный скролл от scrollTo ещё идёт: ждём, пока он дойдёт до цели.
+    const el = questionEls.value[pinnedIndex]
+    const reached = atPageBottom() || (el && Math.abs(el.getBoundingClientRect().top) < 4)
+    if (!reached) return
+    pinnedIndex = null
     return
   }
-  // Активен первый вопрос, низ которого ещё на экране. По top >= 0 последний
-  // вопрос не выбирался никогда: под ним нет места, чтобы поднять его к верхней
-  // кромке, — и стрелки продолжали править ответ предыдущего вопроса.
-  const idx = questionEls.value.findIndex(el => {
-    if (!el) return false
-    return el.getBoundingClientRect().bottom > 0
-  })
+
+  // У конца страницы активен последний вопрос. Отдельный случай, потому что
+  // по «первому видимому» им всегда оказывался бы предпоследний: последний
+  // вопрос невозможно поднять к верхней кромке — под ним ничего нет.
+  const idx = atPageBottom()
+    ? props.questions.length - 1
+    : questionEls.value.findIndex(el => el && el.getBoundingClientRect().bottom > 0)
+
   if (idx !== -1 && idx !== activeIndex.value) {
     emit('index-change', idx)
     activeIndex.value = idx
@@ -258,7 +295,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('scroll', handleScroll)
-  clearTimeout(scrollEndTimer)
 })
 </script>
 
