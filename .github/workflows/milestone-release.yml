@@ -8,6 +8,10 @@ jobs:
   release:
     name: Tag and release milestone
     runs-on: ubuntu-latest
+    # Репозиторий по умолчанию выдаёт GITHUB_TOKEN только read — без этого
+    # gh release create падает с "403: Resource not accessible by integration".
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
