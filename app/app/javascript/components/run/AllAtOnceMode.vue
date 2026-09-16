@@ -5,7 +5,7 @@
       <div class="question-sidebar__grid">
         <button
           v-for="(q, idx) in questions" :key="q.id"
-          @click="scrollTo(idx)"
+          @click="pickFromSidebar(idx, $event)"
           class="question-sidebar__cell"
           tabindex="-1"
           :class="{
@@ -42,6 +42,7 @@
           v-else
           :question="q"
           :answers="answers"
+          :focusedOptIdx="idx === activeIndex ? focusedOptIdx : -1"
           :optionStyle="optionStyle"
           :optionLetterStyle="optionLetterStyle"
           :optionLetter="optionLetter"
@@ -51,6 +52,7 @@
 
       <div class="submit-row">
         <button
+          ref="submitBtn"
           type="submit"
           class="btn btn-primary all-at-once__submit-btn"
           :class="{ 'all-at-once__submit-btn--disabled': answeredCount < questions.length }"
@@ -91,9 +93,31 @@ const emit = defineEmits(['submit', 'index-change'])
 const questionEls   = ref([])
 const activeIndex   = ref(0)
 const focusedOptIdx = ref(0)
+const submitBtn     = ref(null)
+
+// Кнопка «Завершить» — такая же остановка в кольце, как вопросы: стрелка
+// вправо с последнего вопроса ведёт на неё, а с неё — на первый вопрос.
+function focusSubmit() {
+  const el = submitBtn.value
+  if (!el) return
+  el.focus()
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+// Клик мышью фокусирует кнопку даже при tabindex="-1" (кроме Safari), а
+// isInteractiveTarget затем блокирует стрелки на любой кнопке — снимаем
+// фокус, чтобы клавиатура сразу заработала с выбранным вопросом.
+function pickFromSidebar(idx, e) {
+  scrollTo(idx)
+  e.currentTarget?.blur()
+}
 
 function scrollTo(idx) {
-  programmaticScroll = true
+  // Позиция выбрана явно (стрелкой или кликом по сайдбару) — до следующего
+  // ручного скролла она главнее того, что видно на экране. Иначе у последнего
+  // вопроса выбор откатывался на предыдущий: страница упирается в конец,
+  // и первым «видимым» остаётся предыдущий вопрос.
+  pinnedIndex = idx
   emit('index-change', idx)
   activeIndex.value = idx
   focusedOptIdx.value = 0
@@ -105,11 +129,66 @@ function onPick(q, optId) {
   props.answers[q.id] = optId
 }
 
+// Вопрос считается видимым, если на экране есть заметная его часть, —
+// торчащий из-за кромки край не в счёт.
+const VISIBLE_MARGIN = 80
+
+function isQuestionVisible(idx) {
+  const el = questionEls.value[idx]
+  if (!el) return false
+
+  const rect = el.getBoundingClientRect()
+  const top = Math.max(rect.top, 0)
+  const bottom = Math.min(rect.bottom, window.innerHeight)
+
+  return bottom - top >= Math.min(VISIBLE_MARGIN, rect.height)
+}
+
 function currentQuestion() {
   return props.questions[activeIndex.value]
 }
 
+// Горячие клавиши висят на window, поэтому пробел и Enter перехватывались
+// даже когда фокус стоял на кнопке «Завершить тест»: preventDefault не давал
+// браузеру её нажать, а пробел вместо этого снимал ответ.
+//
+// Варианты ответа — label со скрытым input, фокус они не получают, так что
+// выбор ответа с клавиатуры это не задевает.
+const INTERACTIVE_TAGS = [ 'BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT' ]
+
+function isInteractiveTarget(target) {
+  if (!target) return false
+  return target.isContentEditable || INTERACTIVE_TAGS.includes(target.tagName)
+}
+
 function handleKeydown(e) {
+  // Кнопка «Завершить» — остановка в том же кольце, что и вопросы.
+  const onSubmit = e.target === submitBtn.value
+
+  if (onSubmit) {
+    // Enter и пробел оставляем браузеру — они нажимают саму кнопку.
+    if (e.key === 'Enter' || e.key === ' ') return
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      // Снимаем фокус, иначе следующая стрелка снова придёт «с кнопки».
+      e.target.blur()
+      scrollTo(e.key === 'ArrowRight' ? 0 : props.questions.length - 1)
+      return
+    }
+
+    // Вверх-вниз правят ответ последнего вопроса: иначе, дойдя до кнопки,
+    // поменять его с клавиатуры было бы нельзя. Возвращаемся к нему и
+    // передаём событие общей ветке стрелок ниже.
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+
+    e.target.blur()
+    activeIndex.value = props.questions.length - 1
+    emit('index-change', activeIndex.value)
+  }
+
+  if (!onSubmit && isInteractiveTarget(e.target)) return
+
   const q = currentQuestion()
   if (!q) return
 
@@ -119,13 +198,23 @@ function handleKeydown(e) {
   if (e.key === 'ArrowRight') {
     if (isCodeInput) return
     e.preventDefault()
-    scrollTo((activeIndex.value + 1) % props.questions.length)
+    if (activeIndex.value === props.questions.length - 1) focusSubmit()
+    else scrollTo(activeIndex.value + 1)
   } else if (e.key === 'ArrowLeft') {
     if (isCodeInput) return
     e.preventDefault()
-    scrollTo((activeIndex.value - 1 + props.questions.length) % props.questions.length)
+    if (activeIndex.value === 0) focusSubmit()
+    else scrollTo(activeIndex.value - 1)
   } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault()
+
+    // Ответ не должен меняться у вопроса, которого не видно: сначала
+    // показываем его, менять будет уже следующее нажатие.
+    if (!isQuestionVisible(activeIndex.value)) {
+      scrollTo(activeIndex.value)
+      return
+    }
+
     const opts = q.options
     if (!opts?.length) return
     if (q.type === 'multiple') {
@@ -175,20 +264,42 @@ function handleKeydown(e) {
   }
 }
 
-let programmaticScroll = false
-let scrollEndTimer = null
+// Индекс, выбранный явно через scrollTo. Сбрасывается, как только
+// пользователь скроллит сам.
+let pinnedIndex = null
+
+function atPageBottom() {
+  return window.innerHeight + window.scrollY >= document.body.scrollHeight - 4
+}
+
+// scrollIntoView({block:'start'}) учитывает scroll-margin-top карточки
+// (1rem), поэтому итоговый top равен ~16px, а не 0 — порог должен это
+// покрывать, иначе pinnedIndex не снимается никогда и handleScroll
+// перестаёт пересчитывать активный вопрос при обычном скролле.
+const SCROLL_TARGET_TOLERANCE = 20
 
 function handleScroll() {
-if (programmaticScroll) {
-    clearTimeout(scrollEndTimer)
-    scrollEndTimer = setTimeout(() => { programmaticScroll = false }, 150)
+  if (pinnedIndex !== null) {
+    // Плавный скролл от scrollTo ещё идёт: ждём, пока он дойдёт до цели.
+    const el = questionEls.value[pinnedIndex]
+    const reached = atPageBottom() ||
+      (el && Math.abs(el.getBoundingClientRect().top) < SCROLL_TARGET_TOLERANCE)
+    if (!reached) return
+    pinnedIndex = null
     return
   }
-  const idx = questionEls.value.findIndex(el => {
-    if (!el) return false
-    const rect = el.getBoundingClientRect()
-    return rect.top >= 0 && rect.bottom > 0
-  })
+
+  // У конца страницы активен последний вопрос. Отдельный случай, потому что
+  // по «первому видимому» им всегда оказывался бы предпоследний: последний
+  // вопрос невозможно поднять к верхней кромке — под ним ничего нет.
+  //
+  // Видимость считается с запасом: у предыдущей карточки из-за кромки торчит
+  // несколько пикселей, и по «bottom > 0» активным становился бы именно
+  // предыдущий вопрос, а не тот, к которому проскроллили.
+  const idx = atPageBottom()
+    ? props.questions.length - 1
+    : props.questions.findIndex((_q, i) => isQuestionVisible(i))
+
   if (idx !== -1 && idx !== activeIndex.value) {
     emit('index-change', idx)
     activeIndex.value = idx
@@ -203,7 +314,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('scroll', handleScroll)
-  clearTimeout(scrollEndTimer)
 })
 </script>
 

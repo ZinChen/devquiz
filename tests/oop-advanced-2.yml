@@ -182,7 +182,7 @@ questions:
     correct: true
     explanation: Класс Банк требует модификации при добавлении нового типа счета (нужно менять метод создать_счет).
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: Класс Банк нарушает OCP, так как требует модификации при добавлении новых типов счетов (нужно добавлять новые условия в метод создать_счет).
   extended_explanation: |-
     Принцип открытости/закрытости (OCP):
@@ -425,7 +425,7 @@ questions:
     correct: true
     explanation: Прямые вызовы и обмен данными создают сильную связанность.
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: Жесткое связывание (прямые вызовы, обмен данными) увеличивает связанность, что ухудшает гибкость и поддержку кода.
   extended_explanation: |-
     Связанность (coupling) — степень зависимости между классами:
@@ -588,7 +588,7 @@ questions:
     correct: false
     explanation: ООП структурирует код, а не создает хаос.
   difficulty: medium
-  topics: [oop]
+  topics: [oop, architecture]
   explanation: ООП обеспечивает модульность, переиспользование и облегчает поддержку крупных систем благодаря принципам инкапсуляции, наследования и полиморфизма.
   extended_explanation: |-
     Ценность ООП для сложных систем:
@@ -630,7 +630,7 @@ questions:
     correct: false
     explanation: Многие ООБД поддерживают транзакции.
   difficulty: medium
-  topics: [oop]
+  topics: [oop, schema]
   explanation: ООБД хранят данные в виде объектов с атрибутами и методами, что упрощает работу со сложными структурами и отношениями.
   extended_explanation: |-
     Объектно-ориентированные БД:

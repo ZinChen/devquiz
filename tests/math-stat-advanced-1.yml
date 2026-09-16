@@ -566,7 +566,7 @@ questions:
     correct: false
     explanation: Уникальность обеспечивает B-Tree.
   difficulty: medium
-  topics: [indexes]
+  topics: [indexes, performance]
   explanation: BRIN (Block Range Index) эффективен для очень больших таблиц с данными, имеющими физический порядок.
   extended_explanation: |-
     BRIN занимает мало места и быстро отсекает большие диапазоны блоков, но допускает ложные срабатывания.

@@ -13,13 +13,27 @@ Rails.application.routes.draw do
     resources :attempts, only: [ :index ], controller: "test_attempts"
   end
 
+  # Разовое прохождение теста из перетащенного файла: без записи в БД.
+  post   "/preview",       to: "previews#create", as: :preview
+  post   "/preview/grade", to: "previews#grade",  as: :preview_grade
+  # Тест живёт только в теле POST-запроса, восстановить его по GET не из чего.
+  # Сюда попадают перезагрузкой страницы прохождения — возвращаем на список.
+  get    "/preview",       to: "previews#show"
+
   get    "/settings/tags",    to: "preferences#edit",   as: :settings_tags
   patch  "/preferences/tags", to: "preferences#update", as: :preferences_tags
 
   post   "/bookmarks",     to: "bookmarks#create"
   delete "/bookmarks",     to: "bookmarks#destroy"
 
-  get "/dashboard", to: "dashboard#index", as: :dashboard
+  # Тренировка по слабой теме: вопросы собираются из разных тестов, поэтому
+  # маршрут не вложен в /tests/:slug.
+  get  "/practice/topic/:topic",       to: "topic_practices#show",  as: :topic_practice
+  post "/practice/topic/:topic/grade", to: "topic_practices#grade", as: :topic_practice_grade
+
+  get "/dashboard",           to: "dashboard#index",     as: :dashboard
+  get "/dashboard/attempts",  to: "dashboard#attempts",  as: :dashboard_attempts
+  get "/dashboard/bookmarks", to: "dashboard#bookmarks", as: :dashboard_bookmarks
   get "/stats",     to: "stats#index",     as: :stats
 
   get "up" => "rails/health#show", as: :rails_health_check

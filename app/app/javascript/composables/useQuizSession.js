@@ -2,8 +2,16 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
 
-export function useQuizSession(test, questionsSource) {
-  const STORAGE_KEY = `devquiz_session_${test.slug}`
+// `onSubmit` перехватывает отправку: разовый тест из файла отдаёт ответы сам,
+// потому что попытку негде создавать и редиректить некуда.
+export function useQuizSession(test, questionsSource, { onSubmit = null, storageKey = null } = {}) {
+  // Тренировка по ошибкам: бэкенд отдал только слабые вопросы, о чём нужно
+  // сказать при отправке — там от этого зависит знаменатель score.
+  const weakOnly = new URLSearchParams(window.location.search).get('only') === 'weak'
+
+  // У разбора ошибок свой набор вопросов, поэтому и черновик сессии отдельный:
+  // на общем ключе незаконченная тренировка подменяла бы обычное прохождение.
+  const STORAGE_KEY = storageKey ?? `devquiz_session_${test.slug}${weakOnly ? '_weak' : ''}`
   const DEFAULT_CHALLENGE_MODE = test.defaultChallengeMode || 'highlight'
 
   function resolveQuestions() {
@@ -38,6 +46,7 @@ export function useQuizSession(test, questionsSource) {
   const sessionStarted = ref(false)
   let timer
   let saveTimer
+  let submitted = false
 
   function markHintUsed(questionId) {
     usedHints.value = new Set([...usedHints.value, questionId])
@@ -106,6 +115,12 @@ export function useQuizSession(test, questionsSource) {
   })
 
   function saveSession(extra = {}) {
+    // После отправки автосейв (таймер и watch по answers) не должен вернуть
+    // localStorage к жизни: в разовом тесте страница результатов рисуется тем
+    // же компонентом, интервалы продолжают тикать, и без этого следующий
+    // дропнутый файл открылся бы с ответами предыдущего.
+    if (submitted) return
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       answers:       answers.value,
       startedAt:     startedAt.value,
@@ -117,6 +132,7 @@ export function useQuizSession(test, questionsSource) {
   }
 
   function resetChallenge() {
+    submitted            = false
     sessionStarted.value = false
     challengeMode.value  = DEFAULT_CHALLENGE_MODE
     initAnswers()
@@ -178,14 +194,21 @@ export function useQuizSession(test, questionsSource) {
         normalized[q.id] = a ? [a] : []
       }
     })
+    submitted = true
     localStorage.removeItem(STORAGE_KEY)
-    router.post(`/tests/${test.slug}/run`, {
+
+    const payload = {
       answers:        normalized,
       started_at:     startedAt.value,
       time_spent:     elapsed.value,
       challenge_mode: challengeMode.value,
       used_hints:     [...usedHints.value],
-    })
+      weak_only:      weakOnly,
+    }
+
+    if (onSubmit) return onSubmit(payload)
+
+    router.post(`/tests/${test.slug}/run`, payload)
   }
 
   function optionStyle(q, opt) {

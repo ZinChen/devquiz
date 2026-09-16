@@ -67,6 +67,7 @@ questions:
     text: "Текст вопроса?"
     type: single        # single | multiple
     difficulty: easy    # easy | medium
+    topics: [mvc]       # тема вопроса, максимум две
     options:
       - id: a
         text: "Вариант A"
@@ -77,39 +78,83 @@ questions:
     explanation: "Объяснение правильного ответа."
 ```
 
+### Темы вопросов
+
+Поле `topics` у вопроса — то, на чём держится отчёт о слабых местах: по нему считается, какие темы стоит подтянуть, и собирается тренировка по теме. Слаги берутся только из словаря [tests/topics.yml](tests/topics.yml), там же их названия, описания и цвета.
+
+Тесту без `topics` отчёт покажет теги теста целиком (`ruby`, `rails`) вместо конкретных тем — работать будет, но куда менее полезно. Поэтому новые вопросы стоит размечать сразу.
+
+## Соглашения в коде
+
+### Ключи в ответах сервера
+
+Rails отдаёт `snake_case`, фронтенд работает с `camelCase`. Преобразование сделано один раз и глобально в [application.js](app/app/javascript/entrypoints/application.js): интерцептор axios приводит ключи любого ответа, и то же самое происходит с props Inertia.
+
+Поэтому в компонентах поля читаются как `completedAt`, `testTitle`, `hasMore` — **писать преобразование руками не нужно**. Своя функция-конвертер получит `undefined` там, где ищет `completed_at`, и молча обнулит поля: дата превратится в `Invalid Date`, заголовок пропадёт.
+
+Отсюда же следствие: для запросов к своим эндпоинтам используйте `axios`, а не `fetch` — у `fetch` интерцептора нет, и ключи придётся разбирать вручную.
+
 ## Как устроена разработка
 
-Каждая новая возможность живёт в отдельной ветке и привязана к [GitHub Issue](https://github.com/ZinChen/devquiz/issues). Это позволяет работать над фичами по одной, не перемешивая изменения, и чётко видеть историю — что, зачем и когда появилось.
+Каждая возможность привязана к [GitHub Issue](https://github.com/ZinChen/devquiz/issues), а issues сгруппированы по [Milestones](https://github.com/ZinChen/devquiz/milestones) — один milestone соответствует одной версии.
+
+### Ветки и окружения
+
+| Ветка | Куда выкатывается | Когда |
+|---|---|---|
+| `dev` | [dev.devquiz.zinchenlab.ru](https://dev.devquiz.zinchenlab.ru/) | при каждом push |
+| `main` | [devquiz.zinchenlab.ru](https://devquiz.zinchenlab.ru/) | при каждом push |
+
+Деплой автоматический: CI прогоняет линтер, тесты и E2E, собирает образ, кладёт его в ghcr и перезапускает нужный сервис на VDS. Конфиг стенда (`compose.yaml`, `Caddyfile`) подтягивается только из `main`, поэтому push в `dev` не может задеть продакшен.
 
 ### Взять фичу в работу
 
-Открываешь нужный issue на GitHub, смотришь описание и чеклист. Создаёшь ветку от `main` с номером issue в названии:
+Смотришь описание и чеклист в issue, ветвишься от `dev`:
 
 ```bash
-git checkout main && git pull
-git checkout -b feature/1-fill-blank-input
+git checkout dev && git pull
+git checkout -b feature/6-weak-topics
 ```
 
-Разрабатываешь, коммитишь в обычном темпе. Когда готово — открываешь PR:
+Небольшие правки можно вести прямо в `dev` — она и так выкатывается только на стенд.
+
+Когда готово, открываешь PR в `dev` либо мержишь напрямую. Дальше — проверка на стенде: CI зелёный ещё не значит, что вёрстка не поехала.
+
+### Выпустить версию
+
+Когда все issues milestone готовы и проверены на стенде:
+
+**1. Влить `dev` в `main`.**
 
 ```bash
-gh pr create --title "Fill-in-the-blank: ввод текста" --body "Closes #1" --base main
+bin/release-pr v0.5            # достаточно префикса milestone
+bin/release-pr v0.5 --dry-run  # посмотреть, что получится, ничего не создавая
 ```
 
-Фраза `Closes #N` в теле PR — главное. После merge в `main` GitHub автоматически закроет issue.
+Скрипт проверит, что ты в `dev`, всё закоммичено и отправлено, покажет статус CI и соберёт тело PR из открытых issue milestone. Фраза `Closes #N` в теле — то, из-за чего issues закроются после merge; если её забыть, они останутся открытыми, а release notes выйдут пустыми.
 
-### Версии
-
-Issues сгруппированы по [Milestones](https://github.com/ZinChen/devquiz/milestones) — каждый milestone соответствует версии приложения. Когда все issues milestone закрыты, выпускаем релиз:
+То же самое руками:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
-gh release create v0.2.0 --generate-notes
+gh pr create --base main --head dev --title "v0.5 — Weak topics" --body "Closes #6"
 ```
 
-Деплой идёт автоматически при пуше в `main`: GitHub Actions собирает образ,
-кладёт его в ghcr и обновляет контейнер на VDS. Ветка `dev` выкатывается на
-стенд [dev.devquiz.zinchenlab.ru](https://dev.devquiz.zinchenlab.ru/).
+**2. Закрыть milestone** — на странице milestones или командой:
+
+```bash
+gh api -X PATCH repos/ZinChen/devquiz/milestones/4 -f state=closed
+```
+
+Дальше всё автоматически: workflow [milestone-release.yml](.github/workflows/milestone-release.yml) создаёт тег и GitHub Release со списком закрытых issue.
+
+Порядок важен: релиз создаётся от `main` (`--target main`), поэтому milestone закрывают **после** вливания, иначе тег встанет на код без этой работы.
+
+### Про версии
+
+Номер версии живёт только в названии milestone, git-теге и GitHub Release — в коде его нет, поднимать вручную ничего не нужно.
+
+Название milestone задаётся как `vX.Y — Описание` (например, `v0.5 — Weak topics`). Тегом становится версия из начала строки: `v0.5`. Остальное уходит в заголовок релиза, потому что пробелы и тире в имени git-тега недопустимы.
+
+Если заголовок milestone не начинается с версии, workflow просто ничего не делает — релиз придётся создать руками.
 
 Настройка сервера и эксплуатация — [deploy/README.md](deploy/README.md).

@@ -165,3 +165,56 @@ body {
   overflow-x: auto;
   white-space: pre;
 }
+
+/* Оверлей перетаскивания файла теста (TestDropZone). Живёт здесь, а не в
+   scoped-стилях компонента: слой телепортируется в body и scoped-атрибут
+   до него не доезжает. */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(79, 99, 245, 0.08);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.drop-overlay__card {
+  padding: 2rem 3rem;
+  border-radius: 0.75rem;
+  border: 2px dashed #4F63F5;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.12);
+}
+
+.drop-overlay__icon {
+  font-size: 2rem;
+  line-height: 1;
+  color: #4F63F5;
+  margin-bottom: 0.75rem;
+}
+
+.drop-overlay__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.drop-overlay__hint {
+  font-size: 0.8125rem;
+  color: #6B7280;
+}
+
+.drop-overlay-enter-active,
+.drop-overlay-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.drop-overlay-enter-from,
+.drop-overlay-leave-to {
+  opacity: 0;
+}

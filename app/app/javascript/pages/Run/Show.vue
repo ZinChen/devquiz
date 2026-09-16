@@ -1,6 +1,17 @@
 <template>
   <AppLayout>
     <div class="result-wrap">
+      <div v-if="preview" class="result-preview-note">
+        <span class="result-preview-note__icon" aria-hidden="true">i</span>
+        <div>
+          <p class="result-preview-note__title">Тест из файла — результат нигде не сохранён</p>
+          <p class="result-preview-note__text">
+            Эта попытка не попала ни в вашу историю, ни в статистику теста.
+            Чтобы результат не потерялся, скачайте отчёт.
+          </p>
+        </div>
+      </div>
+
       <div class="result-summary">
         <p class="result-summary__label">
           Тест завершён: {{ test.title }}
@@ -14,7 +25,16 @@
         </p>
         <p class="result-summary__time">Время: {{ formatTime(attempt.timeSpent) }}</p>
 
-        <div class="result-summary__actions">
+        <div v-if="preview" class="result-summary__actions">
+          <button type="button" class="btn btn-primary" @click="downloadReport">
+            Сохранить результат
+          </button>
+          <button type="button" class="btn btn-ghost" @click="$emit('retry')">
+            Пройти снова
+          </button>
+          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+        </div>
+        <div v-else class="result-summary__actions">
           <Link
             v-if="suggestedNextMode"
             :href="`/tests/${test.slug}/run/new?mode=${suggestedNextMode}`"
@@ -29,11 +49,94 @@
         </div>
       </div>
 
-      <h2 class="result-breakdown-title">Разбор ответов</h2>
+      <!-- От частного к общему: конкретные вопросы, затем их темы, затем куда идти дальше. -->
+      <template v-if="!preview && hasWeakTopics">
+        <div v-if="weakTopics.recentMistakes?.length" class="weak-header">
+          <h2 class="result-breakdown-title">Вопросы, где вы ошиблись</h2>
+          <Link
+            v-if="weakTopics.hasWeakInThisTest"
+            :href="`/tests/${test.slug}/run/new?only=weak`"
+            class="btn btn-primary btn-sm"
+          >
+            Тренировка по ошибкам
+          </Link>
+        </div>
+
+        <div class="weak-topics">
+          <ul v-if="weakTopics.recentMistakes?.length" class="weak-topics__mistakes-list">
+            <li v-for="m in weakTopics.recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
+              <!-- Вопрос этого теста уже отрисован ниже — скроллим к нему, а не уходим со страницы. -->
+              <a
+                v-if="m.testSlug === test.slug"
+                :href="`#question-${m.questionId}`"
+                class="weak-topics__mistake-link"
+                @click.prevent="scrollToQuestion(m.questionId)"
+              >{{ m.text }}</a>
+              <Link v-else :href="`/tests/${m.testSlug}`" class="weak-topics__mistake-link">{{ m.text }}</Link>
+              <!-- Одна ошибка — счётчик не несёт информации, показываем только повторные. -->
+              <span v-if="m.wrongCount > 1" class="weak-topics__mistake-count">
+                {{ m.wrongCount }} {{ timesLabel(m.wrongCount) }}
+              </span>
+            </li>
+          </ul>
+
+          <section class="weak-topics__section">
+            <h3 class="weak-topics__subtitle">Слабые темы</h3>
+            <div class="weak-topics__tags">
+              <!-- Фон кодирует число ошибок, точка слева — саму тему: два разных
+                   признака, поэтому цвет темы не спорит с градацией. -->
+              <span
+                v-for="topic in weakTopics.tags" :key="topic.slug"
+                class="weak-topics__tag"
+                :class="`weak-topics__tag--${topic.level}`"
+                :title="topicTitle(topic)"
+              >
+                <span
+                  v-if="topic.color"
+                  class="weak-topics__tag-dot"
+                  :style="{ background: topic.color }"
+                  aria-hidden="true"
+                ></span>
+                {{ topic.label }}
+                <span v-if="topic.wrongCount > 1" class="weak-topics__tag-count">{{ topic.wrongCount }}</span>
+              </span>
+            </div>
+          </section>
+
+          <section v-if="weakTopics.recommendedTests?.length" class="weak-topics__section">
+            <h3 class="weak-topics__subtitle">Рекомендуемые тесты</h3>
+            <div class="weak-topics__tests">
+              <Link
+                v-for="rt in weakTopics.recommendedTests" :key="rt.slug"
+                :href="`/tests/${rt.slug}`"
+                class="weak-topics__test-link"
+              >
+                {{ rt.title }}
+              </Link>
+            </div>
+          </section>
+        </div>
+      </template>
+
+      <div class="weak-header">
+        <h2 class="result-breakdown-title">Разбор ответов</h2>
+        <!-- Подпись называет действие по клику, а не текущее состояние:
+             «Только неправильные» в роли статуса читалась бы двояко. -->
+        <button
+          v-if="wrongCount && wrongCount < answersDetail.length"
+          type="button"
+          class="btn btn-ghost btn-sm"
+          @click="onlyWrong = !onlyWrong"
+        >
+          {{ onlyWrong ? `Все ответы (${answersDetail.length})` : `Только неправильные (${wrongCount})` }}
+        </button>
+      </div>
 
       <div
-        v-for="(item, idx) in answersDetail" :key="item.questionId"
+        v-for="(item, idx) in visibleAnswers" :key="item.questionId"
+        :id="`question-${item.questionId}`"
         class="result-item"
+        :class="{ 'result-item--highlight': highlightedQuestion === item.questionId }"
         :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
       >
         <div class="result-item__header">
@@ -186,17 +289,84 @@
 </template>
 
 <script setup>
-import { computed, reactive, onMounted } from 'vue'
+import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
+import { buildReport, reportFilename } from '@/composables/quizReport.js'
 
 const props = defineProps({
   test:           Object,
   attempt:        Object,
   answersDetail:  Array,
+  weakTopics:     { type: Object, default: () => ({}) },
+  // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
+  // вместо ссылок на /tests/:slug показываем скачивание отчёта.
+  preview:        { type: Boolean, default: false },
 })
+
+const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
+
+const onlyWrong = ref(false)
+
+const wrongCount = computed(() => props.answersDetail?.filter(a => !a.correct).length ?? 0)
+
+const visibleAnswers = computed(() =>
+  onlyWrong.value ? props.answersDetail.filter(a => !a.correct) : props.answersDetail
+)
+
+// Подсветка гасится по таймеру, поэтому его надо снимать при уходе со страницы.
+const highlightedQuestion = ref(null)
+let highlightTimer
+
+async function scrollToQuestion(questionId) {
+  // Фильтр мог скрыть карточку — тогда ждём перерисовку, иначе скроллить некуда.
+  if (!document.getElementById(`question-${questionId}`)) {
+    onlyWrong.value = false
+    await nextTick()
+  }
+
+  const el = document.getElementById(`question-${questionId}`)
+  if (!el) return
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  highlightedQuestion.value = questionId
+  clearTimeout(highlightTimer)
+  highlightTimer = setTimeout(() => { highlightedQuestion.value = null }, 1600)
+}
+
+onUnmounted(() => clearTimeout(highlightTimer))
+
+// В тултипе описание темы и число ошибок: на самом теге число показано
+// только при повторных промахах, чтобы не зашумлять строку единицами.
+function topicTitle(topic) {
+  const parts = []
+  if (topic.description) parts.push(topic.description)
+  if (topic.wrongCount > 0) parts.push(`Ошибок: ${topic.wrongCount}`)
+  return parts.join(' • ')
+}
+
+// «2 раза», но «5 раз» и «11 раз» — вторая форма нужна для 5..20 и хвостов 0, 5-9.
+function timesLabel(count) {
+  const tail    = count % 10
+  const hundred = count % 100
+  return tail >= 2 && tail <= 4 && (hundred < 12 || hundred > 14) ? 'раза' : 'раз'
+}
+
+defineEmits(['retry'])
+
+function downloadReport() {
+  const blob = new Blob([buildReport(props)], { type: 'text/markdown;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = reportFilename(props.test.title)
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 const { ready, init, tokenize } = useShiki()
 onMounted(() => init())
@@ -249,11 +419,19 @@ const scoreColor = computed(() => {
   return '#EF4444'
 })
 
-const challengeModeLabel = computed(() => CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null)
+// Режим прохождения пишется в попытку всегда, даже когда в тесте нет ни
+// одного code_challenge. Для такого теста он ничего не значит: показывать
+// бейдж «Highlight» и звать пройти в режиме Fix было бы враньём.
+const hasCodeChallenge = computed(() => props.test.hasCodeChallenge !== false)
+
+const challengeModeLabel = computed(() =>
+  hasCodeChallenge.value ? CHALLENGE_MODE_LABELS[props.attempt.challengeMode] || null : null
+)
 
 const PASS_THRESHOLD = 70
 
 const suggestedNextMode = computed(() => {
+  if (!hasCodeChallenge.value) return null
   if (!props.attempt.challengeMode) return null
   if (props.attempt.score < PASS_THRESHOLD) return null
   const next = nextChallengeMode(props.test.completedChallengeModes || [])
@@ -335,6 +513,48 @@ function optionLetterStyle(item, optId) {
   margin: 0 auto;
 }
 
+.result-preview-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #FDE68A;
+  border-radius: var(--rounded-box, 0.75rem);
+  background: #FFFBEB;
+}
+
+.result-preview-note__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.0625rem;
+  border-radius: 50%;
+  background: #F59E0B;
+  color: #fff;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+}
+
+.result-preview-note__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #92400E;
+  margin-bottom: 0.125rem;
+}
+
+.result-preview-note__text {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #B45309;
+}
+
 .result-summary {
   background: #fff;
   border: 1px solid #F3F4F6;
@@ -391,6 +611,155 @@ function optionLetterStyle(item, optId) {
   margin-bottom: 1rem;
 }
 
+/* Заголовок блока и кнопка тренировки по краям одной строки. */
+.weak-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.weak-header .result-breakdown-title {
+  margin-bottom: 0;
+}
+
+/* Обычная карточка страницы — как .result-item, чтобы блок не выбивался. */
+.weak-topics {
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.weak-topics__section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #F3F4F6;
+}
+
+/* Заголовки второстепенных секций — мельче, чтобы список вопросов читался первым. */
+.weak-topics__subtitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 0.5rem;
+}
+
+.weak-topics__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* Насыщенность фона растёт с числом ошибок: серый — разовый промах,
+   красный — тема, где ошиблись трижды и больше. */
+.weak-topics__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: #F3F4F6;
+  color: #4B5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.weak-topics__tag--none,
+.weak-topics__tag--low {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.weak-topics__tag--medium {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.weak-topics__tag--high {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+/* Цвет темы из словаря — отдельный от градации признак. */
+.weak-topics__tag-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weak-topics__tag-count {
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.weak-topics__tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weak-topics__test-link {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  color: #374151;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.weak-topics__test-link:hover {
+  background: #F7F8FA;
+  border-color: #4F63F5;
+  color: #4F63F5;
+}
+
+.weak-topics__mistakes-list {
+  list-style: disc;
+  padding-left: 1.125rem;
+  margin: 0;
+  /* Маркер красим через цвет самого li, текст ссылки перекрывает его своим. */
+  color: #D1D5DB;
+}
+
+.weak-topics__mistakes-list li {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 0.3125rem;
+}
+
+.weak-topics__mistakes-list li:last-child {
+  margin-bottom: 0;
+}
+
+.weak-topics__mistake-link {
+  color: #374151;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.weak-topics__mistake-link:hover {
+  color: #4F63F5;
+  text-decoration: underline;
+}
+
+.weak-topics__mistake-count {
+  margin-left: 0.375rem;
+  color: #9CA3AF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .result-item {
   background: #fff;
   border: 1px solid;
@@ -398,6 +767,16 @@ function optionLetterStyle(item, optId) {
   border-radius: var(--rounded-box, 0.75rem);
   padding: 1.25rem;
   margin-bottom: 0.75rem;
+}
+
+/* Короткая вспышка после перехода из списка ошибок — чтобы было видно, куда привели. */
+.result-item--highlight {
+  animation: result-item-flash 1.6s ease-out;
+}
+
+@keyframes result-item-flash {
+  0%, 40% { box-shadow: 0 0 0 3px rgba(79, 99, 245, 0.35); }
+  100%    { box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
 }
 
 .result-item__header {

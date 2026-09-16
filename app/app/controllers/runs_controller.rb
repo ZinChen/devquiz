@@ -3,6 +3,17 @@ class RunsController < ApplicationController
 
   def new
     questions = questions_with_db_ids
+    weak_only = params[:only] == "weak"
+
+    # Тренировка по ошибкам: тот же тест, но только из слабых вопросов. Если
+    # прорабатывать уже нечего, молча ведём обычное прохождение целиком.
+    if weak_only
+      weak_ids  = weak_questions(test_slug: @meta.slug).question_ids.to_set
+      filtered  = questions.select { |q| weak_ids.include?(q["id"].to_s) }
+      questions = filtered if filtered.any?
+      weak_only = filtered.any?
+    end
+
     bookmarked_ids = current_user ? current_user.bookmarks
       .joins(:question)
       .where(questions: { test_slug: @meta.slug })
@@ -11,7 +22,8 @@ class RunsController < ApplicationController
     render inertia: "Run/New", props: {
       test:          test_props(@meta),
       questions:     questions,
-      bookmarked_ids: bookmarked_ids
+      bookmarked_ids: bookmarked_ids,
+      weak_only:     weak_only
     }
   end
 
@@ -20,11 +32,17 @@ class RunsController < ApplicationController
     used_hint_ids   = Array(params[:used_hints]).map(&:to_s).to_set
     challenge_mode  = params[:challenge_mode].presence || "fill"
 
+    # В тренировке по ошибкам проходится подмножество вопросов, поэтому знаменатель
+    # берётся по фактически заданным, а не по размеру теста — иначе 100% верных
+    # ответов дали бы score вроде 25%.
+    weak_only       = params[:weak_only].to_s == "true"
+    total_questions = weak_only ? answers_data.size : @meta.questions_count
+
     attempt = TestAttempt.create!(
       user_id:         current_user&.id,
       guest_token:     current_user ? nil : guest_token!,
       test_slug:       @meta.slug,
-      total_questions: @meta.questions_count,
+      total_questions: total_questions,
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
       time_spent:      params[:time_spent].to_i,
@@ -39,12 +57,7 @@ class RunsController < ApplicationController
       next unless question
 
       selected_arr = Array(selected)
-      is_correct   = if question["type"] == "code_challenge"
-        grade_code_challenge(question, selected_arr, challenge_mode)
-      else
-        correct_ids = question["options"].select { |o| o["correct"] }.map { |o| o["id"] }
-        selected_arr.sort == correct_ids.sort
-      end
+      is_correct   = QuizGrading.correct?(question, selected_arr, challenge_mode)
 
       correct_count += 1 if is_correct
 
@@ -56,10 +69,12 @@ class RunsController < ApplicationController
       )
     end
 
-    score = @meta.questions_count > 0 ? (correct_count.to_f / @meta.questions_count * 100).round(2) : 0
+    score = total_questions > 0 ? (correct_count.to_f / total_questions * 100).round(2) : 0
 
     attempt.update!(correct_count: correct_count, score: score)
-    update_test_stats(@meta, score, attempt)
+    # Разбор ошибок — это тренировка по неполному тесту, в общую статистику
+    # и в рекорд теста такие попытки не идут.
+    update_test_stats(@meta, score, attempt) unless weak_only
 
     redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
@@ -71,7 +86,8 @@ class RunsController < ApplicationController
     render inertia: "Run/Show", props: {
       test:           test_props(@meta),
       attempt:        attempt_props(attempt),
-      answers_detail: answers_detail(attempt, questions_map)
+      answers_detail: answers_detail(attempt, questions_map),
+      weak_topics:    weak_topics(attempt, questions_map)
     }
   end
 
@@ -114,6 +130,7 @@ class RunsController < ApplicationController
       difficulty:                t.difficulty,
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
+      has_code_challenge:        t.has_code_challenge?,
       default_challenge_mode:    yaml["default_challenge_mode"],
       language:                  yaml["language"] || "ruby",
       completed_challenge_modes: current_user ? user_completed_modes(t.slug) : []
@@ -143,209 +160,104 @@ class RunsController < ApplicationController
 
   def answers_detail(attempt, questions_map)
     challenge_mode = attempt.challenge_mode.presence || "fill"
-    attempt.test_attempt_answers.map do |ans|
+    attempt.test_attempt_answers.filter_map do |ans|
       q = questions_map[ans.question_id]
       next unless q
 
-      base = {
-        question_id:          ans.question_id,
-        question_text:        q["text"],
-        type:                 q["type"].presence || "single",
-        correct:              ans.correct,
-        explanation:          q["explanation"],
-        extended_explanation: q["extended_explanation"].presence,
-        recommendation:       q["recommendation"].presence
-      }
-
-      if q["type"] == "code_challenge"
-        mode_data = q.dig("modes", challenge_mode) || {}
-        original_code   = mode_data["code"]
-        correct_answer  = Array(mode_data["answer"]).first || mode_data["correct_lines"]&.join(",")
-        selected_answer = ans.selected_options.first.to_s
-
-        if challenge_mode == "fix"
-          base.merge(
-            challenge_mode:  challenge_mode,
-            code:            original_code,
-            language:        q["language"] || "ruby",
-            correct_answer:  diff_lines(original_code, correct_answer),
-            insert_text:     mode_data["insert_text"],
-            selected_answer: diff_lines(original_code, selected_answer)
-          )
-        else
-          base.merge(
-            challenge_mode:  challenge_mode,
-            code:            original_code,
-            language:        q["language"] || "ruby",
-            correct_answer:  correct_answer,
-            insert_text:     mode_data["insert_text"],
-            selected_answer: selected_answer
-          )
-        end
-      else
-        base.merge(
-          options:          q["options"].map { |o| o.slice("id", "text", "explanation") },
-          correct_ids:      q["options"].select { |o| o["correct"] }.map { |o| o["id"] },
-          selected_options: ans.selected_options
-        )
-      end
-    end.compact
+      QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode)
+    end
   end
 
-  # Line-based diff between `original` and `changed` using LCS. Returns only
-  # the lines that differ (no unchanged context), each either:
-  #   { kind: "removed", content: }         — a line only `original` had
-  #   { kind: "modified", tokens: [{text:, type: "context"|"added"}] } — a
-  #     line of `changed`, word-diffed against its removed counterpart when
-  #     replacing one line for one line; words unique to `changed` are
-  #     tagged type: "added".
-  def diff_lines(original, changed)
-    original_lines = original.to_s.split("\n", -1)
-    changed_lines   = changed.to_s.split("\n", -1)
+  RECOMMENDED_TESTS_PER_TAG = 3
+  WEAK_QUESTIONS_LIMIT      = 5
 
-    lcs = longest_common_subsequence(original_lines, changed_lines)
+  # Слабые темы считаются по неверно отвеченным вопросам. Часть вопросов
+  # размечена полем topics (mvc, indexes, locking…) — оно точнее и идёт
+  # первым; для неразмеченных остаются теги теста целиком.
+  def weak_topics(attempt, questions_map)
+    wrong_ids = attempt.test_attempt_answers.reject(&:correct).map(&:question_id)
+    return blank_weak_topics if wrong_ids.empty?
 
-    result = []
-    oi = 0
-    ci = 0
-    lcs.each do |line|
-      run_removed = []
-      while oi < original_lines.size && original_lines[oi] != line
-        run_removed << original_lines[oi]
-        oi += 1
-      end
-      run_added = []
-      while ci < changed_lines.size && changed_lines[ci] != line
-        run_added << changed_lines[ci]
-        ci += 1
-      end
-      result.concat(diff_run(run_removed, run_added))
-      oi += 1
-      ci += 1
-    end
+    # topics вопроса (mvc, indexes) точнее тегов теста (ruby, rails), но
+    # размечены не везде и в tags тестов не встречаются — поэтому показываем
+    # их, а тесты ищем по обоим наборам сразу.
+    #
+    # Считаем до uniq: сколько неверных вопросов пришлось на тему — по этому
+    # числу тема красится и сортируется в отчёте.
+    topic_counts    = wrong_ids.flat_map { |id| Array(questions_map[id]&.fetch("topics", nil)) }.map(&:to_s).tally
+    question_topics = topic_counts.keys
+    shown_tags      = question_topics.presence || @meta.tag_list
+    search_tags     = (question_topics + @meta.tag_list).uniq
+    return blank_weak_topics if search_tags.empty?
 
-    run_removed = []
-    while oi < original_lines.size
-      run_removed << original_lines[oi]
-      oi += 1
-    end
-    run_added = []
-    while ci < changed_lines.size
-      run_added << changed_lines[ci]
-      ci += 1
-    end
-    result.concat(diff_run(run_removed, run_added))
-
-    result.reject { |line| line[:kind] == "modified" && line[:tokens].none? { |t| t[:type] == "added" } }
-  end
-
-  # Within a run of consecutive removed/added lines, pairs up removed[i]
-  # with added[i] (line replacement) and returns a word-level diff for each
-  # pair; leftover removed lines are kept as whole "removed" lines, leftover
-  # added lines with no counterpart are marked as a whole "modified" line.
-  def diff_run(removed, added)
-    paired = [ removed.size, added.size ].min
-    lines  = (0...paired).map { |i| { kind: "modified", tokens: word_diff_tokens(removed[i], added[i]) } }
-    lines += removed[paired..].to_a.map { |line| { kind: "removed", content: line } }
-    lines += added[paired..].to_a.map { |line|
-      type = line.strip.empty? ? "context" : "added"
-      { kind: "modified", tokens: [ { text: line, type: type } ] }
+    {
+      tags:                  weak_tags(shown_tags, topic_counts),
+      recommended_tests:     recommended_tests(search_tags),
+      recent_mistakes:       recent_mistakes(questions_map),
+      has_weak_in_this_test: weak_questions(test_slug: @meta.slug).any?
     }
-    lines
   end
 
-  # Splits a line into words, runs of whitespace, and individual punctuation
-  # characters, so a diff at a single identifier (e.g. find_each -> in_batches)
-  # doesn't drag along neighbouring parens/colons into the "added" tokens.
-  WORD_TOKEN_PATTERN = /[a-zA-Z0-9_]+|\s+|./
-
-  def word_diff_tokens(original_line, changed_line)
-    original_words = original_line.scan(WORD_TOKEN_PATTERN)
-    changed_words   = changed_line.scan(WORD_TOKEN_PATTERN)
-    lcs = longest_common_subsequence(original_words, changed_words)
-
-    tokens = []
-    oi = 0
-    ci = 0
-    lcs.each do |word|
-      oi += 1 while oi < original_words.size && original_words[oi] != word
-      while ci < changed_words.size && changed_words[ci] != word
-        tokens << { text: changed_words[ci], type: added_token_type(changed_words[ci]) }
-        ci += 1
-      end
-      tokens << { text: word, type: "context" }
-      oi += 1
-      ci += 1
-    end
-    while ci < changed_words.size
-      tokens << { text: changed_words[ci], type: added_token_type(changed_words[ci]) }
-      ci += 1
-    end
-
-    tokens
+  def blank_weak_topics
+    { tags: [], recommended_tests: [], recent_mistakes: [], has_weak_in_this_test: false }
   end
 
-  def added_token_type(text)
-    text.strip.empty? ? "context" : "added"
+  # Порог, с которого тема считается проблемной, а не разовым промахом.
+  WEAK_TAG_HIGH_LEVEL   = 3
+  WEAK_TAG_MEDIUM_LEVEL = 2
+
+  # Темы с числом ошибок и уровнем: самые частые первыми, чтобы взгляд
+  # цеплялся за главное. Запасные теги теста счётчика не имеют — они не
+  # привязаны к конкретным вопросам, поэтому идут нейтральным уровнем.
+  def weak_tags(shown_tags, topic_counts)
+    TopicDictionary.decorate(shown_tags).map { |topic|
+      count = topic_counts[topic.slug].to_i
+      topic.to_h.merge(wrong_count: count, level: weak_tag_level(count))
+    }.sort_by { |t| -t[:wrong_count] }
   end
 
-  def longest_common_subsequence(a, b)
-    n = a.size
-    m = b.size
-    dp = Array.new(n + 1) { Array.new(m + 1, 0) }
-
-    (n - 1).downto(0) do |i|
-      (m - 1).downto(0) do |j|
-        dp[i][j] = a[i] == b[j] ? dp[i + 1][j + 1] + 1 : [ dp[i + 1][j], dp[i][j + 1] ].max
-      end
+  def weak_tag_level(count)
+    case count
+    when 0                          then "none"
+    when WEAK_TAG_HIGH_LEVEL..      then "high"
+    when WEAK_TAG_MEDIUM_LEVEL      then "medium"
+    else                                 "low"
     end
-
-    result = []
-    i = 0
-    j = 0
-    while i < n && j < m
-      if a[i] == b[j]
-        result << a[i]
-        i += 1
-        j += 1
-      elsif dp[i + 1][j] >= dp[i][j + 1]
-        i += 1
-      else
-        j += 1
-      end
-    end
-    result
   end
 
-  def grade_code_challenge(question, selected_arr, mode)
-    mode_data = question.dig("modes", mode) || {}
-    case mode
-    when "highlight"
-      correct_raw = Array(mode_data["correct_lines"]).map(&:to_s)
-      selected    = selected_arr.first.to_s.split(",").map(&:strip).sort
+  def recommended_tests(search_tags)
+    tag_conditions = search_tags.map { "tags LIKE ?" }.join(" OR ")
+    tag_values     = search_tags.map { |t| "%#{t}%" }
 
-      # build all accepted forms for each correct entry:
-      # "after:N" also accepts line N (the line before the gap)
-      # plain line number N also accepts "after:N-1"
-      accepted = correct_raw.flat_map do |c|
-        if c.start_with?("after:")
-          n = c.sub("after:", "").to_i
-          [ c, n.to_s ]
-        else
-          n = c.to_i
-          [ c, "after:#{n - 1}" ]
-        end
-      end
+    TestMetadatum.active
+      .where.not(slug: @meta.slug)
+      .where(tag_conditions, *tag_values)
+      .limit(RECOMMENDED_TESTS_PER_TAG * 2)
+      .map { |t| { slug: t.slug, title: t.title, tags: t.tag_list & search_tags } }
+      .select { |t| t[:tags].any? }
+      .first(RECOMMENDED_TESTS_PER_TAG)
+  end
 
-      selected.all? { |s| accepted.include?(s) } &&
-        selected.size == correct_raw.size
-    when "fix"
-      normalize = ->(s) { s.to_s.lines.map(&:rstrip).reject(&:empty?).join("\n").strip }
-      normalize.(selected_arr.first) == normalize.(mode_data["answer"])
-    else
-      accepted = Array(mode_data["answer"]).map { |a| a.to_s.strip.downcase }
-      accepted.include?(selected_arr.first.to_s.strip.downcase)
+  # Вопросы, которые стоит проработать — см. WeakQuestions: учитываются
+  # только недавние попытки, решённые вопросы из списка уходят.
+  def recent_mistakes(questions_map)
+    questions_cache = { @meta.slug => questions_map }
+
+    weak_questions.entries.first(WEAK_QUESTIONS_LIMIT).map do |entry|
+      cache = questions_cache[entry.test_slug] ||= YamlSyncService.load_questions(entry.test_slug).index_by { |q| q["id"] }
+      text  = cache[entry.question_id]&.fetch("text", nil) || entry.question_id
+
+      {
+        question_id: entry.question_id,
+        test_slug:   entry.test_slug,
+        text:        text.to_s.truncate(140),
+        wrong_count: entry.wrong_count
+      }
     end
+  end
+
+  def weak_questions(test_slug: nil)
+    WeakQuestions.for(user: current_user, guest_token: guest_token, test_slug: test_slug)
   end
 
   def update_test_stats(meta, new_score, attempt)
