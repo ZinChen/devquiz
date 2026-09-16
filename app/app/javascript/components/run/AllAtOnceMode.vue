@@ -277,9 +277,13 @@ function handleScroll() {
   // У конца страницы активен последний вопрос. Отдельный случай, потому что
   // по «первому видимому» им всегда оказывался бы предпоследний: последний
   // вопрос невозможно поднять к верхней кромке — под ним ничего нет.
+  //
+  // Видимость считается с запасом: у предыдущей карточки из-за кромки торчит
+  // несколько пикселей, и по «bottom > 0» активным становился бы именно
+  // предыдущий вопрос, а не тот, к которому проскроллили.
   const idx = atPageBottom()
     ? props.questions.length - 1
-    : questionEls.value.findIndex(el => el && el.getBoundingClientRect().bottom > 0)
+    : props.questions.findIndex((_q, i) => isQuestionVisible(i))
 
   if (idx !== -1 && idx !== activeIndex.value) {
     emit('index-change', idx)
