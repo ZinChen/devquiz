@@ -5,7 +5,7 @@
       <div class="question-sidebar__grid">
         <button
           v-for="(q, idx) in questions" :key="q.id"
-          @click="scrollTo(idx)"
+          @click="pickFromSidebar(idx, $event)"
           class="question-sidebar__cell"
           tabindex="-1"
           :class="{
@@ -102,6 +102,14 @@ function focusSubmit() {
   if (!el) return
   el.focus()
   el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+// Клик мышью фокусирует кнопку даже при tabindex="-1" (кроме Safari), а
+// isInteractiveTarget затем блокирует стрелки на любой кнопке — снимаем
+// фокус, чтобы клавиатура сразу заработала с выбранным вопросом.
+function pickFromSidebar(idx, e) {
+  scrollTo(idx)
+  e.currentTarget?.blur()
 }
 
 function scrollTo(idx) {
@@ -264,11 +272,18 @@ function atPageBottom() {
   return window.innerHeight + window.scrollY >= document.body.scrollHeight - 4
 }
 
+// scrollIntoView({block:'start'}) учитывает scroll-margin-top карточки
+// (1rem), поэтому итоговый top равен ~16px, а не 0 — порог должен это
+// покрывать, иначе pinnedIndex не снимается никогда и handleScroll
+// перестаёт пересчитывать активный вопрос при обычном скролле.
+const SCROLL_TARGET_TOLERANCE = 20
+
 function handleScroll() {
   if (pinnedIndex !== null) {
     // Плавный скролл от scrollTo ещё идёт: ждём, пока он дойдёт до цели.
     const el = questionEls.value[pinnedIndex]
-    const reached = atPageBottom() || (el && Math.abs(el.getBoundingClientRect().top) < 4)
+    const reached = atPageBottom() ||
+      (el && Math.abs(el.getBoundingClientRect().top) < SCROLL_TARGET_TOLERANCE)
     if (!reached) return
     pinnedIndex = null
     return
