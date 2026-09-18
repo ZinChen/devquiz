@@ -73,7 +73,8 @@ class DashboardController < ApplicationController
         correct_count:   a.correct_count,
         total_questions: a.total_questions,
         time_spent:      a.time_spent,
-        completed_at:    a.completed_at
+        completed_at:    a.completed_at,
+        weak_only:       a.weak_only
       }
     end
   end

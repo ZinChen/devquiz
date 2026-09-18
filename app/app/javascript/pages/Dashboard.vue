@@ -56,7 +56,12 @@
         class="attempt-row"
       >
         <div>
-          <p class="attempt-row__title">{{ a.testTitle }}</p>
+          <p class="attempt-row__title">
+            {{ a.testTitle }}
+            <!-- Тренировка идёт по части вопросов, поэтому счёт вида 3/3
+                 рядом с обычными попытками иначе читался бы как полный тест. -->
+            <span v-if="a.weakOnly" class="attempt-row__badge">тренировка</span>
+          </p>
           <p class="attempt-row__date">{{ formatDate(a.completedAt) }}</p>
         </div>
         <div class="attempt-row__score-wrap">
@@ -321,6 +326,19 @@ function formatDate(d) {
 .attempt-row__title {
   font-weight: 500;
   font-size: 0.875rem;
+}
+
+/* Пометка, а не акцент: приглушённая, как дата и счётчик рядом. */
+.attempt-row__badge {
+  display: inline-block;
+  margin-left: 0.375rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: #F3F4F6;
+  color: #9CA3AF;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .attempt-row__date {

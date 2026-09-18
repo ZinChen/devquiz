@@ -64,6 +64,18 @@ RSpec.describe "Слабые темы в кабинете", type: :request do
     expect(recommended.first["topics"]).to include("MVC & Request lifecycle")
   end
 
+  # Бейдж «тренировка» в истории рисуется по этому полю.
+  it "отдаёт признак тренировки в истории" do
+    complete_test({ "q1" => [ "wrong" ], "q2" => [ "b" ] })
+    post "/tests/#{meta.slug}/run", params: {
+      answers: { "q1" => [ "b" ] }, started_at: 1.minute.ago.iso8601, time_spent: 30, weak_only: true
+    }
+
+    attempts = dashboard_props["attempts"]
+    expect(attempts.first["weak_only"]).to be true
+    expect(attempts.last["weak_only"]).to be false
+  end
+
   # Из этих двух полей собирается ссылка на страницу результата попытки.
   it "отдаёт id и slug попытки для ссылки на результат" do
     complete_test({ "q1" => [ "b" ], "q2" => [ "b" ] })

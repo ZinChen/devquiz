@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,6 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_120000) do
     t.integer "total_questions", default: 0
     t.datetime "updated_at", null: false
     t.integer "user_id"
+    t.boolean "weak_only", default: false, null: false
     t.index ["completed_at"], name: "index_test_attempts_on_completed_at"
     t.index ["guest_token"], name: "index_test_attempts_on_guest_token", where: "(user_id IS NULL)"
     t.index ["test_slug"], name: "index_test_attempts_on_test_slug"

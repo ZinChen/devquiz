@@ -46,7 +46,8 @@ class RunsController < ApplicationController
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
       time_spent:      params[:time_spent].to_i,
-      challenge_mode:  challenge_mode
+      challenge_mode:  challenge_mode,
+      weak_only:       weak_only
     )
 
     questions_map   = load_questions.index_by { |q| q["id"] }

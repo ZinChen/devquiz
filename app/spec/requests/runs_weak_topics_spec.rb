@@ -137,5 +137,23 @@ RSpec.describe "Слабые темы после теста", type: :request do
 
       expect(meta.reload.slice(:attempts_count, :avg_score, :best_score)).to eq(stats)
     end
+
+    # В статистику теста тренировка не идёт, но в личной истории остаётся —
+    # флаг отличает её от обычного прохождения.
+    it "помечает попытку как тренировку" do
+      complete_test({ "q1" => [ "wrong" ], "q2" => [ "b" ] })
+
+      post "/tests/#{meta.slug}/run", params: {
+        answers: { "q1" => [ "b" ] }, started_at: 1.minute.ago.iso8601, time_spent: 30, weak_only: true
+      }
+
+      expect(TestAttempt.last.weak_only).to be true
+    end
+
+    it "не помечает обычное прохождение" do
+      complete_test({ "q1" => [ "b" ], "q2" => [ "b" ] })
+
+      expect(TestAttempt.last.weak_only).to be false
+    end
   end
 end
