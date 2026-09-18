@@ -9,8 +9,21 @@ namespace :yaml_sync do
     # Stands in for ActiveSupport's blank?, which is unavailable without :environment.
     blank = ->(value) { value.nil? || value.to_s.strip.empty? }
 
-    tests_dir = Pathname.new(__dir__).join("../../../tests").expand_path
-    paths     = Dir.glob(tests_dir.join("*.yml")).sort
+    tests_dir  = Pathname.new(__dir__).join("../../../tests").expand_path
+    custom_dir = Pathname.new(__dir__).join("../../../tests_custom").expand_path
+
+    # CI видит только репозиторные тесты. Локальные из tests_custom/ читаются
+    # приложением наравне с ними, поэтому их полезно прогонять тем же
+    # валидатором — но по явному запросу: у других разработчиков этой папки нет.
+    include_custom = ENV["INCLUDE_CUSTOM"].to_s =~ /\A(1|true|yes)\z/i
+    custom_paths   = include_custom && Dir.exist?(custom_dir) ? Dir.glob(custom_dir.join("*.yml")).sort : []
+
+    paths = Dir.glob(tests_dir.join("*.yml")).sort + custom_paths
+    # Файл из tests_custom/ показывается с префиксом папки: без него сообщение
+    # об ошибке в одноимённом файле не даёт понять, какой из двух виноват.
+    label_for = ->(path) do
+      custom_paths.include?(path) ? "tests_custom/#{File.basename(path)}" : File.basename(path)
+    end
 
     # Types YamlSyncService knows how to store. Unknown types are reported as
     # warnings, not errors, so introducing a new one is never blocked here.
@@ -25,7 +38,7 @@ namespace :yaml_sync do
     checked = 0
 
     paths.each do |path|
-      name = File.basename(path)
+      name = label_for.(path)
 
       begin
         data = YAML.safe_load(File.read(path), permitted_classes: [ Symbol ])
@@ -56,7 +69,13 @@ namespace :yaml_sync do
         errors << "#{name}: missing 'slug'"
       else
         if (first = seen_slugs[slug])
-          errors << "#{name}: slug '#{slug}' already used by #{first}"
+          # Файл из tests_custom/ намеренно встаёт на место репозиторного —
+          # TestSource отдаёт его вместо оригинала. Ошибка только внутри папки.
+          if custom_paths.include?(path) && !first.start_with?("tests_custom/")
+            warnings << "#{name}: overrides repo test '#{first}'"
+          else
+            errors << "#{name}: slug '#{slug}' already used by #{first}"
+          end
         else
           seen_slugs[slug] = name
         end
