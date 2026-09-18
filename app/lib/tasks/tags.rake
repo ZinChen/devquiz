@@ -17,9 +17,17 @@ namespace :tags do
     require "yaml"
     require "pathname"
 
-    root         = Pathname.new(__dir__).join("../..").expand_path
-    tests_dir    = root.join("../tests").expand_path
+    root          = Pathname.new(__dir__).join("../..").expand_path
+    tests_dir     = root.join("../tests").expand_path
+    custom_dir    = root.join("../tests_custom").expand_path
     taxonomy_path = root.join("config/tag_taxonomy.yml")
+
+    # По умолчанию, как и yaml_sync:validate, смотрим только на репозиторные
+    # тесты — у других разработчиков tests_custom/ может не быть. INCLUDE_CUSTOM=1
+    # добавляет личные тесты, которые приложение синхронизирует наравне с ними.
+    include_custom = ENV["INCLUDE_CUSTOM"].to_s =~ /\A(1|true|yes)\z/i
+    test_dirs = [ tests_dir ]
+    test_dirs << custom_dir if include_custom && Dir.exist?(custom_dir)
 
     taxonomy = YAML.safe_load(File.read(taxonomy_path)) || {}
 
@@ -28,7 +36,7 @@ namespace :tags do
     } + (taxonomy["service"] || {}).values.flat_map { |tags| (tags || {}).keys } +
             Array(taxonomy["unassigned"])
 
-    used = Dir.glob(tests_dir.join("*.yml")).sort.flat_map { |path|
+    used = test_dirs.flat_map { |dir| Dir.glob(dir.join("*.yml")).sort }.flat_map { |path|
       data = begin
         YAML.safe_load(File.read(path))
       rescue Psych::SyntaxError => e
