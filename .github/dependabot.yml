@@ -1,0 +1,36 @@
+version: 2
+updates:
+  # Гемы и npm живут в app/, а не в корне: с directory "/" dependabot
+  # не находил манифесты и молчал.
+  - package-ecosystem: bundler
+    directory: "/app"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: npm
+    directory: "/app"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Воркфлоу читаются только из корневого .github/.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  # Базовый образ приложения.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Образы серверного стека: caddy, postgres.
+  - package-ecosystem: docker-compose
+    directory: "/deploy"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

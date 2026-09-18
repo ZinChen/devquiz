@@ -23,14 +23,19 @@ RSpec.describe YamlSyncService do
     }
   end
 
-  let(:yaml_path) { Rails.root.join("tmp/test-quiz.yml") }
+  let(:tests_dir)  { Rails.root.join("tmp/sync_spec_tests") }
+  let(:yaml_path)  { tests_dir.join("test-quiz.yml") }
 
   before do
+    FileUtils.mkdir_p(tests_dir)
     File.write(yaml_path, yaml_content.to_yaml)
-    stub_const("YamlSyncService::TESTS_DIR", Rails.root.join("tmp"))
+    # Пути знает TestSource, поэтому подменяем их там: TESTS_DIR остался только
+    # для topics.yml и больше не участвует в поиске тестов.
+    allow(TestSource).to receive(:repo_dir).and_return(tests_dir)
+    allow(TestSource).to receive(:custom_dir).and_return(Rails.root.join("tmp/sync_spec_custom"))
   end
 
-  after { File.delete(yaml_path) if File.exist?(yaml_path) }
+  after { FileUtils.rm_rf(tests_dir) }
 
   describe ".sync_file" do
     it "creates TestMetadatum from yaml" do

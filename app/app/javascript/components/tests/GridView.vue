@@ -10,14 +10,17 @@
           {{ test.title }}
           <span v-if="duplicateTitles.has(test.title)" class="test-card__slug">{{ test.slug }}</span>
         </h2>
-        <DifficultyBadge :difficulty="test.difficulty" class="test-card__badge" />
+        <div class="test-card__badges">
+          <CustomSourceBadge :custom="test.custom" :overrides-repo="test.overridesRepo" />
+          <DifficultyBadge :difficulty="test.difficulty" class="test-card__badge" />
+        </div>
       </div>
       <p class="test-card__desc">{{ test.description }}</p>
       <div class="test-card__tags">
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--excluded': excludedTags.includes(tag), 'tag-badge--code': tag === 'code' }"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--excluded': excludedTags.includes(tag), 'tag-badge--code': tag === 'code', 'tag-badge--custom': tag === 'custom' }"
           @click.prevent.stop="onTagClick($event, tag)"
           @mousedown.stop="lp.start($event, tag)"
           @mouseup.stop="lp.cancel()"
@@ -82,6 +85,7 @@
 import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
@@ -171,6 +175,13 @@ const duplicateTitles = computed(() => {
   font-size: 0.7rem;
   font-weight: 400;
   color: #9CA3AF;
+}
+
+.test-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
 }
 
 .test-card__badge {

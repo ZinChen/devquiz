@@ -1,5 +1,6 @@
 class TestsController < ApplicationController
-  CODE_TAG = "code"
+  CODE_TAG   = "code"
+  CUSTOM_TAG = "custom"
 
   def index
     tests_list = TestMetadatum.active.order(attempts_count: :desc).to_a
@@ -62,13 +63,20 @@ class TestsController < ApplicationController
       best_score:                t.best_score&.to_f,
       best_attempt_id:           t.best_attempt_id,
       has_code_challenge:        t.has_code_challenge?,
+      custom:                    t.custom?,
+      overrides_repo:            t.overrides_repo,
       completed_challenge_modes: completed_modes
     }
   end
 
-  # Synthetic tag, not stored in the yaml/db: derived from has_code_challenge
-  # so it can't drift out of sync with the actual test content.
+  # Synthetic tags, not stored in the yaml/db: derived from the record itself
+  # so they can't drift out of sync with the actual test content.
   def tags_for(t)
-    t.has_code_challenge? ? [ *t.tag_list, CODE_TAG ] : t.tag_list
+    tags = t.tag_list
+    tags += [ CODE_TAG ]   if t.has_code_challenge?
+    tags += [ CUSTOM_TAG ] if t.custom?
+    # Тот же тег мог оказаться и в yaml: тогда он всё равно должен значить
+    # «этот тест из tests_custom/», а не появиться в списке дважды.
+    tags.uniq
   end
 end

@@ -46,7 +46,8 @@ class RunsController < ApplicationController
       started_at:      Time.parse(params[:started_at]),
       completed_at:    Time.current,
       time_spent:      params[:time_spent].to_i,
-      challenge_mode:  challenge_mode
+      challenge_mode:  challenge_mode,
+      weak_only:       weak_only
     )
 
     questions_map   = load_questions.index_by { |q| q["id"] }
@@ -102,10 +103,7 @@ class RunsController < ApplicationController
   end
 
   def meta_yaml(slug = @meta.slug)
-    @meta_yaml ||= YAML.safe_load(
-      File.read(YamlSyncService::TESTS_DIR.join("#{slug}.yml")),
-      permitted_classes: [ Symbol ]
-    ) rescue {}
+    @meta_yaml ||= YamlSyncService.load_meta(slug)
   end
 
   def questions_with_db_ids
@@ -118,10 +116,7 @@ class RunsController < ApplicationController
   end
 
   def test_props(t)
-    yaml = t.slug == @meta&.slug ? meta_yaml : (YAML.safe_load(
-      File.read(YamlSyncService::TESTS_DIR.join("#{t.slug}.yml")),
-      permitted_classes: [ Symbol ]
-    ) rescue {})
+    yaml = t.slug == @meta&.slug ? meta_yaml : YamlSyncService.load_meta(t.slug)
     {
       slug:                      t.slug,
       title:                     t.title,
@@ -131,6 +126,8 @@ class RunsController < ApplicationController
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
       has_code_challenge:        t.has_code_challenge?,
+      custom:                    t.custom?,
+      overrides_repo:            t.overrides_repo,
       default_challenge_mode:    yaml["default_challenge_mode"],
       language:                  yaml["language"] || "ruby",
       completed_challenge_modes: current_user ? user_completed_modes(t.slug) : []

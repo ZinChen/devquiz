@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 #
-# Готовит PR из dev в main для указанного milestone.
+# Готовит PR из dev в main.
 #
 # Смысл не в экономии набора команд, а в проверках, которые легко забыть:
 # незапушенные коммиты, красный CI на стенде и, главное, сборка Closes #N
 # по всем открытым issue milestone — иначе после merge они останутся
 # открытыми, и release notes выйдут пустыми.
 #
+# Без milestone тоже работает: инфраструктурные релизы (правки деплоя, чистка,
+# мелочи без issue) не стоит задним числом обвешивать issue ради скрипта —
+# тогда тело PR собирается из списка коммитов.
+#
 #   bin/release-pr "v0.5 — Weak topics"
 #   bin/release-pr v0.5            # достаточно префикса
 #   bin/release-pr v0.5 --dry-run  # показать, что будет, и выйти
+#   bin/release-pr                 # без milestone: тело из коммитов
+#   bin/release-pr --dry-run
 
 set -euo pipefail
 
@@ -21,20 +27,28 @@ die() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m%s\033[0m\n' "$*"; }
 warn() { printf '\033[33m%s\033[0m\n' "$*"; }
 
-[ $# -ge 1 ] || die "Укажите milestone: bin/release-pr \"v0.5 — Weak topics\""
-
-QUERY="$1"
+QUERY=""
 DRY_RUN=""
-[ "${2:-}" = "--dry-run" ] && DRY_RUN=1
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -*)        die "Неизвестный флаг: $arg" ;;
+    *)         [ -n "$QUERY" ] && die "Milestone уже указан: $QUERY" || QUERY="$arg" ;;
+  esac
+done
 
 command -v gh >/dev/null || die "Нужен gh CLI"
 
-# Milestone ищем по префиксу, чтобы не набирать тире и название целиком.
-MILESTONE=$(gh api "repos/$REPO/milestones?state=all" \
-  --jq '.[] | .title' | grep -F -m1 -- "$QUERY" || true)
-[ -n "$MILESTONE" ] || die "Milestone, начинающийся с «${QUERY}», не найден"
-
-info "Milestone: $MILESTONE"
+MILESTONE=""
+if [ -n "$QUERY" ]; then
+  # Milestone ищем по префиксу, чтобы не набирать тире и название целиком.
+  MILESTONE=$(gh api "repos/$REPO/milestones?state=all" \
+    --jq '.[] | .title' | grep -F -m1 -- "$QUERY" || true)
+  [ -n "$MILESTONE" ] || die "Milestone, начинающийся с «${QUERY}», не найден"
+  info "Milestone: $MILESTONE"
+else
+  info "Без milestone: тело PR соберётся из списка коммитов"
+fi
 
 # --- проверки состояния веток ---
 
@@ -66,40 +80,54 @@ case "$CI_STATUS" in
   *)                     warn "CI на $HEAD: $CI_STATUS" ;;
 esac
 
-# --- issues milestone ---
+# --- тело PR ---
 
-OPEN_ISSUES=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
-  --state open --limit 100 --json number --jq '.[].number')
-
-CLOSED_COUNT=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
-  --state closed --limit 100 --json number --jq 'length')
-
-if [ -z "$OPEN_ISSUES" ] && [ "$CLOSED_COUNT" = "0" ]; then
-  die "В milestone «${MILESTONE}» нет ни одного issue"
-fi
-
-# Открытые закроются по merge через Closes #N; закрытые уже учтены в
-# release notes, повторять их не нужно.
 BODY=""
-if [ -n "$OPEN_ISSUES" ]; then
-  info "Закроются по merge:"
-  while read -r n; do
-    [ -n "$n" ] || continue
-    title=$(gh issue view "$n" --repo "$REPO" --json title --jq .title)
-    printf '  #%s %s\n' "$n" "$title"
-    BODY="${BODY}Closes #${n}"$'\n'
-  done <<< "$OPEN_ISSUES"
-else
-  warn "Открытых issue нет — все уже закрыты"
-fi
+TITLE=""
 
-[ "$CLOSED_COUNT" = "0" ] || info "Уже закрыто в milestone: $CLOSED_COUNT"
+if [ -n "$MILESTONE" ]; then
+  TITLE="$MILESTONE"
+
+  OPEN_ISSUES=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
+    --state open --limit 100 --json number --jq '.[].number')
+
+  CLOSED_COUNT=$(gh issue list --repo "$REPO" --milestone "$MILESTONE" \
+    --state closed --limit 100 --json number --jq 'length')
+
+  if [ -z "$OPEN_ISSUES" ] && [ "$CLOSED_COUNT" = "0" ]; then
+    die "В milestone «${MILESTONE}» нет ни одного issue"
+  fi
+
+  # Открытые закроются по merge через Closes #N; закрытые уже учтены в
+  # release notes, повторять их не нужно.
+  if [ -n "$OPEN_ISSUES" ]; then
+    info "Закроются по merge:"
+    while read -r n; do
+      [ -n "$n" ] || continue
+      title=$(gh issue view "$n" --repo "$REPO" --json title --jq .title)
+      printf '  #%s %s\n' "$n" "$title"
+      BODY="${BODY}Closes #${n}"$'\n'
+    done <<< "$OPEN_ISSUES"
+  else
+    warn "Открытых issue нет — все уже закрыты"
+  fi
+
+  [ "$CLOSED_COUNT" = "0" ] || info "Уже закрыто в milestone: $CLOSED_COUNT"
+else
+  # Без milestone тело — это сами коммиты: других источников описания нет.
+  # Merge-коммиты пропускаем, они ничего не рассказывают о содержании.
+  BODY=$(git log --no-merges --reverse --format='- %s' "origin/$BASE..origin/$HEAD")
+  TITLE="Релиз $(date +%Y-%m-%d)"
+
+  info "Войдёт в релиз:"
+  printf '%s\n' "$BODY" | sed 's/^/  /'
+fi
 
 if [ -n "$DRY_RUN" ]; then
   echo
   info "--dry-run: PR не создаётся"
-  printf 'Заголовок: %s\n' "$MILESTONE"
-  printf 'Тело:\n%s' "${BODY:-(пусто)}"
+  printf 'Заголовок: %s\n' "$TITLE"
+  printf 'Тело:\n%s\n' "${BODY:-(пусто)}"
   exit 0
 fi
 
@@ -114,11 +142,16 @@ if [ -n "$EXISTING" ]; then
 fi
 
 URL=$(gh pr create --repo "$REPO" --base "$BASE" --head "$HEAD" \
-  --title "$MILESTONE" --body "${BODY:-Релиз $MILESTONE}")
+  --title "$TITLE" --body "${BODY:-$TITLE}")
 
 info "PR создан: $URL"
 echo
 echo "Дальше:"
-echo "  1. Смержить PR — issues закроются автоматически"
-echo "  2. Убедиться, что issues закрылись"
-echo "  3. Закрыть milestone — тег и релиз создадутся сами"
+if [ -n "$MILESTONE" ]; then
+  echo "  1. Смержить PR — issues закроются автоматически"
+  echo "  2. Убедиться, что issues закрылись"
+  echo "  3. Закрыть milestone — тег и релиз создадутся сами"
+else
+  echo "  1. Смержить PR — CI соберёт :latest и выкатит прод"
+  echo "  2. Релиза не будет: он создаётся только закрытием milestone"
+fi

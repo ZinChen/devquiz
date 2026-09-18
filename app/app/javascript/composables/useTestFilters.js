@@ -21,6 +21,14 @@ export function useTestFilters() {
     filterDifficulty.value = null
   }
 
+  // Снять выделение тегов, не трогая сохранённые предпочтения: это разовое
+  // действие «покажи всё» на текущей странице. Поиск и сложность — отдельные
+  // фильтры со своими контролами, их кнопка не касается.
+  function clearTagSelection() {
+    selectedTags.value = []
+    excludedTags.value = []
+  }
+
   // Предустановка выбора из preferred_tags при первой загрузке.
   function seedFromPreferences(tags) {
     if (preferencesSeeded) return
@@ -66,7 +74,7 @@ export function useTestFilters() {
 
   return {
     searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags,
-    clearFilters, seedFromPreferences, applyPreferences,
+    clearFilters, clearTagSelection, seedFromPreferences, applyPreferences,
     toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags
   }
 }

@@ -6,6 +6,7 @@
       <div class="test-detail__card">
         <div class="test-detail__header">
           <h1 class="test-detail__title">{{ test.title }}</h1>
+          <CustomSourceBadge :custom="test.custom" :overrides-repo="test.overridesRepo" />
           <DifficultyBadge :difficulty="test.difficulty" />
         </div>
 
@@ -50,6 +51,7 @@
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 
 defineProps({ test: Object })
 </script>
