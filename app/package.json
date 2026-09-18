@@ -27,6 +27,6 @@
     "@lezer/highlight": "^1.2.3",
     "codemirror": "^6.0.2",
     "js-yaml": "^5.2.3",
-    "shiki": "^4.3.0"
+    "shiki": "^4.4.3"
   }
 }
