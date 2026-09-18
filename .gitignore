@@ -20,5 +20,10 @@ app/.byebug_history
 .idea/
 .claude/
 
+# Локальные тесты: лежат рядом с tests/, читаются приложением, но не шарятся.
+# README нужен, чтобы папка не выглядела случайной у того, кто её найдёт.
+/tests_custom/*
+!/tests_custom/README.md
+
 # Mise (keep mise.toml, ignore local overrides)
 .mise.local.toml

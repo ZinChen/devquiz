@@ -4,6 +4,11 @@ class TestMetadatum < ApplicationRecord
   has_many :test_attempts, foreign_key: :test_slug, primary_key: :slug
 
   scope :active, -> { where(deleted_at: nil) }
+  scope :custom, -> { where(source: TestSource::CUSTOM) }
+
+  def custom?
+    source == TestSource::CUSTOM
+  end
 
   validates :slug, :title, presence: true
   validates :slug, uniqueness: true

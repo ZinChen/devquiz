@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_120001) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -94,9 +94,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_120001) do
     t.integer "estimated_time"
     t.string "file_checksum"
     t.boolean "has_code_challenge", default: false, null: false
+    t.boolean "overrides_repo", default: false, null: false
     t.decimal "pass_rate", precision: 5, scale: 2, default: "0.0"
     t.integer "questions_count", default: 0
     t.string "slug", null: false
+    t.string "source", default: "repo", null: false
     t.datetime "synced_at"
     t.string "tags", default: "", null: false
     t.string "title", null: false
@@ -105,6 +107,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_120001) do
     t.index ["deleted_at"], name: "index_test_metadata_on_deleted_at"
     t.index ["difficulty"], name: "index_test_metadata_on_difficulty"
     t.index ["slug"], name: "index_test_metadata_on_slug", unique: true
+    t.index ["source"], name: "index_test_metadata_on_source"
   end
 
   create_table "users", force: :cascade do |t|

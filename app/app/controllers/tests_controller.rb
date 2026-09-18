@@ -62,6 +62,8 @@ class TestsController < ApplicationController
       best_score:                t.best_score&.to_f,
       best_attempt_id:           t.best_attempt_id,
       has_code_challenge:        t.has_code_challenge?,
+      custom:                    t.custom?,
+      overrides_repo:            t.overrides_repo,
       completed_challenge_modes: completed_modes
     }
   end

@@ -24,17 +24,18 @@ class TopicIndex
     private
 
     def build
-      new(YamlSyncService::TESTS_DIR)
+      new(TestSource.files_by_slug)
     end
   end
 
-  def initialize(tests_dir)
+  # entries: { slug => { path:, ... } } из TestSource — победитель по каждому
+  # слагу уже выбран, поэтому переопределённый тест не попадёт в индекс дважды.
+  def initialize(entries)
     # { "mvc" => { "ror-basics" => ["q1", "q2"] } }
     by_topic = Hash.new { |h, k| h[k] = Hash.new { |h2, k2| h2[k2] = [] } }
 
-    Dir.glob(File.join(tests_dir.to_s, "*.yml")).sort.each do |path|
-      slug = File.basename(path, ".yml")
-      next if slug == "topics"
+    entries.each do |slug, entry|
+      path = entry[:path]
 
       data = begin
         YAML.safe_load(File.read(path), permitted_classes: [ Symbol ])

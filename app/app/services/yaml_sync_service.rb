@@ -2,13 +2,17 @@ require "digest"
 require "yaml"
 
 class YamlSyncService
+  # Папка с тестами из репозитория. Оставлена как есть: по ней лежит topics.yml,
+  # и это по-прежнему «основной» каталог. Про вторую папку знает TestSource.
   TESTS_DIR = Rails.root.join("../tests").expand_path
 
   def self.sync_all
-    file_slugs = Dir.glob(TESTS_DIR.join("*.yml")).filter_map do |path|
-      sync_file(path)
+    entries = TestSource.files_by_slug
+
+    file_slugs = entries.filter_map do |_slug, entry|
+      sync_file(entry[:path], source: entry[:source], overrides_repo: entry[:overrides_repo])
     rescue => e
-      Rails.logger.error "YamlSyncService: failed to sync #{path}: #{e.message}"
+      Rails.logger.error "YamlSyncService: failed to sync #{entry[:path]}: #{e.message}"
       nil
     end
 
@@ -16,13 +20,26 @@ class YamlSyncService
   end
 
   def self.load_questions(slug)
-    path = TESTS_DIR.join("#{slug}.yml")
-    return [] unless File.exist?(path)
+    path = TestSource.path_for(slug)
+    return [] unless path && File.exist?(path)
     data = YAML.safe_load(File.read(path), permitted_classes: [ Symbol ])
     data["questions"] || []
   end
 
-  def self.sync_file(path)
+  # Шапка теста (language, default_challenge_mode и прочее вне questions).
+  # Пустой хэш, если файла нет или он не читается: вызывающему нужны дефолты,
+  # а не исключение.
+  def self.load_meta(slug)
+    path = TestSource.path_for(slug)
+    return {} unless path && File.exist?(path)
+
+    data = YAML.safe_load(File.read(path), permitted_classes: [ Symbol ])
+    data.is_a?(Hash) ? data : {}
+  rescue StandardError
+    {}
+  end
+
+  def self.sync_file(path, source: nil, overrides_repo: false)
     content  = File.read(path)
     checksum = Digest::MD5.hexdigest(content)
     data     = YAML.safe_load(content, permitted_classes: [ Symbol ])
@@ -30,9 +47,27 @@ class YamlSyncService
 
     return unless slug.present?
 
+    # Вопросы потом ищутся по имени файла (TestSource.path_for), а метаданные
+    # пишутся под slug из yaml. Разойдись они — тест открывался бы пустым,
+    # поэтому имя файла считаем главным и говорим об этом вслух.
+    file_slug = File.basename(path, ".yml")
+    if slug != file_slug
+      Rails.logger.warn "YamlSyncService: #{path} declares slug=#{slug}, using file name #{file_slug}"
+      slug = file_slug
+    end
+
+    source ||= TestSource.source_of(File.dirname(path))
+
     meta = TestMetadatum.find_or_initialize_by(slug: slug)
 
-    unless meta.persisted? && meta.file_checksum == checksum
+    # Пересобираем и когда файл не менялся, но переехал между папками (иначе
+    # метка источника осталась бы от прошлого места) или когда запись была
+    # мягко удалена — вернувшийся файл должен вернуть тест в список.
+    unchanged = meta.persisted? && meta.file_checksum == checksum &&
+                meta.source == source && meta.overrides_repo == overrides_repo &&
+                meta.deleted_at.nil?
+
+    unless unchanged
       has_code = Array(data["questions"]).any? { |q| q["type"] == "code_challenge" }
       meta.assign_attributes(
         title:             data["title"],
@@ -42,6 +77,8 @@ class YamlSyncService
         questions_count:   Array(data["questions"]).size,
         has_code_challenge: has_code,
         file_checksum:     checksum,
+        source:            source,
+        overrides_repo:    overrides_repo,
         deleted_at:        nil,
         synced_at:         Time.current
       )
@@ -81,7 +118,11 @@ class YamlSyncService
           correct_ids:          correct_ids,
           explanation:          q["explanation"].to_s.presence,
           extended_explanation: q["extended_explanation"].to_s.presence,
-          recommendation:       q["recommendation"].to_s.presence
+          recommendation:       q["recommendation"].to_s.presence,
+          # Вопрос мог быть мягко удалён вместе с тестом (soft_delete_missing).
+          # Файл вернулся — значит, вопрос снова актуален, иначе тест открылся
+          # бы пустым: закладки и слабые темы смотрят на active.
+          deleted_at:           nil
         )
         rec.save!
       end

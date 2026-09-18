@@ -11,6 +11,7 @@
             {{ test.title }}
             <span v-if="duplicateTitles.has(test.title)" class="test-row__slug">{{ test.slug }}</span>
           </h2>
+          <CustomSourceBadge :custom="test.custom" :overrides-repo="test.overridesRepo" />
           <DifficultyBadge :difficulty="test.difficulty" class="test-row__badge" />
         </div>
         <p class="test-row__desc">{{ test.description }}</p>
@@ -55,6 +56,7 @@
 import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
 import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
