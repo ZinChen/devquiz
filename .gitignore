@@ -18,7 +18,11 @@ app/.byebug_history
 # Editor and assistant settings (personal, not shared)
 .vscode/
 .idea/
-.claude/
+.claude/*
+.claude/skills/*
+# Исключение: командный скил по составлению тестов шарится через репозиторий.
+!.claude/skills/
+!.claude/skills/devquiz-tests/
 
 # Локальные тесты: symlink на tests/ в соседнем проекте devquiz-drafts,
 # читаются приложением, но не шарятся и не трекаются гитом.
