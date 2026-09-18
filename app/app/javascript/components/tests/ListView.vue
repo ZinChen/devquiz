@@ -20,7 +20,7 @@
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--code': tag === 'code' }"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--code': tag === 'code', 'tag-badge--custom': tag === 'custom' }"
           @click.prevent.stop="$emit('toggle-tag', tag)"
         >{{ tag }}</button>
       </div>

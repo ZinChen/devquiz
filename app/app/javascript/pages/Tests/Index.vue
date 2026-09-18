@@ -23,8 +23,8 @@
       <div class="page-header__left">
         <h1 class="page-header__title">Тесты для разработчиков</h1>
         <p class="page-header__subtitle">
-          Ruby on Rails, PostgreSQL и не только
-          <span class="page-header__drop-hint">— или перетащите сюда свой .yml, чтобы пройти его разово</span>
+          Ruby on Rails, Go, PostgreSQL
+          <span class="page-header__drop-hint">и не только</span>
         </p>
       </div>
       <div class="page-header__views hidden">
@@ -75,6 +75,17 @@
           title="Выбрать интересные темы"
         >
           Изменить
+        </button>
+
+        <!-- Разовый сброс выбора: сохранённые предпочтения остаются, при
+             следующем заходе теги снова подставятся. -->
+        <button
+          v-if="hasTagSelection"
+          @click="clearTagSelection"
+          class="badge badge-sm tag-filter tag-filter--clear cursor-pointer"
+          title="Снять выделение тегов на этой странице"
+        >
+          Снять
         </button>
       </div>
 
@@ -144,7 +155,7 @@ const props = defineProps({
 
 const {
   searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags,
-  clearFilters, seedFromPreferences, applyPreferences,
+  clearFilters, clearTagSelection, seedFromPreferences, applyPreferences,
   toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags
 } = useTestFilters()
 
@@ -260,6 +271,12 @@ const visibleTags = computed(() => {
     allowed.has(tag) || selectedTags.value.includes(tag) || excludedTags.value.includes(tag)
   )
 })
+
+// Кнопка «Снять» нужна, только когда есть что снимать — и выбранные теги,
+// и исключённые.
+const hasTagSelection = computed(() =>
+  selectedTags.value.length > 0 || excludedTags.value.length > 0
+)
 
 const hasHiddenTags = computed(() =>
   preferredWithChildren.value !== null && visibleTags.value.length < props.allTags.length

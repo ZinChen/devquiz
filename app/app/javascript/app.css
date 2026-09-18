@@ -94,6 +94,30 @@ body {
   color: #EF4444;
 }
 
+/* Синтетический тег tests_custom/ — под цвет метки «Локальный» на карточке. */
+.tag-badge--custom {
+  background: #E5E7EB;
+  color: #4B5563;
+}
+
+.tag-badge--custom:hover {
+  background: #D1D5DB;
+}
+
+.tag-badge--custom.tag-badge--active {
+  background: #6B7280;
+  color: #fff;
+}
+
+.tag-badge--custom.tag-badge--active:hover {
+  background: #4B5563;
+}
+
+.tag-badge--custom.tag-badge--excluded {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
 .tag-filter {
   background: #F3F4F6;
   color: #6B7280;
@@ -137,6 +161,19 @@ body {
   color: #4F63F5;
   border-color: #C7CDF9;
   background: #EEF0FE;
+}
+
+/* Сброс выбора тегов. Тише «Изменить»: действие разовое и обратимое,
+   поэтому без рамки, а на наведении — намёк на снятие. */
+.tag-filter--clear {
+  background: transparent;
+  color: #9CA3AF;
+  border: 1px solid transparent;
+}
+
+.tag-filter--clear:hover {
+  color: #EF4444;
+  background: #FEF2F2;
 }
 
 .card-bordered {

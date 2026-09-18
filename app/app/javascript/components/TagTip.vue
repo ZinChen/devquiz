@@ -108,15 +108,15 @@ function hide() {
   width: max-content;
   padding: 0.4rem 0.625rem;
   border-radius: 0.5rem;
-  /* Альфа-канал в hex: подложка просвечивает, текст остаётся тёмным. */
   background: #9e9e9e21;
-  color: #6B7280;
+  color: #5c5f65;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
   font-size: 0.75rem;
   font-weight: 400;
   line-height: 1.4;
   text-align: left;
   white-space: normal;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
   opacity: 0;
   pointer-events: none;
   transform: translateX(calc(-50% + var(--tip-shift, 0px))) translateY(-0.25rem);
@@ -133,6 +133,8 @@ function hide() {
   .tag-tip__bubble {
     background: #e5e7eb21;
     color: #F3F4F6;
+    /* В тёмной теме подсветка снизу тоже тёмная, иначе тень светит сквозь. */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   }
 }
 </style>

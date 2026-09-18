@@ -20,7 +20,7 @@
         <button
           v-for="tag in test.tags" :key="tag"
           class="badge badge-sm tag-badge"
-          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--excluded': excludedTags.includes(tag), 'tag-badge--code': tag === 'code' }"
+          :class="{ 'tag-badge--active': selectedTags.includes(tag), 'tag-badge--excluded': excludedTags.includes(tag), 'tag-badge--code': tag === 'code', 'tag-badge--custom': tag === 'custom' }"
           @click.prevent.stop="onTagClick($event, tag)"
           @mousedown.stop="lp.start($event, tag)"
           @mouseup.stop="lp.cancel()"
