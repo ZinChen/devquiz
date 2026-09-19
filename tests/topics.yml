@@ -96,6 +96,53 @@ topics:
     description: "WAL, streaming replication, logical replication, HA"
     color: "#1E40AF"
 
+  # ── Событийная интеграция и эксплуатация ────────────────────────────────────
+
+  messaging:
+    label: "Событийная интеграция"
+    description: "Kafka, брокеры сообщений, доставка событий, схемы, DLQ, consumer group"
+    color: "#0F766E"
+
+  kubernetes:
+    label: "Kubernetes"
+    description: "поды, пробы, автомасштабирование, ресурсы, rolling update"
+    color: "#4338CA"
+
+  observability:
+    label: "Наблюдаемость"
+    description: "метрики, трассировка, кардинальность лейблов, дашборды"
+    color: "#A16207"
+
+  reliability:
+    label: "Надёжность"
+    description: "SLO, error budget, деградация, откаты, отказоустойчивость"
+    color: "#BE123C"
+
+  operations:
+    label: "Эксплуатация"
+    description: "graceful shutdown, statement timeout, advisory locks в проде, диагностика"
+    color: "#475569"
+
+  process:
+    label: "Инженерные практики"
+    description: "код-ревью, технический долг, flaky-тесты, измерение перед оптимизацией"
+    color: "#65A30D"
+
+  testing:
+    label: "Тестирование"
+    description: "mock vs stub, flaky-тесты, контрактные тесты"
+    color: "#DB2777"
+
+  analytics:
+    label: "Аналитика данных"
+    description: "CTE и оконные функции для отчётов, dbt, колоночные СУБД"
+    color: "#5B21B6"
+
+  data:
+    label: "Обработка данных"
+    description: "CDC, потоковая обработка, стриминг против батча"
+    color: "#0C4A6E"
+
   # ── Остальные домены ───────────────────────────────────────────────────────
 
   algorithms:

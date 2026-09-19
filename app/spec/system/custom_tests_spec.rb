@@ -9,7 +9,7 @@ RSpec.describe "Локальные тесты из tests_custom", type: :system,
   def write(dir, slug, title)
     FileUtils.mkdir_p(dir)
     File.write(File.join(dir, "#{slug}.yml"), {
-      "slug" => slug, "title" => title, "description" => "описание", "difficulty" => "beginner",
+      "slug" => slug, "title" => title, "description" => "описание", "difficulty" => "basic",
       "questions" => [ { "id" => "q1", "text" => "Вопрос?", "type" => "single",
         "options" => [ { "id" => "a", "text" => "Да", "correct" => true },
                        { "id" => "b", "text" => "Нет", "correct" => false } ] } ]

@@ -4,7 +4,7 @@ import { load, CORE_SCHEMA } from 'js-yaml'
 export const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2 МБ
 const YAML_EXTENSIONS = ['.yml', '.yaml']
 
-const DIFFICULTIES    = ['beginner', 'intermediate', 'advanced']
+const DIFFICULTIES    = ['basic', 'advanced', 'expert']
 const QUESTION_TYPES  = ['single', 'multiple', 'code_challenge']
 const CHALLENGE_MODES = ['highlight', 'select', 'fill', 'fix']
 

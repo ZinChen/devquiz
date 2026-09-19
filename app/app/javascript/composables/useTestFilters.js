@@ -5,6 +5,11 @@ const selectedTags     = ref([])
 const excludedTags     = ref([])
 const filterDifficulty = ref(null)
 
+const SORT_STORAGE_KEY = 'devquiz_tests_sort'
+const VALID_SORT_VALUES = ['popular', 'new', 'alpha', 'easiest']
+const storedSort = localStorage.getItem(SORT_STORAGE_KEY)
+const sortBy = ref(VALID_SORT_VALUES.includes(storedSort) ? storedSort : 'popular')
+
 // Показывать ли теги за пределами предпочтений ("Другие теги").
 const showOtherTags = ref(false)
 
@@ -72,9 +77,14 @@ export function useTestFilters() {
     showOtherTags.value = !showOtherTags.value
   }
 
+  function setSortBy(value) {
+    sortBy.value = value
+    localStorage.setItem(SORT_STORAGE_KEY, value)
+  }
+
   return {
-    searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags,
+    searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags, sortBy,
     clearFilters, clearTagSelection, seedFromPreferences, applyPreferences,
-    toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags
+    toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags, setSortBy
   }
 }

@@ -2,7 +2,7 @@ slug: api-advanced-2
 title: "API — безопасность и архитектура"
 description: "Продвинутые вопросы по безопасности API: SOAP, OAuth 2.0, JWT, ETag, GraphQL, кэширование, DDoS."
 tags: [api, security, hh]
-difficulty: advanced
+difficulty: expert
 estimated_time: 20
 
 questions:

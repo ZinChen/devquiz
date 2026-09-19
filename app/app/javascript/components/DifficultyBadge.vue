@@ -8,9 +8,9 @@ import { computed } from 'vue'
 const props = defineProps({ difficulty: String })
 
 const map = {
-  beginner:     { label: 'Начальный',     color: '#10B981' },
-  intermediate: { label: 'Средний',       color: '#F59E0B' },
-  advanced:     { label: 'Продвинутый',   color: '#EF4444' },
+  basic:    { label: 'Базовый',     color: '#10B981' },
+  advanced: { label: 'Продвинутый', color: '#F59E0B' },
+  expert:   { label: 'Эксперт',     color: '#EF4444' },
 }
 
 const info  = computed(() => map[props.difficulty] || { label: props.difficulty, color: '#6B7280' })

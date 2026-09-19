@@ -2,7 +2,7 @@ slug: ror-associations
 title: "ActiveRecord Associations: Ассоциации моделей"
 description: "belongs_to, has_many, has_one, polymorphic, STI, через таблицу joins и продвинутые техники."
 tags: [ruby, rails, activerecord, associations, backend, claude-gen]
-difficulty: intermediate
+difficulty: advanced
 estimated_time: 22
 
 questions:

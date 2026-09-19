@@ -58,6 +58,7 @@ class TestsController < ApplicationController
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
       attempts_count:            t.attempts_count,
+      created_at:                t.created_at,
       avg_score:                 t.avg_score.to_f,
       pass_rate:                 t.pass_rate.to_f,
       best_score:                t.best_score&.to_f,
