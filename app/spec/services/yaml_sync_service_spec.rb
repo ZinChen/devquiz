@@ -6,7 +6,7 @@ RSpec.describe YamlSyncService do
       "slug" => "test-quiz",
       "title" => "Test Quiz",
       "description" => "A test quiz",
-      "difficulty" => "beginner",
+      "difficulty" => "basic",
       "estimated_time" => 10,
       "tags" => [ "rails", "ruby" ],
       "questions" => [
@@ -52,7 +52,7 @@ RSpec.describe YamlSyncService do
       YamlSyncService.sync_file(yaml_path.to_s)
       meta = TestMetadatum.find_by(slug: "test-quiz")
       expect(meta.title).to eq("Test Quiz")
-      expect(meta.difficulty).to eq("beginner")
+      expect(meta.difficulty).to eq("basic")
       expect(meta.questions_count).to eq(1)
       expect(meta.tag_list).to eq([ "rails", "ruby" ])
     end

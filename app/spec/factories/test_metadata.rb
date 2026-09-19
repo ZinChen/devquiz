@@ -3,7 +3,7 @@ FactoryBot.define do
     sequence(:slug) { |n| "test-slug-#{n}" }
     title { Faker::Lorem.sentence(word_count: 3) }
     description { Faker::Lorem.paragraph }
-    difficulty { "beginner" }
+    difficulty { "basic" }
     estimated_time { 10 }
     questions_count { 5 }
   end

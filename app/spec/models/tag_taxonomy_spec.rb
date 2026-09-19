@@ -45,11 +45,11 @@ RSpec.describe TagTaxonomy do
   # в колонке difficulty. Тег-дублёр врал бы в фильтре.
   describe "уровень сложности" do
     it "не объявлен тегом в таксономии" do
-      expect(described_class.known_tags & %w[beginner intermediate advanced]).to be_empty
+      expect(described_class.known_tags & %w[basic advanced expert]).to be_empty
     end
 
     it "не встречается тегом ни в одном тесте" do
-      with_level = TestMetadatum.active.select { |t| (t.tag_list & %w[beginner intermediate advanced]).any? }
+      with_level = TestMetadatum.active.select { |t| (t.tag_list & %w[basic advanced expert]).any? }
       expect(with_level.map(&:slug)).to be_empty
     end
   end

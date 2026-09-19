@@ -2,7 +2,7 @@ slug: ror-interview
 title: "Rails: Вопросы с собеседований"
 description: "Типичные вопросы с реальных технических интервью на позицию Ruby on Rails разработчика."
 tags: [ruby, rails, interview, backend, claude-gen]
-difficulty: intermediate
+difficulty: advanced
 estimated_time: 30
 
 questions:

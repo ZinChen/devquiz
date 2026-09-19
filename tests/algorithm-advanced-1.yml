@@ -2,7 +2,7 @@ slug: algorithm-advanced-1
 title: "Алгоритмы и структуры данных"
 description: "Продвинутые вопросы по алгоритмам: сортировка, поиск, хеш-таблицы, графы, динамическое программирование и оптимизация."
 tags: [algorithms, hh]
-difficulty: advanced
+difficulty: expert
 estimated_time: 20
 
 questions:

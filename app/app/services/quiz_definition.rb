@@ -5,7 +5,7 @@ class QuizDefinition
   MAX_QUESTIONS   = 300
   MAX_OPTIONS     = 12
   MAX_TEXT_LENGTH = 20_000
-  DIFFICULTIES    = %w[beginner intermediate advanced].freeze
+  DIFFICULTIES    = %w[basic advanced expert].freeze
   QUESTION_TYPES  = %w[single multiple code_challenge].freeze
   CHALLENGE_MODES = %w[highlight select fill fix].freeze
 

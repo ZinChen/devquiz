@@ -216,9 +216,9 @@ const viewComponents = { grid: GridView, list: ListView }
 const activeViewComponent = computed(() => viewComponents[activeView.value])
 
 const difficulties = [
-  { value: 'beginner',     label: 'Начальный' },
-  { value: 'intermediate', label: 'Средний' },
-  { value: 'advanced',     label: 'Продвинутый' },
+  { value: 'basic',    label: 'Базовый' },
+  { value: 'advanced', label: 'Продвинутый' },
+  { value: 'expert',   label: 'Эксперт' },
 ]
 
 const baseFilteredTests = computed(() => {
@@ -399,9 +399,9 @@ function tagCount(tag) {
   flex-shrink: 0;
 }
 
-.difficulty-dot--beginner     { background-color: #22c55e; border-color: #22c55e; }
-.difficulty-dot--intermediate { background-color: #f59e0b; border-color: #f59e0b; }
-.difficulty-dot--advanced     { background-color: #ef4444; border-color: #ef4444; }
+.difficulty-dot--basic    { background-color: #22c55e; border-color: #22c55e; }
+.difficulty-dot--advanced { background-color: #f59e0b; border-color: #f59e0b; }
+.difficulty-dot--expert   { background-color: #ef4444; border-color: #ef4444; }
 
 .difficulty-dot--disabled {
   opacity: 0.25;

@@ -2,7 +2,7 @@ slug: ror-migrations
 title: "Rails Migrations: Управление схемой БД"
 description: "Создание и изменение таблиц, типы колонок, индексы, откаты и лучшие практики."
 tags: [ruby, rails, migrations, backend, claude-gen]
-difficulty: intermediate
+difficulty: advanced
 estimated_time: 20
 
 questions:

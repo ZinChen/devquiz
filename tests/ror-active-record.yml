@@ -2,7 +2,7 @@ slug: ror-active-record
 title: "ActiveRecord: Запросы и ORM"
 description: "Конструирование запросов, scopes, коллбэки и продвинутые возможности ActiveRecord."
 tags: [ruby, rails, activerecord, backend, claude-gen]
-difficulty: intermediate
+difficulty: advanced
 estimated_time: 25
 
 questions:

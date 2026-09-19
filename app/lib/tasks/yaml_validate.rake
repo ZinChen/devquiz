@@ -93,7 +93,7 @@ namespace :yaml_sync do
       # Уровень хранится только в difficulty. Тег-дублёр даёт второй источник
       # правды и врёт в фильтре: тегом помечены единицы тестов, а колонка
       # заполнена у всех, так что выдачи расходятся.
-      level_tags = Array(data["tags"]).map(&:to_s) & %w[beginner intermediate advanced]
+      level_tags = Array(data["tags"]).map(&:to_s) & %w[basic advanced expert]
       if level_tags.any?
         errors << "#{name}: уровень задаётся полем 'difficulty', уберите тег(и): #{level_tags.join(', ')}"
       end
