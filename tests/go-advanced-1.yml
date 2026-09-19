@@ -5,7 +5,7 @@ description: 'Продвинутые вопросы по языку Go: гору
 tags:
 - go
 - hh
-difficulty: expert
+difficulty: advanced
 estimated_time: 20
 questions:
 - id: q1

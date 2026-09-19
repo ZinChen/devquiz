@@ -6,7 +6,7 @@ tags:
 - postgresql
 - sql
 - hh
-difficulty: advanced
+difficulty: basic
 estimated_time: 15
 questions:
 - id: q1

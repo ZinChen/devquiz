@@ -5,7 +5,7 @@ description: 'Продвинутые вопросы по Git: rebase, merge, che
 tags:
 - git
 - hh
-difficulty: expert
+difficulty: advanced
 estimated_time: 20
 questions:
 - id: q1
