@@ -89,6 +89,35 @@
         </button>
       </div>
 
+    </div>
+
+    <div class="controls-row">
+      <div class="sort-menu">
+        <button
+          @click.stop="sortMenuOpen = !sortMenuOpen"
+          class="sort-menu__icon"
+          :class="{ 'sort-menu__icon--active': sortMenuOpen }"
+          title="Сортировка"
+          aria-label="Сортировка"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="16" y2="6"/><line x1="4" y1="12" x2="12" y2="12"/><line x1="4" y1="18" x2="8" y2="18"/>
+            <path d="M18 10 L18 20 M18 20 L15 17 M18 20 L21 17"/>
+          </svg>
+        </button>
+
+        <div v-if="sortMenuOpen" class="sort-menu__dropdown">
+          <button
+            v-for="opt in sortOptions" :key="opt.value"
+            @click="onSortSelect(opt.value)"
+            class="sort-menu__option"
+            :class="{ 'sort-menu__option--active': sortBy === opt.value }"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
+
       <div class="difficulty-dots">
         <button
           v-for="d in difficulties" :key="d.value"
@@ -123,7 +152,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 
 function useLongPress(onLong, delay = 500) {
   let timer = null
@@ -154,9 +183,9 @@ const props = defineProps({
 })
 
 const {
-  searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags,
+  searchQuery, selectedTags, excludedTags, filterDifficulty, showOtherTags, sortBy,
   clearFilters, clearTagSelection, seedFromPreferences, applyPreferences,
-  toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags
+  toggleTag, toggleExcludeTag, toggleDifficulty, toggleOtherTags, setSortBy
 } = useTestFilters()
 
 seedFromPreferences(props.preferredTags)
@@ -221,6 +250,33 @@ const difficulties = [
   { value: 'expert',   label: 'Эксперт' },
 ]
 
+const sortMenuOpen = ref(false)
+
+function closeSortMenu() { sortMenuOpen.value = false }
+onMounted(() => document.addEventListener('click', closeSortMenu))
+onUnmounted(() => document.removeEventListener('click', closeSortMenu))
+
+function onSortSelect(value) {
+  setSortBy(value)
+  sortMenuOpen.value = false
+}
+
+const sortOptions = [
+  { value: 'popular',  label: 'По популярности' },
+  { value: 'new',      label: 'По новизне' },
+  { value: 'alpha',    label: 'По алфавиту' },
+  { value: 'easiest',  label: 'По сложности' },
+]
+
+const sortComparators = {
+  popular: (a, b) => b.attemptsCount - a.attemptsCount,
+  new:     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+  alpha:   (a, b) => a.title.localeCompare(b.title, 'ru'),
+  easiest: (a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty),
+}
+
+const DIFFICULTY_ORDER = ['basic', 'advanced', 'expert']
+
 const baseFilteredTests = computed(() => {
   let result = props.tests
 
@@ -249,6 +305,10 @@ const filteredTests = computed(() => {
     result = result.filter(t => selectedTags.value.some(tag => t.tags?.includes(tag)))
   if (excludedTags.value.length > 0)
     result = result.filter(t => excludedTags.value.every(tag => !t.tags?.includes(tag)))
+
+  const compare = sortComparators[sortBy.value]
+  if (compare) result = [...result].sort(compare)
+
   return result
 })
 
@@ -386,6 +446,7 @@ function tagCount(tag) {
   display: flex;
   gap: 0.4rem;
   align-items: center;
+  padding: .35rem;
 }
 
 .difficulty-dot {
@@ -407,11 +468,71 @@ function tagCount(tag) {
   opacity: 0.25;
 }
 
+.sort-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sort-menu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.35rem;
+  color: #4B5563;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.sort-menu__icon:hover,
+.sort-menu__icon--active {
+  color: #111827;
+  background-color: #F3F4F6;
+}
+
+.sort-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  z-index: 20;
+  min-width: 11rem;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sort-menu__option {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.875rem;
+  color: #374151;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.sort-menu__option:hover {
+  background-color: #F3F4F6;
+}
+
+.sort-menu__option--active {
+  color: #4F63F5;
+  font-weight: 600;
+}
+
 .tag-filters-row {
   display: flex;
   align-items: flex-end;
   gap: 1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .tag-filters {
@@ -420,6 +541,14 @@ function tagCount(tag) {
   align-items: center;
   gap: 0.5rem;
   flex: 1;
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .tag-filter-btn {
