@@ -5,6 +5,7 @@ class User < ApplicationRecord
   has_many :bookmarked_questions, through: :bookmarks, source: :question
 
   validates :email, presence: true
+  validates :name, length: { maximum: 60 }, allow_blank: true
 
   # Находит или создаёт пользователя по данным OmniAuth.
   #

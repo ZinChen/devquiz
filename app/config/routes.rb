@@ -23,6 +23,8 @@ Rails.application.routes.draw do
   get    "/settings/tags",    to: "preferences#edit",   as: :settings_tags
   patch  "/preferences/tags", to: "preferences#update", as: :preferences_tags
 
+  patch  "/profile", to: "profiles#update", as: :profile
+
   post   "/bookmarks",     to: "bookmarks#create"
   delete "/bookmarks",     to: "bookmarks#destroy"
 

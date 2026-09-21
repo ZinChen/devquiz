@@ -2,9 +2,22 @@
   <AppLayout>
     <h1 class="dashboard-title">Мой кабинет</h1>
 
-    <!-- Слева факты о пройденном, справа — что с этим делать. -->
-    <div class="dashboard-grid">
-      <section class="dashboard-col">
+    <div class="tabs" role="tablist">
+      <button
+        v-for="t in tabs" :key="t.id"
+        type="button"
+        role="tab"
+        class="tabs__item"
+        :class="{ 'tabs__item--active': tab === t.id }"
+        :aria-selected="tab === t.id"
+        @click="tab = t.id"
+      >
+        {{ t.label }}
+      </button>
+    </div>
+
+    <section v-if="tab === 'overview'" class="dashboard-stack">
+      <div class="dashboard-col dashboard-col--half">
         <h2 class="dashboard-section-title">Статистика</h2>
         <dl class="stat-list">
           <div v-for="s in summaryCards" :key="s.label" class="stat-list__row">
@@ -12,9 +25,34 @@
             <dd class="stat-list__value">{{ s.value }}</dd>
           </div>
         </dl>
-      </section>
+      </div>
 
-      <section class="dashboard-col">
+      <div class="dashboard-col">
+        <h2 class="dashboard-section-title">Сильные темы</h2>
+        <template v-if="strongTopics.length">
+          <div class="weak-summary">
+            <span
+              v-for="topic in strongTopics" :key="topic.slug"
+              class="weak-summary__tag weak-summary__tag--strong"
+              :title="strongTopicTitle(topic)"
+            >
+              <span
+                v-if="topic.color"
+                class="weak-summary__dot"
+                :style="{ background: topic.color }"
+                aria-hidden="true"
+              ></span>
+              {{ topic.label }}
+              <span class="weak-summary__count">{{ topic.correctCount }}</span>
+            </span>
+          </div>
+        </template>
+        <p v-else class="dashboard-col__empty">
+          Пока рано подводить итоги — пройдите больше тестов, и здесь появятся темы, в которых вы уверенно отвечаете.
+        </p>
+      </div>
+
+      <div class="dashboard-col">
         <h2 class="dashboard-section-title">Слабые темы</h2>
         <template v-if="weakTopics.length">
           <div class="weak-summary">
@@ -40,141 +78,182 @@
         <p v-else class="dashboard-col__empty">
           Пока нечего подтягивать — пройдите тест, и слабые темы появятся здесь.
         </p>
-      </section>
-    </div>
+      </div>
 
-    <div class="dashboard-grid dashboard-grid--bottom">
-      <section class="dashboard-col">
-    <h2 class="dashboard-section-title">История прохождений</h2>
-
-    <div v-if="attempts.length" class="attempts-list">
-      <!-- Ведёт на страницу результата этой попытки: там разбор ответов
-           и слабые темы — отдельное окно дублировало бы её. -->
-      <Link
-        v-for="a in attempts" :key="a.id"
-        :href="`/tests/${a.testSlug}/runs/${a.id}`"
-        class="attempt-row"
-      >
-        <div>
-          <p class="attempt-row__title">
-            {{ a.testTitle }}
-            <!-- Тренировка идёт по части вопросов, поэтому счёт вида 3/3
-                 рядом с обычными попытками иначе читался бы как полный тест. -->
-            <span v-if="a.weakOnly" class="attempt-row__badge">тренировка</span>
-          </p>
-          <p class="attempt-row__date">{{ formatDate(a.completedAt) }}</p>
+      <div class="dashboard-col">
+        <h2 class="dashboard-section-title">Рекомендуемые тесты</h2>
+        <div v-if="recommendedTests.length" class="recommended-tests recommended-tests--grid">
+          <Link
+            v-for="t in recommendedTests" :key="t.slug"
+            :href="`/tests/${t.slug}`"
+            class="recommended-tests__item"
+          >
+            <span class="recommended-tests__title">{{ t.title }}</span>
+            <span v-if="t.topics?.length" class="recommended-tests__topics">{{ t.topics.join(', ') }}</span>
+            <span v-if="t.completed" class="recommended-tests__badge">пройден</span>
+          </Link>
         </div>
-        <div class="attempt-row__score-wrap">
-          <span class="attempt-row__count">{{ a.correctCount }}/{{ a.totalQuestions }}</span>
-          <span class="attempt-row__score" :style="{ color: scoreColor(a.score) }">{{ a.score.toFixed(0) }}%</span>
+        <p v-else class="dashboard-col__empty">
+          Пока нет рекомендаций — они появятся, когда наберутся слабые темы.
+        </p>
+      </div>
+
+      <div class="dashboard-col">
+        <h2 class="dashboard-section-title">История прохождений</h2>
+
+        <div v-if="attempts.length" class="attempts-list">
+          <!-- Ведёт на страницу результата этой попытки: там разбор ответов
+               и слабые темы — отдельное окно дублировало бы её. -->
+          <Link
+            v-for="a in attempts" :key="a.id"
+            :href="`/tests/${a.testSlug}/runs/${a.id}`"
+            class="attempt-row"
+          >
+            <div>
+              <p class="attempt-row__title">
+                {{ a.testTitle }}
+                <!-- Тренировка идёт по части вопросов, поэтому счёт вида 3/3
+                     рядом с обычными попытками иначе читался бы как полный тест. -->
+                <span v-if="a.weakOnly" class="attempt-row__badge">тренировка</span>
+              </p>
+              <p class="attempt-row__date">{{ formatDate(a.completedAt) }}</p>
+            </div>
+            <div class="attempt-row__score-wrap">
+              <span class="attempt-row__count">{{ a.correctCount }}/{{ a.totalQuestions }}</span>
+              <span class="attempt-row__score" :style="{ color: scoreColor(a.score) }">{{ a.score.toFixed(0) }}%</span>
+            </div>
+          </Link>
+
+          <button
+            v-if="hasMoreAttemptsRef"
+            type="button"
+            class="load-more"
+            :disabled="loadingAttempts"
+            @click="loadMoreAttempts"
+          >
+            {{ loadingAttempts ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
+          </button>
         </div>
-      </Link>
 
-      <button
-        v-if="hasMoreAttemptsRef"
-        type="button"
-        class="load-more"
-        :disabled="loadingAttempts"
-        @click="loadMoreAttempts"
-      >
-        {{ loadingAttempts ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
-      </button>
-    </div>
+        <div v-else class="dashboard-empty">
+          <p>Вы ещё не прошли ни одного теста</p>
+          <Link href="/" class="btn btn-sm btn-primary dashboard-empty__btn">
+            К тестам
+          </Link>
+        </div>
+      </div>
+    </section>
 
-    <div v-else class="dashboard-empty">
-      <p>Вы ещё не прошли ни одного теста</p>
-      <Link href="/" class="btn btn-sm btn-primary dashboard-empty__btn">
-        К тестам
-      </Link>
-    </div>
+    <section v-else-if="tab === 'bookmarks'">
+      <h2 class="dashboard-section-title">Избранные вопросы</h2>
 
-      </section>
-
-      <section class="dashboard-col">
-    <template v-if="recommendedTests.length">
-      <h2 class="dashboard-section-title">Рекомендуемые тесты</h2>
-      <div class="recommended-tests">
-        <Link
-          v-for="t in recommendedTests" :key="t.slug"
-          :href="`/tests/${t.slug}`"
-          class="recommended-tests__item"
+      <div v-if="bookmarks.length" class="bookmarks-list">
+        <!-- Удалённая закладка не исчезает сразу: пока страница открыта, её
+             можно вернуть — удаление в один клик иначе необратимо. -->
+        <div
+          v-for="b in bookmarks" :key="b.id"
+          class="bookmark-card"
+          :class="{ 'bookmark-card--removed': removedIds.has(b.id) }"
         >
-          <span class="recommended-tests__title">{{ t.title }}</span>
-          <span v-if="t.topics?.length" class="recommended-tests__topics">{{ t.topics.join(', ') }}</span>
-          <span v-if="t.completed" class="recommended-tests__badge">пройден</span>
-        </Link>
-      </div>
-    </template>
-
-      </section>
-    </div>
-
-    <h2 class="dashboard-section-title">Избранные вопросы</h2>
-
-    <div v-if="bookmarks.length" class="bookmarks-list">
-      <!-- Удалённая закладка не исчезает сразу: пока страница открыта, её
-           можно вернуть — удаление в один клик иначе необратимо. -->
-      <div
-        v-for="b in bookmarks" :key="b.id"
-        class="bookmark-card"
-        :class="{ 'bookmark-card--removed': removedIds.has(b.id) }"
-      >
-        <div class="bookmark-card__header">
-          <span class="bookmark-card__test">{{ b.testTitle }}</span>
-          <button
-            v-if="removedIds.has(b.id)"
-            type="button"
-            class="bookmark-restore"
-            @click="restoreBookmark(b)"
-          >
-            Вернуть
-          </button>
-          <button
-            v-else
-            type="button"
-            class="bookmark-remove"
-            title="Убрать из избранного"
-            @click="removeBookmark(b)"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-            </svg>
-          </button>
-        </div>
-        <p class="bookmark-card__text">{{ b.questionText }}</p>
-        <div class="bookmark-card__options">
-          <div
-            v-for="opt in b.options" :key="opt.id"
-            class="bookmark-option"
-            :class="b.correctIds.includes(opt.id) ? 'bookmark-option--correct' : ''"
-          >
-            {{ opt.text }}
+          <div class="bookmark-card__header">
+            <span class="bookmark-card__test">{{ b.testTitle }}</span>
+            <button
+              v-if="removedIds.has(b.id)"
+              type="button"
+              class="bookmark-restore"
+              @click="restoreBookmark(b)"
+            >
+              Вернуть
+            </button>
+            <button
+              v-else
+              type="button"
+              class="bookmark-remove"
+              title="Убрать из избранного"
+              @click="removeBookmark(b)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
           </div>
+          <p class="bookmark-card__text">{{ b.questionText }}</p>
+          <div class="bookmark-card__options">
+            <div
+              v-for="opt in b.options" :key="opt.id"
+              class="bookmark-option"
+              :class="b.correctIds.includes(opt.id) ? 'bookmark-option--correct' : ''"
+            >
+              {{ opt.text }}
+            </div>
+          </div>
+          <p v-if="b.explanation" class="bookmark-card__explanation">{{ b.explanation }}</p>
         </div>
-        <p v-if="b.explanation" class="bookmark-card__explanation">{{ b.explanation }}</p>
+
+        <button
+          v-if="hasMoreBookmarksRef"
+          type="button"
+          class="load-more"
+          :disabled="loadingBookmarks"
+          @click="loadMoreBookmarks"
+        >
+          {{ loadingBookmarks ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
+        </button>
       </div>
 
-      <button
-        v-if="hasMoreBookmarksRef"
-        type="button"
-        class="load-more"
-        :disabled="loadingBookmarks"
-        @click="loadMoreBookmarks"
-      >
-        {{ loadingBookmarks ? 'Загружаем…' : `Показать ещё ${pageSize}` }}
-      </button>
-    </div>
+      <div v-else class="dashboard-empty dashboard-empty--sm">
+        <p>Нет избранных вопросов</p>
+        <p class="dashboard-empty__hint">Добавляйте вопросы в избранное во время прохождения теста</p>
+      </div>
+    </section>
 
-    <div v-else class="dashboard-empty dashboard-empty--sm">
-      <p>Нет избранных вопросов</p>
-      <p class="dashboard-empty__hint">Добавляйте вопросы в избранное во время прохождения теста</p>
-    </div>
+    <section v-else-if="tab === 'profile'" class="profile">
+      <h2 class="dashboard-section-title">Профиль</h2>
+
+      <div class="profile__card">
+        <img v-if="avatarUrl" :src="avatarUrl" alt="" class="profile__avatar" />
+        <div v-else class="profile__avatar profile__avatar--placeholder">{{ initials }}</div>
+
+        <div class="profile__fields">
+          <label class="profile__label" for="profile-name">Имя</label>
+          <input
+            id="profile-name"
+            v-model.trim="nameInput"
+            type="text"
+            maxlength="60"
+            class="profile__input"
+            placeholder="Как вас называть"
+          />
+
+          <label class="profile__label" for="profile-avatar">Ссылка на аватар</label>
+          <input
+            id="profile-avatar"
+            v-model.trim="avatarInput"
+            type="url"
+            class="profile__input"
+            placeholder="https://…"
+          />
+
+          <p class="profile__email">{{ currentUser?.email }}</p>
+          <p v-if="currentUser?.providers?.length" class="profile__providers">
+            Вход через: {{ currentUser.providers.join(', ') }}
+          </p>
+        </div>
+      </div>
+
+      <div class="profile__actions">
+        <button class="btn btn-primary" :disabled="!profileChanged || savingProfile" @click="saveProfile">
+          {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+        <span v-if="!profileChanged && !savingProfile" class="settings__hint">Изменений нет</span>
+      </div>
+    </section>
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 
@@ -183,11 +262,22 @@ const props = defineProps({
   stats:              Object,
   bookmarks:          { type: Array, default: () => [] },
   weakTopics:         { type: Array, default: () => [] },
+  strongTopics:       { type: Array, default: () => [] },
   recommendedTests:   { type: Array, default: () => [] },
   hasMoreAttempts:    { type: Boolean, default: false },
   hasMoreBookmarks:   { type: Boolean, default: false },
   pageSize:           { type: Number, default: 5 },
 })
+
+const page = usePage()
+const currentUser = computed(() => page.props.currentUser)
+
+const tabs = [
+  { id: 'overview',  label: 'Тесты' },
+  { id: 'bookmarks', label: 'Избранное' },
+  { id: 'profile',   label: 'Профиль' },
+]
+const tab = ref('overview')
 
 const bookmarks = ref(props.bookmarks)
 
@@ -242,6 +332,15 @@ function topicTitle(topic) {
   return parts.join(' • ')
 }
 
+const strongTopics = computed(() => props.strongTopics)
+
+function strongTopicTitle(topic) {
+  const parts = []
+  if (topic.description) parts.push(topic.description)
+  parts.push(`Верно: ${topic.correctCount} из ${topic.totalCount}`)
+  return parts.join(' • ')
+}
+
 // Лучший балл убран намеренно: у любого, кто прошёл пару тестов, там 100%,
 // и строка ничего не сообщает.
 const summaryCards = computed(() => [
@@ -279,6 +378,34 @@ function scoreColor(s) {
 function formatDate(d) {
   return new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
+
+// Профиль: имя и аватар редактируются локально и уходят PATCH-ом на /profile.
+const nameInput   = ref(currentUser.value?.name ?? '')
+const avatarInput = ref(currentUser.value?.avatarUrl ?? '')
+const savingProfile = ref(false)
+
+const avatarUrl = computed(() => avatarInput.value || currentUser.value?.avatarUrl)
+
+const initials = computed(() => {
+  const source = nameInput.value || currentUser.value?.email || ''
+  return source.trim().slice(0, 1).toUpperCase() || '?'
+})
+
+const profileChanged = computed(() => {
+  const initialName   = currentUser.value?.name ?? ''
+  const initialAvatar = currentUser.value?.avatarUrl ?? ''
+  return nameInput.value !== initialName || avatarInput.value !== initialAvatar
+})
+
+function saveProfile() {
+  if (savingProfile.value) return
+  savingProfile.value = true
+
+  router.patch('/profile', { name: nameInput.value, avatar_url: avatarInput.value }, {
+    preserveScroll: true,
+    onFinish: () => { savingProfile.value = false }
+  })
+}
 </script>
 
 <style scoped>
@@ -294,11 +421,39 @@ function formatDate(d) {
   margin-bottom: 1rem;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.tabs__item {
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6B7280;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabs__item:hover {
+  color: #4F63F5;
+}
+
+.tabs__item--active {
+  color: #4F63F5;
+  border-bottom-color: #4F63F5;
+}
+
 .attempts-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
 }
 
 .attempt-row {
@@ -367,12 +522,10 @@ function formatDate(d) {
   text-align: center;
   padding: 3rem 0;
   color: #9CA3AF;
-  margin-bottom: 2.5rem;
 }
 
 .dashboard-empty--sm {
   padding: 2.5rem 0;
-  margin-bottom: 0;
 }
 
 .dashboard-empty__btn {
@@ -503,6 +656,11 @@ function formatDate(d) {
   color: #991B1B;
 }
 
+.weak-summary__tag--strong {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
 .weak-summary__dot {
   width: 0.5rem;
   height: 0.5rem;
@@ -522,7 +680,19 @@ function formatDate(d) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+}
+
+/* Отдельная секция во всю ширину: раскладываем карточки в две колонки,
+   а не одной строкой, как в узкой колонке рядом с темами. */
+.recommended-tests--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 48rem) {
+  .recommended-tests--grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .recommended-tests__item {
@@ -564,29 +734,26 @@ function formatDate(d) {
   filter: brightness(0.95);
 }
 
+/* Сильные темы — не ссылки: тренировать уже освоенную тему незачем,
+   поэтому тег не должен выглядеть кликабельным. */
+.weak-summary__tag--strong {
+  cursor: default;
+}
+
+.weak-summary__tag--strong:hover {
+  filter: none;
+}
+
 .recommended-tests__topics {
   color: #9CA3AF;
   font-size: 0.75rem;
 }
 
-/* Две колонки: слева факты о пройденном, справа — куда двигаться.
-   На узком экране схлопываются в одну, порядок задан в разметке. */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  align-items: start;
-}
-
-.dashboard-grid--bottom {
-  gap: 1rem 2rem;
-}
-
-@media (max-width: 48rem) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+/* Секции вкладки «Тесты» идут одна под другой; отступ между ними —
+   на самих секциях (.dashboard-col), а не здесь. */
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-col__empty {
@@ -632,9 +799,25 @@ function formatDate(d) {
   text-align: right;
 }
 
-/* В колонке панели идут друг под другом, без общей высоты. */
+/* Секции идут друг под другом с равным отступом; последней он не нужен. */
 .dashboard-col {
   min-width: 0;
+  margin-bottom: 2rem;
+}
+
+.dashboard-col:last-child {
+  margin-bottom: 0;
+}
+
+/* Статистика — в половину ширины секции, а не во всю. */
+.dashboard-col--half {
+  max-width: calc(50% - 0.5rem);
+}
+
+@media (max-width: 48rem) {
+  .dashboard-col--half {
+    max-width: none;
+  }
 }
 
 /* Удалённая, но ещё возвращаемая закладка: видно, что её больше нет,
@@ -687,5 +870,88 @@ function formatDate(d) {
 .load-more:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.profile__card {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  padding: 1.25rem;
+  max-width: 32rem;
+}
+
+.profile__avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profile__avatar--placeholder {
+  display: grid;
+  place-items: center;
+  background: #EEF0FF;
+  color: #4F63F5;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.profile__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile__label {
+  font-size: 0.75rem;
+  color: #6B7280;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.profile__label:first-child {
+  margin-top: 0;
+}
+
+.profile__input {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.profile__input:focus {
+  outline: none;
+  border-color: #4F63F5;
+}
+
+.profile__email {
+  font-size: 0.8125rem;
+  color: #9CA3AF;
+  margin-top: 0.5rem;
+}
+
+.profile__providers {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+.profile__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.settings__hint {
+  font-size: 0.8125rem;
+  color: #9CA3AF;
 }
 </style>

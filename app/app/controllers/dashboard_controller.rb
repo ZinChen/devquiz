@@ -22,6 +22,7 @@ class DashboardController < ApplicationController
         tests_completed: slugs.count
       },
       weak_topics:       weak_topics.entries.map(&:to_h),
+      strong_topics:     strong_topics.entries.map(&:to_h),
       recommended_tests: recommended_tests(slugs)
     }
   end
@@ -102,29 +103,59 @@ class DashboardController < ApplicationController
     @weak_topics ||= WeakTopicsSummary.for(user: current_user)
   end
 
+  def strong_topics
+    @strong_topics ||= StrongTopicsSummary.for(user: current_user, exclude_slugs: weak_topics.slugs)
+  end
+
   # Тесты, где реально есть вопросы по слабым темам. Ищем через TopicIndex, а
   # не по tags теста: темы вопроса (mvc, queries, indexes) в тегах тестов по
   # большей части не встречаются, и поиск по ним ничего бы не находил.
   #
-  # Тест тем ценнее, чем больше слабых тем он закрывает; непройденные идут
-  # первыми — там пользы больше, чем в повторе уже знакомого.
+  # Тест ранжируется по тому, НАСКОЛЬКО ПРОБЛЕМНУЮ тему он закрывает и
+  # НАСКОЛЬКО ПЛОТНО — а не по числу разных тем: иначе широкий «сборный»
+  # тест, задевающий десяток тем по одному вопросу, обходил бы узкий тест,
+  # состоящий по большей части из вопросов по самой слабой теме пользователя —
+  # тот полезнее, даже если тем в нём меньше. Непройденные идут первыми —
+  # там пользы больше, чем в повторе уже знакомого.
   def recommended_tests(completed_slugs)
     return [] if weak_topics.slugs.empty?
 
-    scored = Hash.new { |h, k| h[k] = [] }
+    # Место темы в списке слабых (0 — самая проблемная) — по нему и ранжируем тесты.
+    rank_of = weak_topics.entries.each_with_index.to_h { |topic, i| [ topic.slug, i ] }
+
+    # Для каждого теста: подписи тем на карточку, лучший (наименьший) ранг
+    # среди них и число вопросов именно по этой лучшей теме — плотность.
+    labels_by_slug        = Hash.new { |h, k| h[k] = [] }
+    rank_by_slug          = Hash.new(Float::INFINITY)
+    best_topic_count_by_slug = Hash.new(0)
+
     weak_topics.entries.each do |topic|
-      TopicIndex.tests_for(topic.slug).each { |slug| scored[slug] << topic.label }
+      TopicIndex.question_ids_for(topic.slug).each do |slug, question_ids|
+        labels_by_slug[slug] << topic.label
+
+        rank = rank_of[topic.slug]
+        next if rank > rank_by_slug[slug]
+
+        # Более проблемная тема — переопределяем; при том же ранге не бывает
+        # (у каждой темы свой уникальный ранг), так что достаточно "<".
+        if rank < rank_by_slug[slug]
+          rank_by_slug[slug] = rank
+          best_topic_count_by_slug[slug] = question_ids.size
+        end
+      end
     end
-    return [] if scored.empty?
+    return [] if labels_by_slug.empty?
 
-    meta_map = TestMetadatum.active.where(slug: scored.keys).index_by(&:slug)
+    meta_map = TestMetadatum.active.where(slug: labels_by_slug.keys).index_by(&:slug)
 
-    scored.filter_map { |slug, labels|
+    labels_by_slug.filter_map { |slug, labels|
       meta = meta_map[slug]
       next unless meta
 
-      { slug: slug, title: meta.title, topics: labels.uniq, completed: completed_slugs.include?(slug) }
-    }.sort_by { |t| [ t[:completed] ? 1 : 0, -t[:topics].size ] }
+      { slug: slug, title: meta.title, topics: labels.uniq, completed: completed_slugs.include?(slug),
+        best_rank: rank_by_slug[slug], best_topic_count: best_topic_count_by_slug[slug] }
+    }.sort_by { |t| [ t[:completed] ? 1 : 0, t[:best_rank], -t[:best_topic_count] ] }
      .first(RECOMMENDED_TESTS_LIMIT)
+     .map { |t| t.except(:best_rank, :best_topic_count) }
   end
 end
