@@ -320,7 +320,7 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
-import { detectAnimal } from '@/assets/animalIconPaths'
+import { detectAnimal } from '@/assets/animalIcons'
 
 const props = defineProps({
   attempts:           Array,

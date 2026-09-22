@@ -12,17 +12,14 @@
       :viewBox="animalIcon.viewBox"
       overflow="visible"
     >
-      <!-- markup: иконка из нескольких фигур (контур+глаза и т.п.). Линии
-           красятся в currentColor (=foreground); основной контур, если он
-           без заливки, красится в var(--fill-bg) (=background) — иначе сквозь
-           пустой контур просвечивал бы фон страницы, а не круг аватара.
-           d: обычный случай, один силуэт-путь. -->
+      <!-- Линии красятся в currentColor (=foreground); часть многослойных
+           иконок красит заливку контура через var(--fill-bg) (=background) —
+           иначе сквозь пустой контур просвечивал бы фон страницы, а не круг
+           аватара (см. animalIcons.js: hasFillBg). -->
       <g
-        v-if="animalIcon.markup"
         :style="{ color: foreground, '--fill-bg': background }"
         v-html="animalIcon.markup"
       />
-      <path v-else :d="animalIcon.d" :fill="foreground" />
     </svg>
     <text
       v-else
@@ -39,7 +36,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { ANIMAL_ICON_VARIANTS, detectAnimal } from '@/assets/animalIconPaths'
+import { ANIMAL_ICON_VARIANTS, detectAnimal } from '@/assets/animalIcons'
 
 const props = defineProps({
   // Стабильный ключ для выбора цвета — не зависит от имени, чтобы кнопка
