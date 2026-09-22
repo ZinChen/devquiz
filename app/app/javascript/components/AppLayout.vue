@@ -19,7 +19,7 @@
             </Link>
           </template>
           <template v-else>
-            <Link href="/login" class="btn btn-sm btn-primary">
+            <Link href="/login" class="btn btn-sm btn-primary" title="Вас никто не узнает">
               Войти
             </Link>
           </template>

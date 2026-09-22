@@ -10,7 +10,7 @@
         class="tabs__item"
         :class="{ 'tabs__item--active': tab === t.id }"
         :aria-selected="tab === t.id"
-        @click="tab = t.id"
+        @click="selectTab(t.id)"
       >
         {{ t.label }}
       </button>
@@ -178,7 +178,23 @@
             </button>
           </div>
           <p class="bookmark-card__text">{{ b.questionText }}</p>
-          <div class="bookmark-card__options">
+
+          <div v-if="b.typeField === 'code_challenge'" class="bookmark-code">
+            <template v-if="highlightModeFor(b)">
+              <div class="bookmark-code__lines">
+                <div
+                  v-for="(line, i) in highlightLinesFor(b)" :key="i"
+                  class="bookmark-code-line"
+                  :class="{ 'bookmark-code-line--correct': highlightModeFor(b).correctLines.includes(String(i + 1)) }"
+                ><code>{{ line || ' ' }}</code></div>
+              </div>
+              <p v-if="highlightModeFor(b).hint" class="bookmark-card__explanation">{{ highlightModeFor(b).hint }}</p>
+            </template>
+            <p v-else class="bookmark-card__explanation">
+              Этот тип вопроса пока нельзя показать в избранном — откройте его в тесте «{{ b.testTitle }}».
+            </p>
+          </div>
+          <div v-else class="bookmark-card__options">
             <div
               v-for="opt in b.options" :key="opt.id"
               class="bookmark-option"
@@ -209,10 +225,35 @@
 
     <section v-else-if="tab === 'profile'" class="profile">
       <h2 class="dashboard-section-title">Профиль</h2>
+      <p class="profile__intro">
+        Ваши данные, которые могут увидеть остальные при прохождении тестов
+      </p>
 
       <div class="profile__card">
-        <img v-if="avatarUrl" :src="avatarUrl" alt="" class="profile__avatar" />
-        <div v-else class="profile__avatar profile__avatar--placeholder">{{ initials }}</div>
+        <div class="profile__avatar-block">
+          <img v-if="avatarUrl" :src="avatarUrl" alt="" class="profile__avatar" />
+          <GeneratedAvatar v-else class="profile__avatar" :seed="avatarSeedInput" :name="nameInput" />
+
+          <div class="profile__avatar-actions">
+            <button
+              type="button"
+              class="profile__link-btn"
+              :disabled="!!avatarUrl"
+              :title="avatarUrl ? 'Недоступно: сейчас показывается ваше фото, а не сгенерированный аватар' : ''"
+              @click="randomizeAvatar"
+            >
+              Сменить цвет
+            </button>
+            <button
+              v-for="p in avatarProviders" :key="p.provider"
+              type="button"
+              class="profile__link-btn"
+              @click="adoptAvatar(p.provider)"
+            >
+              Взять из {{ providerLabel(p.provider) }}
+            </button>
+          </div>
+        </div>
 
         <div class="profile__fields">
           <label class="profile__label" for="profile-name">Имя</label>
@@ -224,6 +265,19 @@
             class="profile__input"
             placeholder="Как вас называть"
           />
+          <div class="profile__name-actions">
+            <button type="button" class="profile__link-btn" @click="randomizeName">
+              Сменить имя
+            </button>
+            <button
+              v-for="p in nameProviders" :key="p.provider"
+              type="button"
+              class="profile__link-btn"
+              @click="adoptName(p.provider)"
+            >
+              Взять из {{ providerLabel(p.provider) }}
+            </button>
+          </div>
 
           <label class="profile__label" for="profile-avatar">Ссылка на аватар</label>
           <input
@@ -242,8 +296,17 @@
       </div>
 
       <div class="profile__actions">
-        <button class="btn btn-primary" :disabled="!profileChanged || savingProfile" @click="saveProfile">
+        <button class="btn btn-primary" :disabled="!profileChanged || !nameInput.trim() || savingProfile" @click="saveProfile">
           {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+        <button
+          v-if="profileChanged"
+          type="button"
+          class="profile__cancel-btn"
+          :disabled="savingProfile"
+          @click="cancelProfileChanges"
+        >
+          Отмена
         </button>
         <span v-if="!profileChanged && !savingProfile" class="settings__hint">Изменений нет</span>
       </div>
@@ -252,10 +315,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
+import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
+import { detectAnimal } from '@/assets/animalIconPaths'
 
 const props = defineProps({
   attempts:           Array,
@@ -264,6 +329,7 @@ const props = defineProps({
   weakTopics:         { type: Array, default: () => [] },
   strongTopics:       { type: Array, default: () => [] },
   recommendedTests:   { type: Array, default: () => [] },
+  identities:         { type: Array, default: () => [] },
   hasMoreAttempts:    { type: Boolean, default: false },
   hasMoreBookmarks:   { type: Boolean, default: false },
   pageSize:           { type: Number, default: 5 },
@@ -277,7 +343,26 @@ const tabs = [
   { id: 'bookmarks', label: 'Избранное' },
   { id: 'profile',   label: 'Профиль' },
 ]
-const tab = ref('overview')
+const tabIds = tabs.map(t => t.id)
+
+// Вкладка живёт в хэше (#profile), а не только в памяти компонента: так
+// обновление страницы и кнопка «назад» возвращают туда же, а не сбрасывают
+// на первую вкладку — без похода на сервер, хэш меняет только браузер.
+function tabFromHash() {
+  const id = window.location.hash.slice(1)
+  return tabIds.includes(id) ? id : 'overview'
+}
+
+const tab = ref(tabFromHash())
+
+function selectTab(id) {
+  tab.value = id
+  window.location.hash = id
+}
+
+function onHashChange() { tab.value = tabFromHash() }
+onMounted(() => window.addEventListener('hashchange', onHashChange))
+onUnmounted(() => window.removeEventListener('hashchange', onHashChange))
 
 const bookmarks = ref(props.bookmarks)
 
@@ -315,6 +400,17 @@ async function loadMoreBookmarks() {
   } catch {} finally {
     loadingBookmarks.value = false
   }
+}
+
+// Избранное умеет показывать только code_challenge в режиме highlight —
+// это единственный режим, где ответ выражается статично (подсветкой нужных
+// строк), без интерактивного ввода. Для fill/select/fix показываем заглушку.
+function highlightModeFor(b) {
+  return b.modes?.highlight ?? null
+}
+
+function highlightLinesFor(b) {
+  return (highlightModeFor(b)?.code ?? '').trimEnd().split('\n')
 }
 
 
@@ -380,31 +476,148 @@ function formatDate(d) {
 }
 
 // Профиль: имя и аватар редактируются локально и уходят PATCH-ом на /profile.
-const nameInput   = ref(currentUser.value?.name ?? '')
-const avatarInput = ref(currentUser.value?.avatarUrl ?? '')
-const savingProfile = ref(false)
+const nameInput       = ref(currentUser.value?.name ?? '')
+const avatarInput     = ref(currentUser.value?.avatarUrl ?? '')
+const avatarSeedInput = ref(currentUser.value?.avatarSeed || currentUser.value?.email || 'default')
+const savingProfile   = ref(false)
 
-const avatarUrl = computed(() => avatarInput.value || currentUser.value?.avatarUrl)
+// Только avatarInput, без запасного currentUser.avatarUrl: очистка поля
+// должна сразу вернуть сгенерированный аватар, а не показывать старое
+// сохранённое фото, пока не нажато «Сохранить».
+const avatarUrl = computed(() => avatarInput.value)
 
-const initials = computed(() => {
-  const source = nameInput.value || currentUser.value?.email || ''
-  return source.trim().slice(0, 1).toUpperCase() || '?'
+// Цвет пересчитывается только когда меняется само распознанное животное
+// (появилось, исчезло или сменилось на другое) — а не на каждую напечатанную
+// букву, иначе фон мигал бы во время ввода имени.
+watch(() => detectAnimal(nameInput.value), (next, prev) => {
+  if (next !== prev) avatarSeedInput.value = Math.random().toString(36).slice(2)
 })
 
 const profileChanged = computed(() => {
   const initialName   = currentUser.value?.name ?? ''
   const initialAvatar = currentUser.value?.avatarUrl ?? ''
-  return nameInput.value !== initialName || avatarInput.value !== initialAvatar
+  const initialSeed   = currentUser.value?.avatarSeed || currentUser.value?.email || 'default'
+  return nameInput.value !== initialName
+    || avatarInput.value !== initialAvatar
+    || avatarSeedInput.value !== initialSeed
 })
+
+// Возвращает поля профиля к тому, что сейчас сохранено на сервере —
+// отменяет любой несохранённый ввод, включая случайное имя/цвет и вставленный URL.
+function cancelProfileChanges() {
+  nameInput.value = currentUser.value?.name ?? ''
+  avatarInput.value = currentUser.value?.avatarUrl ?? ''
+  avatarSeedInput.value = currentUser.value?.avatarSeed || currentUser.value?.email || 'default'
+}
 
 function saveProfile() {
   if (savingProfile.value) return
   savingProfile.value = true
 
-  router.patch('/profile', { name: nameInput.value, avatar_url: avatarInput.value }, {
+  // На /dashboard, а не /profile: форма профиля живёт на этой странице, и
+  // Inertia запоминает URL ответа как адрес браузера — на другом маршруте
+  // адресная строка переключилась бы туда, а её обновление давало бы 404.
+  //
+  // Хэш (#profile) передаём в самом целевом URL визита, а не восстанавливаем
+  // постфактум: Inertia сама переносит хэш из URL запроса в page.url, если
+  // ответ сервера пришёл без хэша на тот же путь (см. setPage/visit в
+  // @inertiajs/core — w.hash && !V.hash && тот же путь → V.hash = w.hash).
+  // Без хэша в целевом URL это условие не срабатывает, и адресная строка
+  // остаётся без него.
+  router.patch(`/dashboard${window.location.hash}`, {
+    name: nameInput.value,
+    avatar_url: avatarInput.value,
+    avatar_seed: avatarSeedInput.value,
+  }, {
     preserveScroll: true,
+    // Ключ в snake_case: сервер отдаёт проп как current_user (см.
+    // ApplicationController#current_user_props), camelCase — только
+    // клиентское преобразование в application.js. С неверным ключом here
+    // partial reload молча отдавал бы ПОЛНЫЙ дашборд вместо одного пропа.
+    only: [ 'current_user' ],
     onFinish: () => { savingProfile.value = false }
   })
+}
+
+const PROVIDER_LABELS = { google_oauth2: 'Google', github: 'GitHub' }
+function providerLabel(provider) {
+  return PROVIDER_LABELS[provider] || provider
+}
+
+// Кнопка «Взять из …» показывается только для провайдеров, реально
+// вернувших это поле — иначе кнопка была бы бесполезной заглушкой.
+const nameProviders   = computed(() => props.identities.filter(i => i.rawName))
+const avatarProviders = computed(() => props.identities.filter(i => i.rawAvatarUrl))
+
+// Тот же список, что в RandomIdentity (app/services/random_identity.rb) —
+// имя меняется мгновенно, без похода на сервер и без прогресс-бара Inertia
+// поверх страницы. Сохраняется, как и обычный ввод, только по «Сохранить».
+const ADJECTIVES = [
+  'Быстрый', 'Смелый', 'Тихий', 'Ловкий', 'Хитрый', 'Весёлый', 'Сонный', 'Шустрый', 'Мудрый', 'Дерзкий',
+  'Игривый', 'Спокойный', 'Яркий', 'Задумчивый', 'Отважный', 'Незаметный', 'Проворный', 'Добрый',
+  'Загадочный', 'Бодрый', 'Одинокий', 'Затаившийся', 'Коварный', 'Летучий', 'Ворчливый',
+  'Рассеянный', 'Скользкий', 'Наглый', 'Пугливый', 'Неуловимый', 'Ленивый', 'Взъерошенный',
+  'Голодный', 'Молчаливый', 'Своенравный', 'Упрямый', 'Внимательный', 'Терпеливый', 'Насторожённый',
+]
+const ANIMALS = [
+  'Аллигатор', 'Муравьед', 'Броненосец', 'Тур', 'Аксолотль', 'Барсук', 'Мышь', 'Бизон',
+  'Верблюд', 'Капибара', 'Хамелеон', 'Гепард', 'Шиншилла', 'Бурундук', 'Чупакабра', 'Баклан',
+  'Койот', 'Ворон', 'Динго', 'Динозавр', 'Дельфин', 'Утка', 'Слон', 'Хорёк', 'Лис', 'Лягушка', 'Жираф',
+  'Суслик', 'Гризли', 'Ёж', 'Бегемот', 'Гиена', 'Козерог', 'Ифрит', 'Игуана', 'Шакал', 'Джекалоп',
+  'Кенгуру', 'Коала', 'Кракен', 'Лемур', 'Леопард', 'Лигр', 'Лама', 'Ламантин', 'Норка', 'Обезьяна',
+  'Лось', 'Нарвал', 'Орангутан', 'Выдра', 'Панда', 'Пингвин', 'Утконос', 'Питон', 'Квагга', 'Кролик',
+  'Енот', 'Носорог', 'Овца', 'Землеройка', 'Скунс', 'Лори', 'Белка', 'Тигр', 'Черепаха', 'Морж',
+  'Волк', 'Росомаха', 'Вомбат', 'Сова', 'Бобр', 'Кот', 'Тукан',
+]
+
+// Существительные женского рода — прилагательное перед ними ставится в
+// женском роде ("Хитрая Лиса", не "Хитрый Лиса"). Признак "оканчивается на
+// -а/-я" покрывает почти все случаи автоматически; "Мышь" — исключение.
+const FEMININE_ANIMALS = new Set([...ANIMALS.filter(a => /[ая]$/.test(a)), 'Мышь'])
+
+// Мужская форма на -кий/-гий/-хий/-жий/-чий/-ший/-щий даёт -ая (Тихий →
+// Тихая); на -ый/-ой — тоже -ая. "-ийся" (причастие вроде "Затаившийся") —
+// отдельно, обычное правило его не покрывает: "ий" там не в конце слова.
+function feminize(word) {
+  if (/[гкхжчшщ]ийся$/.test(word)) return word.replace(/ийся$/, 'аяся')
+  if (/[гкхжчшщ]ий$/.test(word)) return word.replace(/ий$/, 'ая')
+  if (word.endsWith('ый')) return word.replace(/ый$/, 'ая')
+  if (word.endsWith('ой')) return word.replace(/ой$/, 'ая')
+  return word
+}
+
+function randomName() {
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)]
+  const rawAdjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
+  const adjective = FEMININE_ANIMALS.has(animal) ? feminize(rawAdjective) : rawAdjective
+  return `${adjective} ${animal}`
+}
+
+function randomizeName() {
+  nameInput.value = randomName()
+}
+
+// Данные уже пришли в props.identities вместе со страницей — незачем
+// ходить на сервер за тем, что и так лежит на клиенте.
+function adoptName(provider) {
+  const identity = props.identities.find(i => i.provider === provider)
+  if (identity?.rawName) nameInput.value = identity.rawName
+}
+
+// Новый случайный seed — мгновенно на клиенте, как и «Случайное имя»: без
+// похода на сервер и без прогресс-бара Inertia. Сбрасывает avatarInput,
+// иначе выбранное раньше фото провайдера продолжало бы показываться поверх
+// нового сгенерированного аватара.
+function randomizeAvatar() {
+  avatarInput.value = ''
+  avatarSeedInput.value = Math.random().toString(36).slice(2)
+}
+
+// Данные уже пришли в props.identities вместе со страницей — незачем
+// ходить на сервер за тем, что и так лежит на клиенте.
+function adoptAvatar(provider) {
+  const identity = props.identities.find(i => i.provider === provider)
+  if (identity?.rawAvatarUrl) avatarInput.value = identity.rawAvatarUrl
 }
 </script>
 
@@ -614,6 +827,42 @@ function saveProfile() {
   border-top: 1px solid #F3F4F6;
   padding-top: 0.6rem;
   margin-top: 0.25rem;
+}
+
+.bookmark-code {
+  margin-bottom: 0.75rem;
+}
+
+.bookmark-code__lines {
+  background: #F3F4F6;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.bookmark-code-line {
+  padding: 0 1.25rem;
+  border-left: 3px solid transparent;
+  min-height: 1.6em;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre;
+}
+
+.bookmark-code-line code {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  color: inherit;
+}
+
+.bookmark-code-line--correct {
+  background: rgba(16, 185, 129, 0.08);
+  border-left-color: #10B981;
+  color: #059669;
+  font-weight: 500;
 }
 
 /* Слабые темы и рекомендации: та же карточка и та же градация,
@@ -827,7 +1076,8 @@ function saveProfile() {
 }
 
 .bookmark-card--removed .bookmark-card__text,
-.bookmark-card--removed .bookmark-card__options {
+.bookmark-card--removed .bookmark-card__options,
+.bookmark-card--removed .bookmark-code {
   text-decoration: line-through;
   text-decoration-color: #D1D5DB;
 }
@@ -872,6 +1122,14 @@ function saveProfile() {
   cursor: default;
 }
 
+.profile__intro {
+  font-size: 0.8125rem;
+  color: #6B7280;
+  max-width: 32rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
 .profile__card {
   display: flex;
   gap: 1.25rem;
@@ -884,6 +1142,14 @@ function saveProfile() {
   max-width: 32rem;
 }
 
+.profile__avatar-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .profile__avatar {
   width: 4rem;
   height: 4rem;
@@ -892,13 +1158,41 @@ function saveProfile() {
   flex-shrink: 0;
 }
 
-.profile__avatar--placeholder {
-  display: grid;
-  place-items: center;
-  background: #EEF0FF;
+.profile__avatar-actions,
+.profile__name-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.profile__avatar-actions {
+  justify-content: center;
+}
+
+.profile__name-actions {
+  margin-top: 0.125rem;
+}
+
+.profile__link-btn {
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  background: #fff;
   color: #4F63F5;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.profile__link-btn:hover:not(:disabled) {
+  background: #EEF0FF;
+  border-color: #C7CDFA;
+}
+
+.profile__link-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .profile__fields {
@@ -946,8 +1240,28 @@ function saveProfile() {
 .profile__actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.5rem;
   margin-top: 1rem;
+}
+
+.profile__cancel-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6B7280;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.profile__cancel-btn:hover:not(:disabled) {
+  color: #374151;
+}
+
+.profile__cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .settings__hint {
