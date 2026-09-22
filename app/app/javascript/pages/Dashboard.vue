@@ -185,8 +185,13 @@
                 <div
                   v-for="(line, i) in highlightLinesFor(b)" :key="i"
                   class="bookmark-code-line"
-                  :class="{ 'bookmark-code-line--correct': highlightModeFor(b).correctLines.includes(String(i + 1)) }"
-                ><code>{{ line || ' ' }}</code></div>
+                  :class="{ 'bookmark-code-line--correct': isCorrectLine(b, i) }"
+                ><code><template
+                    v-if="tokenizedFor(b)"
+                  ><span
+                      v-for="(tok, ti) in (tokenizedFor(b)[i] || [])" :key="ti"
+                      :style="tok.color ? { color: tok.color } : {}"
+                    >{{ tok.content }}</span></template><template v-else>{{ line || ' ' }}</template></code></div>
               </div>
               <p v-if="highlightModeFor(b).hint" class="bookmark-card__explanation">{{ highlightModeFor(b).hint }}</p>
             </template>
@@ -321,6 +326,7 @@ import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
 import { detectAnimal } from '@/assets/animalIcons'
+import { useShiki } from '@/composables/useShiki.js'
 
 const props = defineProps({
   attempts:           Array,
@@ -411,6 +417,22 @@ function highlightModeFor(b) {
 
 function highlightLinesFor(b) {
   return (highlightModeFor(b)?.code ?? '').trimEnd().split('\n')
+}
+
+// YAML отдаёт correct_lines как числа (yaml_sync_service их не приводит
+// к строкам, в отличие от QuizDefinition), поэтому сравниваем через String().
+function isCorrectLine(b, i) {
+  const lines = highlightModeFor(b)?.correctLines ?? []
+  return lines.some(l => String(l) === String(i + 1))
+}
+
+const { ready: shikiReady, init: initShiki, tokenize } = useShiki()
+onMounted(initShiki)
+
+function tokenizedFor(b) {
+  if (!shikiReady.value) return null
+  const code = highlightModeFor(b)?.code ?? ''
+  return tokenize(code, b.language || 'ruby')
 }
 
 
