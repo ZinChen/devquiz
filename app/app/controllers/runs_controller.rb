@@ -84,11 +84,17 @@ class RunsController < ApplicationController
     attempt = TestAttempt.includes(:test_attempt_answers).find(params[:id])
     questions_map = load_questions.index_by { |q| q["id"] }
 
+    bookmarked_ids = current_user ? current_user.bookmarks
+      .joins(:question)
+      .where(questions: { test_slug: @meta.slug })
+      .pluck(:question_id) : []
+
     render inertia: "Run/Show", props: {
       test:           test_props(@meta),
       attempt:        attempt_props(attempt),
       answers_detail: answers_detail(attempt, questions_map),
-      weak_topics:    weak_topics(attempt, questions_map)
+      weak_topics:    weak_topics(attempt, questions_map),
+      bookmarked_ids: bookmarked_ids
     }
   end
 
@@ -157,11 +163,13 @@ class RunsController < ApplicationController
 
   def answers_detail(attempt, questions_map)
     challenge_mode = attempt.challenge_mode.presence || "fill"
+    db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
+
     attempt.test_attempt_answers.filter_map do |ans|
       q = questions_map[ans.question_id]
       next unless q
 
-      QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode)
+      QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode, db_id: db_map[ans.question_id]&.id)
     end
   end
 

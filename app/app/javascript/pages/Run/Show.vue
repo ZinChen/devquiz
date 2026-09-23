@@ -147,6 +147,12 @@
             {{ item.correct ? '✓' : '✗' }}
           </span>
           <p class="result-item__question" v-html="formatText(item.questionText)"></p>
+          <BookmarkButton
+            v-if="item.dbId"
+            :question-id="item.dbId"
+            :initial="bookmarkedIds.includes(item.dbId)"
+            class="result-item__bookmark"
+          />
         </div>
 
         <div v-if="item.type === 'code_challenge'" class="result-code-challenge">
@@ -292,6 +298,7 @@
 import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 import { buildReport, reportFilename } from '@/composables/quizReport.js'
@@ -301,6 +308,7 @@ const props = defineProps({
   attempt:        Object,
   answersDetail:  Array,
   weakTopics:     { type: Object, default: () => ({}) },
+  bookmarkedIds:  { type: Array, default: () => [] },
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
@@ -801,6 +809,11 @@ function optionLetterStyle(item, optId) {
 .result-item__question {
   font-size: 0.875rem;
   font-weight: 500;
+  flex: 1;
+}
+
+.result-item__bookmark {
+  margin-top: -0.125rem;
 }
 
 .result-item__options {

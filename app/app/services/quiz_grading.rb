@@ -45,10 +45,13 @@ module QuizGrading
   end
 
   # Разбор одного ответа для страницы результатов. `selected_options` —
-  # массив выбранного, `correct` — уже посчитанный вердикт.
-  def answer_detail(question, selected_options, correct, challenge_mode)
+  # массив выбранного, `correct` — уже посчитанный вердикт. `db_id` — PK
+  # записи Question в БД (нужен для закладок), может отсутствовать для
+  # разового прохождения из перетащенного файла.
+  def answer_detail(question, selected_options, correct, challenge_mode, db_id: nil)
     base = {
       question_id:          question["id"],
+      db_id:                db_id,
       question_text:        question["text"],
       type:                 question["type"].presence || "single",
       correct:              correct,
