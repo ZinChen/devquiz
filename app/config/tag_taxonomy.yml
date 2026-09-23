@@ -31,6 +31,7 @@ categories:
       patterns:     Сервисы, form-объекты и борьба с толстыми моделями
       architecture: Слои приложения, границы модулей и зависимости
       gems:         Гемы, экосистема и выбор библиотек
+      runtime:      GVL, JIT, Ractor, Fiber, серверы приложений и реализации языка
   postgresql:
     title: PostgreSQL
     description: Запросы, индексы, блокировки и производительность БД
@@ -68,6 +69,11 @@ categories:
     title: Go
     description: Горутины, каналы и модель конкурентности
     children: {}
+  ai-assisted-dev:
+    title: AI в разработке
+    description: Агенты, скиллы и практика работы с AI-инструментами в команде
+    children:
+      agents: Роли агентов, RAG, MCP и практика применения в команде
   math:
     title: Математика
     description: Статистика и вероятность для разработчика
