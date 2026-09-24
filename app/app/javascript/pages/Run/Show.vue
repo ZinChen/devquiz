@@ -147,6 +147,12 @@
             {{ item.correct ? '✓' : '✗' }}
           </span>
           <p class="result-item__question" v-html="formatText(item.questionText)"></p>
+          <BookmarkButton
+            v-if="item.dbId"
+            :question-id="item.dbId"
+            :initial="bookmarkedIds.includes(item.dbId)"
+            class="result-item__bookmark"
+          />
         </div>
 
         <div v-if="item.type === 'code_challenge'" class="result-code-challenge">
@@ -292,6 +298,7 @@
 import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 import { buildReport, reportFilename } from '@/composables/quizReport.js'
@@ -301,6 +308,7 @@ const props = defineProps({
   attempt:        Object,
   answersDetail:  Array,
   weakTopics:     { type: Object, default: () => ({}) },
+  bookmarkedIds:  { type: Array, default: () => [] },
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
@@ -399,7 +407,12 @@ function toggleDetails(questionId) {
 
 function formatMarkdown(text) {
   if (!text) return ''
-  return text
+  const codeBlocks = []
+  const withoutCode = text.replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
+    codeBlocks.push(code.trimEnd())
+    return '@@CODE_BLOCK_' + (codeBlocks.length - 1) + '@@'
+  })
+  const formatted = withoutCode
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -411,6 +424,10 @@ function formatMarkdown(text) {
     .replace(/\n\n/g, '</p><p>')
     .replace(/^(?!<[hul])(.+)$/gm, (m) => m.startsWith('<') ? m : m)
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="result-link">$1</a>')
+  return formatted.replace(/@@CODE_BLOCK_(\d+)@@/g, (_, i) =>
+    '<div class="result-code-caption">Пример решения:</div>' +
+    '<pre class="result-code-block"><code>' + escapeHtml(codeBlocks[Number(i)]) + '</code></pre>'
+  )
 }
 
 const scoreColor = computed(() => {
@@ -801,6 +818,11 @@ function optionLetterStyle(item, optId) {
 .result-item__question {
   font-size: 0.875rem;
   font-weight: 500;
+  flex: 1;
+}
+
+.result-item__bookmark {
+  margin-top: -0.125rem;
 }
 
 .result-item__options {
@@ -859,6 +881,32 @@ function optionLetterStyle(item, optId) {
   padding: 0.125rem 0.25rem;
   font-size: 0.875rem;
   font-family: monospace;
+}
+
+:deep(.result-code-caption) {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0.75rem 0 0.375rem;
+}
+
+:deep(.result-code-block) {
+  background: #F3F4F6;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  margin: 0 0 0.5rem;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #374151;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+:deep(.result-code-block code) {
+  font-family: inherit;
 }
 
 .result-item__details {

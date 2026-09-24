@@ -1,10 +1,12 @@
 class ApplicationController < ActionController::Base
   GUEST_TOKEN_COOKIE     = :guest_token
+  GUEST_IDENTITY_COOKIE  = :guest_identity
   PREFERRED_TAGS_COOKIE  = :preferred_tags
 
   inertia_share do
     {
       current_user: current_user_props,
+      guest_identity: current_user ? nil : GuestIdentity.from_cookie(cookies.signed[GUEST_IDENTITY_COOKIE]),
       flash: flash.to_h
     }
   end
@@ -16,8 +18,10 @@ class ApplicationController < ActionController::Base
   end
   helper_method :current_user
 
-  # Токен гостя создаётся лениво — только когда его действительно надо записать
-  # (первая попытка, выбор тегов), чтобы не ставить куку каждому посетителю.
+  # Токен и личность гостя создаются лениво и вместе — только когда гость
+  # действительно что-то делает (первая попытка, выбор тегов), чтобы не
+  # ставить куки каждому посетителю, включая тех, кто просто листает список
+  # тестов и ничего не проходит.
   def guest_token
     cookies.signed[GUEST_TOKEN_COOKIE]
   end
@@ -28,7 +32,15 @@ class ApplicationController < ActionController::Base
       expires:  1.year.from_now,
       httponly: true
     }
+    guest_identity!
     guest_token
+  end
+
+  def guest_identity!
+    cookies.signed[GUEST_IDENTITY_COOKIE] ||= {
+      value:   GuestIdentity.generate.to_json,
+      expires: 1.year.from_now
+    }
   end
 
   # Предпочтения гостя живут в куке до логина, после — в users.preferred_tags.
@@ -61,11 +73,12 @@ class ApplicationController < ActionController::Base
   def current_user_props
     return nil unless current_user
     {
-      id:         current_user.id,
-      name:       current_user.name,
-      email:      current_user.email,
-      avatar_url: current_user.avatar_url,
-      providers:  current_user.connected_providers
+      id:          current_user.id,
+      name:        current_user.name,
+      email:       current_user.email,
+      avatar_url:  current_user.avatar_url,
+      avatar_seed: current_user.avatar_seed,
+      providers:   current_user.connected_providers
     }
   end
 

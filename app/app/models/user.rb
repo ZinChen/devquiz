@@ -5,34 +5,48 @@ class User < ApplicationRecord
   has_many :bookmarked_questions, through: :bookmarks, source: :question
 
   validates :email, presence: true
+  validates :name, presence: true, length: { maximum: 60 }
 
   # Находит или создаёт пользователя по данным OmniAuth.
   #
   # Аккаунты из разных провайдеров склеиваются в один, если совпадает email,
   # но только когда провайдер подтвердил владение адресом — иначе чужой
   # аккаунт можно было бы захватить, зарегистрировав почту без подтверждения.
-  def self.from_omniauth(auth)
+  #
+  # guest_identity — {name:, avatar_seed:} из гостевой куки текущего браузера
+  # (см. GuestIdentity): если под этим именем/аватаром уже проходили тесты
+  # анонимно, аккаунт продолжает называться так же, а не получает новую
+  # случайную пару — иначе смена имени в момент логина выглядела бы как сбой.
+  # Применяется только к только что созданному аккаунту: у существующего
+  # пользователя уже есть свои name/avatar_seed, которые нельзя затирать.
+  def self.from_omniauth(auth, guest_identity: nil)
     email = auth.info.email.to_s.strip.downcase
     raise OmniauthError, "Провайдер не вернул email" if email.blank?
 
     transaction do
       identity = Identity.find_by(provider: auth.provider, uid: auth.uid)
-      next identity.user.tap { |u| u.refresh_profile_from(auth) } if identity
+      if identity
+        identity.refresh_raw_from(auth)
+        next identity.user
+      end
 
       user = find_by_email(email)
 
       if user
         raise OmniauthError, "Email не подтверждён провайдером" unless email_verified?(auth)
-        user.refresh_profile_from(auth)
       else
+        # Имя и фото — случайные (или унаследованные от гостя), а не из auth:
+        # пользователь сам решает, показывать ли настоящие (см. RandomIdentity,
+        # DashboardController#update — там же меняется профиль).
         user = create!(
-          email:      email,
-          name:       auth.info.name,
-          avatar_url: auth.info.image
+          email:       email,
+          name:        guest_identity&.dig(:name) || RandomIdentity.name,
+          avatar_seed: guest_identity&.dig(:avatar_seed) || RandomIdentity.avatar_seed
         )
       end
 
-      user.identities.create!(provider: auth.provider, uid: auth.uid)
+      identity = user.identities.create!(provider: auth.provider, uid: auth.uid)
+      identity.refresh_raw_from(auth)
       user
     end
   end
@@ -49,14 +63,6 @@ class User < ApplicationRecord
     when "github"        then true
     else false
     end
-  end
-
-  # Обновляет пустые поля профиля данными свежего входа, не затирая заполненные.
-  def refresh_profile_from(auth)
-    self.name       = auth.info.name  if name.blank?
-    self.avatar_url = auth.info.image if avatar_url.blank?
-    save! if changed?
-    self
   end
 
   def connected_providers

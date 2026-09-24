@@ -184,3 +184,13 @@ topics:
     label: "ООП & Паттерны"
     description: "SOLID, GoF паттерны, наследование, полиморфизм, инкапсуляция"
     color: "#059669"
+
+  ruby_runtime:
+    label: "Ruby: рантайм"
+    description: "GVL, YJIT, Ractor, Fiber, Thread, реализации языка, серверы приложений"
+    color: "#BE123C"
+
+  ai_agents:
+    label: "AI-агенты в разработке"
+    description: "Агенты, скиллы, RAG, MCP, роли агентов и практика применения в команде"
+    color: "#0EA5E9"

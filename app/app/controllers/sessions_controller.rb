@@ -5,17 +5,20 @@ class SessionsController < ApplicationController
 
   def create
     auth = request.env["omniauth.auth"]
-    user = User.from_omniauth(auth)
 
     # Гостевое состояние читаем до reset_session — он сбрасывает подписанные куки.
-    token      = guest_token
-    guest_tags = preferred_tags
+    token          = guest_token
+    guest_tags     = preferred_tags
+    guest_identity = GuestIdentity.from_cookie(cookies.signed[GUEST_IDENTITY_COOKIE])
+
+    user = User.from_omniauth(auth, guest_identity: guest_identity)
 
     reset_session
     session[:user_id] = user.id
 
     claim_guest_attempts(user, token)
     adopt_guest_preferences(user, guest_tags)
+    cookies.delete(GUEST_IDENTITY_COOKIE)
 
     redirect_to root_path, notice: "Добро пожаловать, #{user.name.presence || user.email}!"
   rescue User::OmniauthError, ActiveRecord::RecordInvalid => e

@@ -34,11 +34,20 @@ RSpec.describe User, type: :model do
       expect(user.identities.pluck(:provider, :uid)).to eq([ [ "github", "gh-1" ] ])
     end
 
-    it "sets profile attributes" do
+    it "sets a random name and avatar seed instead of provider data" do
       user = User.from_omniauth(github_auth)
       expect(user.email).to eq("test@example.com")
-      expect(user.name).to eq("Test User")
-      expect(user.avatar_url).to eq("http://avatar.url")
+      expect(user.name).to be_present
+      expect(user.name).not_to eq("Test User")
+      expect(user.avatar_seed).to be_present
+      expect(user.avatar_url).to be_nil
+    end
+
+    it "stores the provider's raw name and avatar on the identity" do
+      user = User.from_omniauth(github_auth)
+      identity = user.identities.first
+      expect(identity.raw_name).to eq("Test User")
+      expect(identity.raw_avatar_url).to eq("http://avatar.url")
     end
 
     it "returns the same user on repeat login" do
@@ -97,19 +106,22 @@ RSpec.describe User, type: :model do
       expect(User.count).to eq(2)
     end
 
-    it "fills in blank profile fields on a later login" do
-      user = User.from_omniauth(omniauth(provider: "github", uid: "gh-3", email: "blank@example.com", name: nil, image: nil))
-      expect(user.name).to be_blank
+    it "never overwrites the account name or avatar from a later login" do
+      user = User.from_omniauth(github_auth)
+      original_name = user.name
 
-      User.from_omniauth(omniauth(provider: "google_oauth2", uid: "gg-5", email: "blank@example.com", name: "Real Name", image: "http://img"))
-      expect(user.reload.name).to eq("Real Name")
-      expect(user.avatar_url).to eq("http://img")
+      User.from_omniauth(omniauth(provider: "google_oauth2", uid: "gg-6", email: "test@example.com", name: "Other Name", image: "http://img"))
+      expect(user.reload.name).to eq(original_name)
+      expect(user.avatar_url).to be_nil
     end
 
-    it "does not overwrite an existing name with provider data" do
+    it "refreshes the identity's raw name and avatar on repeat login" do
       User.from_omniauth(github_auth)
-      user = User.from_omniauth(omniauth(provider: "google_oauth2", uid: "gg-6", email: "test@example.com", name: "Other Name"))
-      expect(user.name).to eq("Test User")
+      user = User.from_omniauth(omniauth(provider: "github", uid: "gh-1", email: "test@example.com", name: "Updated Name", image: "http://updated"))
+
+      identity = user.identities.find_by(provider: "github")
+      expect(identity.raw_name).to eq("Updated Name")
+      expect(identity.raw_avatar_url).to eq("http://updated")
     end
   end
 

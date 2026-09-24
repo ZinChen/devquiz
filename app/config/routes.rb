@@ -31,9 +31,10 @@ Rails.application.routes.draw do
   get  "/practice/topic/:topic",       to: "topic_practices#show",  as: :topic_practice
   post "/practice/topic/:topic/grade", to: "topic_practices#grade", as: :topic_practice_grade
 
-  get "/dashboard",           to: "dashboard#index",     as: :dashboard
-  get "/dashboard/attempts",  to: "dashboard#attempts",  as: :dashboard_attempts
-  get "/dashboard/bookmarks", to: "dashboard#bookmarks", as: :dashboard_bookmarks
+  get   "/dashboard",           to: "dashboard#index",     as: :dashboard
+  patch "/dashboard",           to: "dashboard#update"
+  get   "/dashboard/attempts",  to: "dashboard#attempts",  as: :dashboard_attempts
+  get   "/dashboard/bookmarks", to: "dashboard#bookmarks", as: :dashboard_bookmarks
   get "/stats",     to: "stats#index",     as: :stats
 
   get "up" => "rails/health#show", as: :rails_health_check
