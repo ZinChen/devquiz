@@ -81,6 +81,23 @@
       </div>
 
       <div class="dashboard-col">
+        <h2 class="dashboard-section-title">Частые ошибки</h2>
+        <template v-if="recentMistakes.length">
+          <ul class="mistakes-list">
+            <li v-for="m in recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
+              <Link :href="`/tests/${m.testSlug}`" class="mistakes-list__link">{{ m.text }}</Link>
+              <span v-if="m.wrongCount > 1" class="mistakes-list__count">
+                {{ m.wrongCount }} {{ timesLabel(m.wrongCount) }}
+              </span>
+            </li>
+          </ul>
+        </template>
+        <p v-else class="dashboard-col__empty">
+          Пока нет частых ошибок — они появятся здесь, если вопрос собьёт вас несколько раз.
+        </p>
+      </div>
+
+      <div class="dashboard-col">
         <h2 class="dashboard-section-title">Рекомендуемые тесты</h2>
         <div v-if="recommendedTests.length" class="recommended-tests recommended-tests--grid">
           <Link
@@ -334,6 +351,7 @@ const props = defineProps({
   bookmarks:          { type: Array, default: () => [] },
   weakTopics:         { type: Array, default: () => [] },
   strongTopics:       { type: Array, default: () => [] },
+  recentMistakes:     { type: Array, default: () => [] },
   recommendedTests:   { type: Array, default: () => [] },
   identities:         { type: Array, default: () => [] },
   hasMoreAttempts:    { type: Boolean, default: false },
@@ -451,6 +469,14 @@ function topicTitle(topic) {
 }
 
 const strongTopics = computed(() => props.strongTopics)
+const recentMistakes = computed(() => props.recentMistakes)
+
+// «2 раза», но «5 раз» и «11 раз» — вторая форма нужна для 5..20 и хвостов 0, 5-9.
+function timesLabel(count) {
+  const tail    = count % 10
+  const hundred = count % 100
+  return tail >= 2 && tail <= 4 && (hundred < 12 || hundred > 14) ? 'раза' : 'раз'
+}
 
 function strongTopicTitle(topic) {
   const parts = []
@@ -885,6 +911,47 @@ function adoptAvatar(provider) {
   border-left-color: #10B981;
   color: #059669;
   font-weight: 500;
+}
+
+/* Тот же вид карточки, что у «Слабые темы» ниже — список внутри неё,
+   а не отдельные теги, так как тут не темы, а конкретные вопросы. */
+.mistakes-list {
+  list-style: disc;
+  margin: 0;
+  padding: 1rem 1rem 1rem 2.125rem;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  color: #D1D5DB;
+}
+
+.mistakes-list li {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 0.3125rem;
+}
+
+.mistakes-list li:last-child {
+  margin-bottom: 0;
+}
+
+.mistakes-list__link {
+  color: #374151;
+  text-decoration: none;
+}
+
+.mistakes-list__link:hover {
+  color: #4F63F5;
+  text-decoration: underline;
+}
+
+.mistakes-list__count {
+  margin-left: 0.375rem;
+  color: #9CA3AF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Слабые темы и рекомендации: та же карточка и та же градация,

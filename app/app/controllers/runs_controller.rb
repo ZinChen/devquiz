@@ -244,13 +244,12 @@ class RunsController < ApplicationController
   end
 
   # Вопросы, которые стоит проработать — см. WeakQuestions: учитываются
-  # только недавние попытки, решённые вопросы из списка уходят.
+  # только недавние попытки, решённые вопросы из списка уходят. Только
+  # вопросы этого теста — иначе список результата пестрит чужими темами
+  # и не соотносится с только что пройденным тестом.
   def recent_mistakes(questions_map)
-    questions_cache = { @meta.slug => questions_map }
-
-    weak_questions.entries.first(WEAK_QUESTIONS_LIMIT).map do |entry|
-      cache = questions_cache[entry.test_slug] ||= YamlSyncService.load_questions(entry.test_slug).index_by { |q| q["id"] }
-      text  = cache[entry.question_id]&.fetch("text", nil) || entry.question_id
+    weak_questions(test_slug: @meta.slug).entries.first(WEAK_QUESTIONS_LIMIT).map do |entry|
+      text = questions_map[entry.question_id]&.fetch("text", nil) || entry.question_id
 
       {
         question_id: entry.question_id,
