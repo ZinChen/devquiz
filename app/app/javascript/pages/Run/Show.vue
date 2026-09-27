@@ -32,7 +32,7 @@
           <button type="button" class="btn btn-ghost" @click="$emit('retry')">
             Пройти снова
           </button>
-          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+          <Link href="/" class="btn btn-ghost">Завершить</Link>
         </div>
         <div v-else class="result-summary__actions">
           <Link
@@ -45,7 +45,7 @@
           <Link :href="`/tests/${test.slug}/run/new`" :class="suggestedNextMode ? 'btn btn-ghost' : 'btn btn-primary'">
             Пройти снова
           </Link>
-          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+          <Link href="/" class="btn btn-ghost">Завершить</Link>
         </div>
       </div>
 
@@ -146,7 +146,10 @@
           >
             {{ item.correct ? '✓' : '✗' }}
           </span>
-          <p class="result-item__question" v-html="formatText(item.questionText)"></p>
+          <p class="result-item__question">
+            <span class="result-item__number">Вопрос {{ questionNumberById.get(item.questionId) }}.</span>
+            <span v-html="formatText(item.questionText)"></span>
+          </p>
           <BookmarkButton
             v-if="item.dbId"
             :question-id="item.dbId"
@@ -300,6 +303,7 @@ import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
+import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 import { buildReport, reportFilename } from '@/composables/quizReport.js'
 
@@ -323,6 +327,14 @@ const wrongCount = computed(() => props.answersDetail?.filter(a => !a.correct).l
 const visibleAnswers = computed(() =>
   onlyWrong.value ? props.answersDetail.filter(a => !a.correct) : props.answersDetail
 )
+
+// Номер вопроса — позиция в исходном тесте, а не в отфильтрованном списке,
+// иначе при «Только неправильные» номера сбивались бы на 1, 2, 3...
+const questionNumberById = computed(() => {
+  const map = new Map()
+  props.answersDetail.forEach((item, i) => map.set(item.questionId, i + 1))
+  return map
+})
 
 // Подсветка гасится по таймеру, поэтому его надо снимать при уходе со страницы.
 const highlightedQuestion = ref(null)
@@ -407,12 +419,8 @@ function toggleDetails(questionId) {
 
 function formatMarkdown(text) {
   if (!text) return ''
-  const codeBlocks = []
-  const withoutCode = text.replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
-    codeBlocks.push(code.trimEnd())
-    return '@@CODE_BLOCK_' + (codeBlocks.length - 1) + '@@'
-  })
-  const formatted = withoutCode
+  const { withPlaceholders, blocks } = splitCodeBlocks(text)
+  const formatted = withPlaceholders
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -426,7 +434,7 @@ function formatMarkdown(text) {
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="result-link">$1</a>')
   return formatted.replace(/@@CODE_BLOCK_(\d+)@@/g, (_, i) =>
     '<div class="result-code-caption">Пример решения:</div>' +
-    '<pre class="result-code-block"><code>' + escapeHtml(codeBlocks[Number(i)]) + '</code></pre>'
+    resolveCodeBlockHtml(blocks[Number(i)])
   )
 }
 
@@ -462,16 +470,7 @@ function formatTime(seconds) {
   return `${m}м ${s}с`
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function formatText(text) {
-  if (!text) return ''
-  return text
-    .replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${escapeHtml(code.trimEnd())}</code></pre>`)
-    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-}
+const { formatText, splitCodeBlocks, resolveCodeBlockHtml } = useCodeHighlight()
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 function optionLetter(idx) { return LETTERS[idx] || String(idx + 1) }
@@ -819,6 +818,12 @@ function optionLetterStyle(item, optId) {
   font-size: 0.875rem;
   font-weight: 500;
   flex: 1;
+}
+
+.result-item__number {
+  color: #6B7280;
+  font-weight: 600;
+  margin-right: 0.25rem;
 }
 
 .result-item__bookmark {

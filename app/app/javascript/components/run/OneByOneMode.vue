@@ -44,6 +44,7 @@
             :optionStyle="optionStyle"
             :optionLetterStyle="optionLetterStyle"
             :optionLetter="optionLetter"
+            :formatText="formatText"
             @pick="onRadioPick(currentQuestion, $event)"
           />
 

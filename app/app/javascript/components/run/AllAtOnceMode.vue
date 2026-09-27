@@ -46,6 +46,7 @@
           :optionStyle="optionStyle"
           :optionLetterStyle="optionLetterStyle"
           :optionLetter="optionLetter"
+          :formatText="formatText"
           @pick="onPick(q, $event)"
         />
       </div>

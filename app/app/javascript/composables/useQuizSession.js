@@ -1,6 +1,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
+import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
 
 // `onSubmit` перехватывает отправку: разовый тест из файла отдаёт ответы сам,
 // потому что попытку негде создавать и редиректить некуда.
@@ -225,15 +226,7 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
     return { background: '#fff', color: '#9CA3AF', borderColor: '#E5E7EB' }
   }
 
-  function formatText(text) {
-    return text
-      .replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${escapeHtml(code.trimEnd())}</code></pre>`)
-      .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  }
-
-  function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
+  const { formatText } = useCodeHighlight()
 
   const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
   function optionLetter(idx) {

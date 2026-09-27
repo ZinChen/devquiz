@@ -29,7 +29,7 @@
           v-model="answers[question.id]"
           class="hidden"
         />
-        <span class="option__text">{{ opt.text }}</span>
+        <span class="option__text" v-html="formatText(opt.text)"></span>
       </div>
     </label>
   </div>
@@ -42,6 +42,7 @@ defineProps({
   optionStyle:      Function,
   optionLetterStyle: Function,
   optionLetter:     Function,
+  formatText:       Function,
   // Позиция курсора для выбора с клавиатуры. У multiple стрелки не меняют
   // ответ, а двигают курсор — без подсветки это происходит вслепую.
   focusedOptIdx:    { type: Number, default: -1 },
@@ -59,7 +60,7 @@ defineEmits(['pick'])
 
 .option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
   border-radius: 0.75rem;
@@ -78,7 +79,6 @@ defineEmits(['pick'])
   font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid currentColor;
-  margin-top: 0.125rem;
 }
 
 .option__body {
@@ -87,6 +87,34 @@ defineEmits(['pick'])
 
 .option__text {
   font-size: 0.875rem;
+}
+
+/* Варианты ответа уже сами по себе узкие — код здесь переносится по
+   ширине, а не скроллится в сторону, как в теле вопроса. Shiki красит фон
+   инлайн-стилем (тема github-light) поверх нашего .code-block, поэтому
+   здесь фон перебивается через !important — в варианте ответа код должен
+   сливаться с фоном лейбла, а не быть белым прямоугольником.
+   white-space стоит в normal (не pre-wrap): между <span class="line">
+   в HTML-выводе Shiki остаются настоящие переносы строк — при pre-wrap
+   на родителе браузер показывал бы и их, и display:block у .line,
+   удваивая межстрочный интервал. Перенос по словам внутри строки и сам
+   межстрочный интервал задаёт .line ниже. */
+.option__text :deep(.code-block) {
+  display: block;
+  border: none;
+  background: none !important;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+}
+
+/* Shiki рендерит каждую строку кода как отдельный span — перенос по
+   словам и межстрочный интервал держим здесь, а не на родителе. */
+.option__text :deep(.shiki .line) {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 /* Клавиатурный курсор у вопросов с несколькими ответами: стрелки двигают
