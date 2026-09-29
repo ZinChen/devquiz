@@ -190,6 +190,11 @@ topics:
     description: "GVL, YJIT, Ractor, Fiber, Thread, реализации языка, серверы приложений"
     color: "#BE123C"
 
+  ruby_language:
+    label: "Ruby: язык"
+    description: "объектная модель, память, метапрограммирование, синтаксис"
+    color: "#9333EA"
+
   ai_agents:
     label: "AI-агенты в разработке"
     description: "Агенты, скиллы, RAG, MCP, роли агентов и практика применения в команде"
