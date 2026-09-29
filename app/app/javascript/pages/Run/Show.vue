@@ -265,11 +265,12 @@
               {{ optionLetter(oi) }}
             </span>
             <span class="result-option__body">
-              <span>{{ opt.text }}</span>
+              <span v-html="formatText(opt.text)"></span>
               <span
                 v-if="opt.explanation && (item.correctIds.includes(opt.id) || item.selectedOptions.includes(opt.id))"
                 class="result-option__explanation"
-              >{{ opt.explanation }}</span>
+                v-html="formatMarkdown(opt.explanation)"
+              ></span>
             </span>
           </div>
         </div>
@@ -840,7 +841,7 @@ function optionLetterStyle(item, optId) {
 
 .result-option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
@@ -850,12 +851,35 @@ function optionLetterStyle(item, optId) {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .result-option__explanation {
   font-size: 0.75rem;
   opacity: 0.75;
   font-style: italic;
+}
+
+/* Вариант ответа может содержать SQL-блок (```sql), как в основном
+   тексте вопроса — тот же порядок переопределения, что в QuestionOptions.vue:
+   Shiki красит фон инлайн-стилем, здесь код должен сливаться с фоном
+   строки, а не быть белым прямоугольником поверх подсветки правильного/
+   неправильного ответа. */
+.result-option__body :deep(.code-block) {
+  display: block;
+  border: none;
+  background: none !important;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+}
+
+.result-option__body :deep(.shiki .line) {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 .result-option__letter {
