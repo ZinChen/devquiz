@@ -284,6 +284,7 @@ const baseFilteredTests = computed(() => {
   if (q) {
     result = result.filter(t =>
       t.title.toLowerCase().includes(q) ||
+      t.slug?.toLowerCase().includes(q) ||
       t.description?.toLowerCase().includes(q) ||
       t.tags?.some(tag => tag.toLowerCase().includes(q))
     )
