@@ -29,6 +29,22 @@ namespace :yaml_sync do
     # warnings, not errors, so introducing a new one is never blocked here.
     known_types = %w[single multiple code_challenge]
 
+    # Тема получает полный вес вопроса без деления на их число (см.
+    # WeakTopicsSummary), а пороги уровней в runs_controller рассчитаны на то,
+    # что тем мало. Пять тем на вопрос — это десяток «проблемных» тем после
+    # двух ошибок, то есть отчёт, который ничего не советует.
+    max_topics = 3
+
+    # Словарь тем читается из того же tests/, без базы. Незнакомый слаг не
+    # ошибка — TopicDictionary покажет его как есть, — но это почти всегда
+    # опечатка, из-за которой тема остаётся без названия и цвета.
+    known_topics = begin
+      dict = YAML.safe_load(File.read(tests_dir.join("topics.yml")))
+      dict.is_a?(Hash) ? Array(dict["topics"]&.keys).map(&:to_s) : []
+    rescue Errno::ENOENT, Psych::SyntaxError
+      []
+    end
+
     errors    = []
     warnings  = []
     seen_slugs = {}
@@ -130,6 +146,24 @@ namespace :yaml_sync do
         type = q["type"].to_s.empty? ? "single" : q["type"].to_s
         unless known_types.include?(type)
           warnings << "#{name} #{label}: unrecognised type '#{type}'"
+        end
+
+        if q.key?("topics")
+          topics = q["topics"]
+          if topics.is_a?(Array)
+            if topics.size > max_topics
+              errors << "#{name} #{label}: #{topics.size} topics, не больше #{max_topics} на вопрос"
+            end
+
+            if known_topics.any?
+              unknown = topics.map(&:to_s).reject { |t| known_topics.include?(t) }
+              unknown.each do |t|
+                warnings << "#{name} #{label}: topic '#{t}' отсутствует в tests/topics.yml"
+              end
+            end
+          else
+            errors << "#{name} #{label}: 'topics' must be a list"
+          end
         end
 
         # code_challenge carries its own payload rather than options.

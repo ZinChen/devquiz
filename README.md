@@ -59,24 +59,30 @@ slug: my-quiz          # уникальный идентификатор
 title: "Название теста"
 description: "Краткое описание."
 tags: [tag1, tag2]
-difficulty: beginner   # beginner | intermediate | advanced
+difficulty: advanced   # basic | advanced | expert
 estimated_time: 15     # минуты
 
 questions:
   - id: q1
     text: "Текст вопроса?"
-    type: single        # single | multiple
-    difficulty: easy    # easy | medium
-    topics: [mvc]       # тема вопроса, максимум две
+    type: single        # single | multiple | code_challenge
+    difficulty: medium  # easy | medium | hard
+    topics: [mvc]       # тема вопроса, максимум три
     options:
       - id: a
         text: "Вариант A"
         correct: false
+        explanation: "Почему вариант не работает."
       - id: b
         text: "Вариант B"
         correct: true
-    explanation: "Объяснение правильного ответа."
+        explanation: "Механизм, по которому вариант верен."
+    explanation: "Разбор: механизм плюс практическое следствие."
+    extended_explanation: "Развёрнутая теория на 2–4 предложения."
+    recommendation: "Что повторить, при наличии — ссылка на документацию."
 ```
+
+Формально валидатору хватает `explanation` у вопроса, но фактический стандарт в проекте — заполнять `explanation` у каждого варианта, `extended_explanation` и `recommendation`: страница результатов показывает их в блоке разбора. Подробные требования к вопросам, вариантам и пояснениям — в скиле [devquiz-tests](.claude/skills/devquiz-tests/SKILL.md), он шарится через репозиторий.
 
 ### Темы вопросов
 
