@@ -27,6 +27,24 @@
         </dl>
       </div>
 
+      <div v-if="achievements.recent.length" class="dashboard-col">
+        <h2 class="dashboard-section-title">Последние достижения</h2>
+        <div class="achievements-strip">
+          <span
+            v-for="a in achievements.recent"
+            :key="a.slug"
+            class="achievements-strip__item"
+            :title="a.title"
+          >
+            <span aria-hidden="true">{{ a.icon || '🏅' }}</span>
+            {{ a.title }}
+          </span>
+          <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
+            Все достижения →
+          </button>
+        </div>
+      </div>
+
       <div class="dashboard-col">
         <h2 class="dashboard-section-title">Сильные темы</h2>
         <template v-if="strongTopics.length">
@@ -332,6 +350,16 @@
         </button>
         <span v-if="!profileChanged && !savingProfile" class="settings__hint">Изменений нет</span>
       </div>
+
+      <div class="profile__achievements">
+        <h2 class="dashboard-section-title">
+          Достижения
+          <span class="profile__achievements-count">
+            {{ achievements.earnedCount }} из {{ achievements.totalCount }}
+          </span>
+        </h2>
+        <AchievementList :items="achievements.items" />
+      </div>
     </section>
   </AppLayout>
 </template>
@@ -342,6 +370,7 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
+import AchievementList from '@/components/AchievementList.vue'
 import { detectAnimal } from '@/assets/animalIcons'
 import { useShiki } from '@/composables/useShiki.js'
 
@@ -354,6 +383,7 @@ const props = defineProps({
   recentMistakes:     { type: Array, default: () => [] },
   recommendedTests:   { type: Array, default: () => [] },
   identities:         { type: Array, default: () => [] },
+  achievements:       { type: Object, default: () => ({ earnedCount: 0, totalCount: 0, items: [], recent: [] }) },
   hasMoreAttempts:    { type: Boolean, default: false },
   hasMoreBookmarks:   { type: Boolean, default: false },
   pageSize:           { type: Number, default: 5 },
@@ -491,6 +521,7 @@ const summaryCards = computed(() => [
   { label: 'Всего попыток',   value: props.stats.totalAttempts },
   { label: 'Тестов пройдено', value: props.stats.testsCompleted },
   { label: 'Средний балл',    value: props.stats.avgScore.toFixed(1) + '%' },
+  { label: 'Достижений',      value: `${props.achievements.earnedCount} из ${props.achievements.totalCount}` },
 ])
 
 // Карточка остаётся в списке, помеченная как удалённая: из БД запись уже
@@ -1145,6 +1176,46 @@ function adoptAvatar(provider) {
 
 .dashboard-col:last-child {
   margin-bottom: 0;
+}
+
+.achievements-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.achievements-strip__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: #EEF0FE;
+  color: #3D4EDB;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.achievements-strip__more {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #4F63F5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile__achievements {
+  margin-top: 2rem;
+}
+
+.profile__achievements-count {
+  margin-left: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6B7280;
 }
 
 /* Статистика — в половину ширины секции, а не во всю. */

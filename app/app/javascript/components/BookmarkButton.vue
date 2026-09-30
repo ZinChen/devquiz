@@ -17,6 +17,7 @@
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
+import { useToasts } from '@/composables/useToasts'
 
 const props = defineProps({
   questionId: { type: Number, required: true },
@@ -28,6 +29,8 @@ const currentUser = computed(() => page.props.currentUser)
 
 const isBookmarked = ref(props.initial)
 
+const { notify } = useToasts()
+
 async function toggle() {
   const wasBookmarked = isBookmarked.value
   isBookmarked.value = !wasBookmarked
@@ -36,7 +39,12 @@ async function toggle() {
     if (wasBookmarked) {
       await axios.delete('/bookmarks', { data: { question_id: props.questionId } })
     } else {
-      await axios.post('/bookmarks', { question_id: props.questionId })
+      const { data } = await axios.post('/bookmarks', { question_id: props.questionId })
+      // Ачивка за наполненное избранное — единственная, что выдаётся вне
+      // прохождения теста: страницы результата здесь нет, показываем тостом.
+      for (const achievement of data.newAchievements ?? []) {
+        notify(`${achievement.icon || '🏅'} Новое достижение: ${achievement.title}`)
+      }
     }
   } catch {
     isBookmarked.value = wasBookmarked

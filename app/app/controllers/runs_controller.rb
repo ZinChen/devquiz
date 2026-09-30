@@ -77,6 +77,11 @@ class RunsController < ApplicationController
     # и в рекорд теста такие попытки не идут.
     update_test_stats(@meta, score, attempt) unless weak_only
 
+    # В flash уезжают только слаги: сессия лежит в куке (4 КБ), а названия и
+    # описания страница результата возьмёт из базы.
+    earned = AchievementsService.call(current_user)
+    flash[:new_achievement_slugs] = earned.map(&:slug) if earned.any?
+
     redirect_to test_run_path(test_slug: @meta.slug, id: attempt.id)
   end
 
@@ -90,15 +95,42 @@ class RunsController < ApplicationController
       .pluck(:question_id) : []
 
     render inertia: "Run/Show", props: {
-      test:           test_props(@meta),
-      attempt:        attempt_props(attempt),
-      answers_detail: answers_detail(attempt, questions_map),
-      weak_topics:    weak_topics(attempt, questions_map),
-      bookmarked_ids: bookmarked_ids
+      test:             test_props(@meta),
+      attempt:          attempt_props(attempt),
+      answers_detail:   answers_detail(attempt, questions_map),
+      weak_topics:      weak_topics(attempt, questions_map),
+      bookmarked_ids:   bookmarked_ids,
+      new_achievements: new_achievements_props,
+      guest_prompt:     guest_prompt?
     }
   end
 
   private
+
+  # Ачивки, выданные за только что завершённый тест: create кладёт в flash
+  # слаги, здесь они превращаются в данные для блока «Новое достижение».
+  def new_achievements_props
+    slugs = Array(flash[:new_achievement_slugs])
+    return [] if slugs.empty?
+
+    Achievement.where(slug: slugs).ordered.map do |achievement|
+      {
+        slug:        achievement.slug,
+        title:       achievement.title,
+        description: achievement.description,
+        icon:        achievement.icon
+      }
+    end
+  end
+
+  # Гость ачивок не получает, поэтому после первого пройденного теста ему
+  # показывается приглашение зарегистрироваться — один раз, дальше уже
+  # назойливо.
+  def guest_prompt?
+    return false if current_user || guest_token.blank?
+
+    TestAttempt.where(guest_token: guest_token).where.not(completed_at: nil).count == 1
+  end
 
   def load_test
     @meta = TestMetadatum.find_by!(slug: params[:test_slug])

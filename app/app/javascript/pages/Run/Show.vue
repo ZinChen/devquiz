@@ -49,6 +49,32 @@
         </div>
       </div>
 
+      <div v-if="newAchievements.length" class="result-achievements">
+        <h2 class="result-achievements__title">
+          {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
+        </h2>
+        <div class="result-achievements__list">
+          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
+            <span class="result-achievement__icon" aria-hidden="true">{{ a.icon || '🏅' }}</span>
+            <div>
+              <p class="result-achievement__name">{{ a.title }}</p>
+              <p v-if="a.description" class="result-achievement__text">{{ a.description }}</p>
+            </div>
+          </div>
+        </div>
+        <Link href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
+      </div>
+
+      <div v-if="guestPrompt" class="result-guest">
+        <p class="result-guest__title">Первый тест пройден</p>
+        <p class="result-guest__text">
+          Войдите, чтобы статистика сохранялась, а за пройденные тесты начислялись
+          достижения — псевдоним и аватар останутся теми же. Email и настоящее имя
+          из Google или GitHub другим пользователям не показываются.
+        </p>
+        <Link href="/login" class="btn btn-sm btn-primary">Войти</Link>
+      </div>
+
       <!-- От частного к общему: конкретные вопросы, затем их темы, затем куда идти дальше. -->
       <template v-if="!preview && hasWeakTopics">
         <div v-if="weakTopics.recentMistakes?.length" class="weak-header">
@@ -317,6 +343,13 @@ const props = defineProps({
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
+  // Ачивки, выданные за эту попытку: приезжают через flash из
+  // RunsController#create. Блоком, а не тостом — тост уезжает раньше, чем
+  // человек оторвётся от своего результата.
+  newAchievements: { type: Array, default: () => [] },
+  // Гость ачивок не получает: после первого пройденного теста показываем,
+  // что даёт регистрация.
+  guestPrompt:    { type: Boolean, default: false },
 })
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
@@ -525,6 +558,81 @@ function optionLetterStyle(item, optId) {
 </script>
 
 <style scoped>
+/* Новые ачивки — сразу под результатом: это событие той же попытки, и
+   человек как раз смотрит сюда. */
+.result-achievements {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #DDE1FD;
+  border-radius: 0.75rem;
+  background: #F7F8FF;
+}
+
+.result-achievements__title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.result-achievements__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.result-achievement {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.result-achievement__icon {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.result-achievement__name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.result-achievement__text {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.result-achievements__link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #4F63F5;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-guest {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #F3F4F6;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.result-guest__title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #111827;
+}
+
+.result-guest__text {
+  margin: 0.375rem 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #6B7280;
+}
+
 .result-wrap {
   max-width: 42rem;
   margin: 0 auto;

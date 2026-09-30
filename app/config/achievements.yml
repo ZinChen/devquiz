@@ -1,0 +1,215 @@
+# Каталог ачивок. Метаданные живут здесь, условия выдачи — в
+# AchievementsService: они слишком разные, чтобы описываться данными
+# (серия по дням, улучшение результата). Синхронизируется в базу через
+# rake achievements:sync, оттуда берутся стабильные id для user_achievements.
+#
+# group     — лесенка: ачивки одной группы показываются одной плиткой с текущей
+#             ступенью. Порог ступени — threshold.
+# threshold — порог, с которым сравнивается факт (AchievementFacts#value_for).
+#             Есть и у одиночных ачивок со счётным условием — по нему же
+#             рисуется прогресс в кабинете. Ачивки без порога бинарны:
+#             speedrun, code_runner, comeback.
+# shareable — видна ли ачивка другим пользователям в live-активности (#10).
+#             false у тех, что раскрывают поведение, а не результат.
+achievements:
+  # ── Пройдено тестов (уникальных, без тренировок по ошибкам) ──────────────
+  first_test:
+    title: Первый шаг
+    description: Пройден первый тест
+    icon: 🌱
+    group: tests_passed
+    threshold: 1
+    position: 10
+  ten_tests:
+    title: На разгоне
+    description: Пройдено 10 разных тестов
+    icon: 🚀
+    group: tests_passed
+    threshold: 10
+    position: 11
+  twenty_tests:
+    title: Половина пути
+    description: Пройдено 20 разных тестов
+    icon: 🧭
+    group: tests_passed
+    threshold: 20
+    position: 12
+  thirty_tests:
+    title: Знаток каталога
+    description: Пройдено 30 разных тестов
+    icon: 🗺️
+    group: tests_passed
+    threshold: 30
+    position: 13
+
+  # ── Верных ответов суммарно ──────────────────────────────────────────────
+  correct_100:
+    title: Сотня
+    description: 100 верных ответов
+    icon: 💯
+    group: correct_answers
+    threshold: 100
+    position: 20
+  correct_200:
+    title: Двести
+    description: 200 верных ответов
+    icon: ✌️
+    group: correct_answers
+    threshold: 200
+    position: 21
+  correct_300:
+    title: Триста
+    description: 300 верных ответов
+    icon: 🎯
+    group: correct_answers
+    threshold: 300
+    position: 22
+  correct_400:
+    title: Четыреста
+    description: 400 верных ответов
+    icon: 📈
+    group: correct_answers
+    threshold: 400
+    position: 23
+  correct_500:
+    title: Пятьсот
+    description: 500 верных ответов
+    icon: 🏋️
+    group: correct_answers
+    threshold: 500
+    position: 24
+  correct_600:
+    title: Шестьсот
+    description: 600 верных ответов
+    icon: 🧠
+    group: correct_answers
+    threshold: 600
+    position: 25
+  correct_700:
+    title: Семьсот
+    description: 700 верных ответов
+    icon: 🔥
+    group: correct_answers
+    threshold: 700
+    position: 26
+  # Ступени ниже недостижимы на текущем каталоге (728 вопросов) — засеяны
+  # заранее, чтобы с ростом каталога не требовалась правка данных.
+  correct_800:
+    title: Восемьсот
+    description: 800 верных ответов
+    icon: ⚡
+    group: correct_answers
+    threshold: 800
+    position: 27
+  correct_900:
+    title: Девятьсот
+    description: 900 верных ответов
+    icon: 💎
+    group: correct_answers
+    threshold: 900
+    position: 28
+  correct_1000:
+    title: Тысячник
+    description: 1000 верных ответов
+    icon: 👑
+    group: correct_answers
+    threshold: 1000
+    position: 29
+
+  # ── Без ошибок ───────────────────────────────────────────────────────────
+  perfect_score:
+    title: Без ошибок
+    description: Тест пройден на 100%
+    icon: ✨
+    group: perfect
+    threshold: 1
+    position: 30
+  ten_perfect:
+    title: Перфекционист
+    description: 10 тестов пройдено на 100%
+    icon: 🏆
+    group: perfect
+    threshold: 10
+    position: 31
+
+  # ── По сложности (тест зачитывается при результате 70% и выше) ───────────
+  three_basic:
+    title: Основы взяты
+    description: 3 теста уровня basic на 70% и выше
+    icon: 📗
+    group: level_basic
+    threshold: 3
+    position: 40
+  three_advanced:
+    title: Уверенный уровень
+    description: 3 теста уровня advanced на 70% и выше
+    icon: 📘
+    group: level_advanced
+    threshold: 3
+    position: 41
+  ten_advanced:
+    title: Профи
+    description: 10 тестов уровня advanced на 70% и выше
+    icon: 🎓
+    group: level_advanced
+    threshold: 10
+    position: 42
+  three_expert:
+    title: Тяжёлый вес
+    description: 3 теста уровня expert на 70% и выше
+    icon: 📕
+    group: level_expert
+    threshold: 3
+    position: 43
+  ten_expert:
+    title: Хардкорщик
+    description: 10 тестов уровня expert на 70% и выше
+    icon: 🥇
+    group: level_expert
+    threshold: 10
+    position: 44
+
+  # ── Одиночные ────────────────────────────────────────────────────────────
+  speedrun:
+    title: Скоростной
+    description: Тест на 80% и выше, пройденный вдвое быстрее отведённого времени
+    icon: ⏱️
+    position: 50
+  code_runner:
+    title: Руки в коде
+    description: Пройден тест с заданиями на код
+    icon: 💻
+    position: 51
+  comeback:
+    title: Второй подход
+    description: Результат по тесту улучшен на 30 пунктов и больше
+    icon: 🔁
+    shareable: false
+    position: 52
+  weak_trained:
+    title: Работа над ошибками
+    description: 5 тренировок по слабым вопросам
+    icon: 🩹
+    threshold: 5
+    shareable: false
+    position: 53
+  streak_three:
+    title: Три дня подряд
+    description: Тесты три дня подряд
+    icon: 📅
+    threshold: 3
+    shareable: false
+    position: 54
+  streak_week:
+    title: Неделя дисциплины
+    description: Тесты семь дней подряд
+    icon: 🗓️
+    threshold: 7
+    shareable: false
+    position: 55
+  hoarder:
+    title: Запасливый
+    description: 10 вопросов в избранном
+    icon: 🔖
+    threshold: 10
+    position: 56

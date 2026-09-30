@@ -23,6 +23,7 @@ module DashboardRenderable
         avg_score:       attempts.average(:score).to_f.round(1),
         tests_completed: slugs.count
       },
+      achievements:      achievements_summary.to_props,
       weak_topics:       weak_topics.entries.map(&:to_h),
       strong_topics:     strong_topics.entries.map(&:to_h),
       recommended_tests: recommended_tests(slugs),
@@ -105,6 +106,10 @@ module DashboardRenderable
 
       props
     end
+  end
+
+  def achievements_summary
+    @achievements_summary ||= AchievementsSummary.for(user: current_user)
   end
 
   def weak_topics

@@ -3,6 +3,8 @@ class User < ApplicationRecord
   has_many :test_attempts, foreign_key: :user_id
   has_many :bookmarks, dependent: :destroy
   has_many :bookmarked_questions, through: :bookmarks, source: :question
+  has_many :user_achievements, dependent: :destroy
+  has_many :achievements, through: :user_achievements
 
   validates :email, presence: true
   validates :name, presence: true, length: { maximum: 60 }

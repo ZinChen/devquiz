@@ -10,9 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_21_152814) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_120002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "achievements", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "group_name"
+    t.string "icon"
+    t.integer "position", default: 0, null: false
+    t.boolean "shareable", default: true, null: false
+    t.string "slug", null: false
+    t.integer "threshold"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_name"], name: "index_achievements_on_group_name"
+    t.index ["slug"], name: "index_achievements_on_slug", unique: true
+  end
 
   create_table "bookmarks", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -113,7 +128,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_152814) do
     t.index ["source"], name: "index_test_metadata_on_source"
   end
 
+  create_table "user_achievements", force: :cascade do |t|
+    t.bigint "achievement_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "earned_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["achievement_id"], name: "index_user_achievements_on_achievement_id"
+    t.index ["user_id", "achievement_id"], name: "index_user_achievements_on_user_id_and_achievement_id", unique: true
+    t.index ["user_id"], name: "index_user_achievements_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
+    t.integer "achievements_count", default: 0, null: false
     t.string "avatar_seed"
     t.string "avatar_url"
     t.datetime "created_at", null: false
@@ -127,4 +154,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_21_152814) do
   add_foreign_key "bookmarks", "questions"
   add_foreign_key "bookmarks", "users"
   add_foreign_key "identities", "users"
+  add_foreign_key "user_achievements", "achievements"
+  add_foreign_key "user_achievements", "users"
 end
