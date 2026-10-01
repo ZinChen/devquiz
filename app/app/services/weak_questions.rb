@@ -46,6 +46,12 @@ class WeakQuestions
     scope = @user ? TestAttempt.where(user_id: @user.id) : TestAttempt.where(guest_token: @guest_token)
     scope = scope.where(test_slug: @test_slug) if @test_slug
 
+    # Только живые тесты. Ошибки по удалённому тесту остаются в истории, но
+    # показать их нечем: вопросов в YAML больше нет, и список «частых ошибок»
+    # вырождался в голые q4/q13, а ссылка вела на несуществующий тест.
+    # Ответы при этом не трогаем — вернётся тест, вернутся и его слабые вопросы.
+    scope = scope.where(test_slug: TestMetadatum.active.select(:slug))
+
     TestAttemptAnswer
       .joins(:test_attempt)
       .merge(scope)

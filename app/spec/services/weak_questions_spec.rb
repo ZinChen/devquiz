@@ -4,7 +4,11 @@ RSpec.describe WeakQuestions do
   let(:user) { create(:user) }
 
   # Ответы задаются от старых к новым, как они и накапливались бы в жизни.
+  # Метаданные теста создаются заодно: слабые вопросы считаются только по
+  # живым тестам, а в жизни запись в test_metadata есть у каждого теста —
+  # её заводит YamlSyncService.
   def answer(question_id, correct, slug: "ror-basics", at: Time.current)
+    TestMetadatum.find_or_create_by!(slug: slug) { |m| m.title = slug }
     attempt = TestAttempt.create!(user_id: user.id, test_slug: slug, total_questions: 1, created_at: at)
     attempt.test_attempt_answers.create!(
       question_id: question_id, selected_options: [ "a" ], correct: correct, created_at: at
@@ -20,6 +24,16 @@ RSpec.describe WeakQuestions do
 
     expect(entries_for.map(&:question_id)).to eq([ "q1" ])
     expect(entries_for.first.wrong_count).to eq(1)
+  end
+
+  it "не возвращает вопросы удалённого теста" do
+    answer("q1", false, slug: "ror-basics")
+    answer("q4", false, slug: "sql-pick-wrong-advanced-1")
+    TestMetadatum.find_by(slug: "sql-pick-wrong-advanced-1").update!(deleted_at: Time.current)
+
+    # Показать такой вопрос нечем: YAML удалён вместе с тестом, и список
+    # выродился бы в голый идентификатор со ссылкой в никуда.
+    expect(entries_for.map(&:question_id)).to eq([ "q1" ])
   end
 
   it "не возвращает вопрос, на который всегда отвечали верно" do
