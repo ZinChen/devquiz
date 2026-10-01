@@ -95,18 +95,37 @@ function formatDate(value) {
   align-items: stretch;
 }
 
+/* Мини-карточка собрана иначе, чем большая: цвет занимает всю левую часть
+   целиком, а не квадратик внутри отступов. Поэтому у самой карточки отступов
+   нет — их несёт правая половина. */
 .achievements--compact .achievement {
-  gap: 0.625rem;
-  padding: 0.625rem 0.875rem;
-  border-radius: 0.375rem;
-  min-width: 11rem;
+  gap: 0;
+  padding: 0;
+  border-radius: 0.5rem;
+  min-width: 14rem;
+  overflow: hidden;
 }
 
+/* Название в одну строку: перенос ломает квадрат слева — он следует за
+   высотой карточки, и из-за второй строки соседние плитки разъезжаются. */
+.achievements--compact .achievement__title {
+  white-space: nowrap;
+}
+
+/* Квадрат по высоте карточки: ширина следует за высотой, поэтому блок
+   остаётся квадратным и когда название переносится на две строки. */
 .achievements--compact .achievement__icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.375rem;
-  font-size: 1.125rem;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 3.25rem;
+  aspect-ratio: 1;
+  border-radius: 0;
+  font-size: 1.55rem;
+}
+
+.achievements--compact .achievement__body {
+  padding: 0.5rem 0.875rem;
 }
 
 .achievements--compact .achievement__title {
@@ -167,13 +186,15 @@ function formatDate(value) {
 }
 
 .achievement__body {
+  flex: 1;
   min-width: 0;
 }
 
 .achievement__title {
   display: flex;
   align-items: baseline;
-  gap: 0.375rem;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-weight: 600;
   font-size: 0.875rem;
   color: #111827;
@@ -183,12 +204,14 @@ function formatDate(value) {
   color: #6B7280;
 }
 
+/* Нейтральный, а не фирменный синий: синим в интерфейсе покрашены кнопки и
+   ссылки, и бейдж ступени читался бы как интерактивный. */
 .achievement__tier {
   flex-shrink: 0;
   padding: 0.0625rem 0.375rem;
   border-radius: 999px;
-  background: #EEF0FE;
-  color: #4F63F5;
+  background: #F1F2F4;
+  color: #6B7280;
   font-size: 0.6875rem;
   font-weight: 600;
 }

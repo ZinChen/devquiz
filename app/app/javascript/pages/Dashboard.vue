@@ -1170,8 +1170,12 @@ function adoptAvatar(provider) {
   margin-bottom: 0;
 }
 
+/* Ссылка уходит под полоску вправо — к концу ряда карточек, а не к началу:
+   взгляд доходит до последней и упирается в неё. */
 .achievements-strip__more {
+  display: block;
   margin-top: 0.625rem;
+  margin-left: auto;
   border: 0;
   background: none;
   padding: 0;
