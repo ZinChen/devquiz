@@ -16,10 +16,15 @@ class AchievementsSummary
     @user = user
   end
 
+  # Счёт идёт по плиткам, а не по ступеням каталога: под шапкой «6 из 13»
+  # лежат ровно 13 плиток, и число совпадает с тем, что человек видит. Счёт по
+  # ступеням давал бы «15 из 28» над тринадцатью карточками — формально верно,
+  # но читается как ошибка. Детализация по ступеням осталась в бейдже 3/4 на
+  # самой плитке.
   def to_props
     {
-      earned_count: earned_at_by_slug.size,
-      total_count:  AchievementsCatalog.entries.size,
+      earned_count: items.count { |item| item[:earned] },
+      total_count:  items.size,
       items:        items,
       recent:       recent
     }

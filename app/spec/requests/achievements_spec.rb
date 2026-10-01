@@ -115,7 +115,9 @@ RSpec.describe "Достижения", type: :request do
 
       achievements = response.parsed_body["props"]["achievements"]
       expect(achievements["earned_count"]).to be_positive
-      expect(achievements["total_count"]).to eq(Achievement.count)
+      # Счёт по плиткам, а не по ступеням: под шапкой лежит ровно столько
+      # карточек, сколько названо в знаменателе.
+      expect(achievements["total_count"]).to eq(achievements["items"].size)
       expect(achievements["items"]).to be_present
     end
   end

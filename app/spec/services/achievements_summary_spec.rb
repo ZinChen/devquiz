@@ -24,7 +24,7 @@ RSpec.describe AchievementsSummary do
     tests_passed = props[:items].count { |i| i[:key] == "tests_passed" }
 
     expect(tests_passed).to eq(1)
-    expect(props[:items].size).to be < props[:total_count]
+    expect(props[:items].size).to be < AchievementsCatalog.entries.size
   end
 
   it "показывает первую ступень как цель, пока ничего не взято" do
@@ -111,11 +111,23 @@ RSpec.describe AchievementsSummary do
     end
   end
 
-  it "считает полученное из общего числа ачивок каталога" do
+  it "считает плитки, а не ступени каталога" do
     complete(slug: "ror-basics")
     AchievementsService.call(user)
 
-    expect(props[:earned_count]).to eq(user.user_achievements.count)
-    expect(props[:total_count]).to eq(Achievement.count)
+    # Ступеней выдано больше, чем плиток: first_test и perfect_score — это две
+    # ступени в двух разных группах, и каждая показана одной плиткой.
+    expect(props[:total_count]).to eq(props[:items].size)
+    expect(props[:total_count]).to be < Achievement.count
+    expect(props[:earned_count]).to eq(props[:items].count { |i| i[:earned] })
+  end
+
+  it "не считает группу дважды, когда в ней взято несколько ступеней" do
+    12.times { |i| complete(slug: "test-#{i}", at: i.hours.ago) }
+    AchievementsService.call(user)
+
+    # Взяты first_test и ten_tests — две ступени одной группы, плитка одна.
+    expect(user.achievements.where(group_name: "tests_passed").count).to eq(2)
+    expect(props[:items].count { |i| i[:key] == "tests_passed" }).to eq(1)
   end
 end

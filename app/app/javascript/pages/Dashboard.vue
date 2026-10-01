@@ -29,20 +29,10 @@
 
       <div v-if="achievements.recent.length" class="dashboard-col">
         <h2 class="dashboard-section-title">Последние достижения</h2>
-        <div class="achievements-strip">
-          <span
-            v-for="a in achievements.recent"
-            :key="a.slug"
-            class="achievements-strip__item"
-            :title="a.title"
-          >
-            <span aria-hidden="true">{{ a.icon || '🏅' }}</span>
-            {{ a.title }}
-          </span>
-          <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
-            Все достижения →
-          </button>
-        </div>
+        <AchievementList :items="achievements.recent" compact />
+        <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
+          Все достижения →
+        </button>
       </div>
 
       <div class="dashboard-col">
@@ -1178,26 +1168,8 @@ function adoptAvatar(provider) {
   margin-bottom: 0;
 }
 
-.achievements-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.achievements-strip__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.1875rem 0.625rem;
-  border-radius: 999px;
-  background: #EEF0FE;
-  color: #3D4EDB;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
 .achievements-strip__more {
+  margin-top: 0.625rem;
   border: 0;
   background: none;
   padding: 0;
