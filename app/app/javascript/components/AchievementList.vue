@@ -38,7 +38,10 @@
           </span>
         </div>
 
-        <p v-else-if="item.earnedAt && !compact" class="achievement__date">{{ formatDate(item.earnedAt) }}</p>
+        <!-- Нижняя строка есть у каждой карточки: у ступенчатых это прогресс,
+             у остальных — дата получения. Иначе в одном ряду часть карточек
+             оказывается ниже и с пустотой под названием. -->
+        <p v-else-if="item.earnedAt" class="achievement__date">{{ formatDate(item.earnedAt) }}</p>
       </div>
     </div>
   </div>
@@ -64,7 +67,16 @@ function barWidth(progress) {
 
 function formatDate(value) {
   if (!value) return ''
-  return new Date(value).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const date = new Date(value)
+  // В мини-карточке на полную дату нет ширины: «1 октября 2026 г.» вытесняет
+  // всё остальное. Год там показываем только у прошлогодних.
+  if (props.compact) {
+    const sameYear = date.getFullYear() === new Date().getFullYear()
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
+  }
+
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 </script>
 
@@ -80,6 +92,7 @@ function formatDate(value) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: stretch;
 }
 
 .achievements--compact .achievement {
@@ -106,13 +119,20 @@ function formatDate(value) {
   margin-top: 0.3125rem;
 }
 
+.achievements--compact .achievement__date {
+  margin-top: 0.25rem;
+}
+
 .achievement {
   display: flex;
   gap: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid #F3F4F6;
+  border: 1px solid #EFF1F4;
   border-radius: 0.625rem;
   background: #fff;
+  /* Та же мера, что у шапки приложения: карточка приподнимается над фоном,
+     но не спорит с остальным интерфейсом. */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* Невзятая ачивка остаётся читаемой: это не «секрет», а цель — по ней
@@ -120,6 +140,7 @@ function formatDate(value) {
 .achievement--locked {
   background: #FAFAFB;
   border-style: dashed;
+  box-shadow: none;
 }
 
 .achievement--locked .achievement__icon {

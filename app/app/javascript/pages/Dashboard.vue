@@ -256,7 +256,7 @@
     <section v-else-if="tab === 'profile'" class="profile">
       <h2 class="dashboard-section-title">Профиль</h2>
       <p class="profile__intro">
-        Ваши данные, которые могут увидеть остальные при прохождении тестов
+        Ваши данные, остальные видят только аватарку и имя
       </p>
 
       <div class="profile__card">

@@ -147,38 +147,38 @@ achievements:
     threshold: 10
     position: 31
 
-  # ── По сложности (тест зачитывается при результате 70% и выше) ───────────
+  # ── По сложности (тест зачитывается при результате 70%) ───────────
   three_basic:
     title: Основы взяты
-    description: 3 теста уровня basic на 70% и выше
+    description: 3 теста basic на 70%
     icon: 📗
     group: level_basic
     threshold: 3
     position: 40
   three_advanced:
     title: Уверенный уровень
-    description: 3 теста уровня advanced на 70% и выше
+    description: 3 теста advanced на 70%
     icon: 📘
     group: level_advanced
     threshold: 3
     position: 41
   ten_advanced:
     title: Профи
-    description: 10 тестов уровня advanced на 70% и выше
+    description: 10 тестов advanced на 70%
     icon: 🎓
     group: level_advanced
     threshold: 10
     position: 42
   three_expert:
     title: Тяжёлый вес
-    description: 3 теста уровня expert на 70% и выше
+    description: 3 теста expert на 70%
     icon: 📕
     group: level_expert
     threshold: 3
     position: 43
   ten_expert:
     title: Хардкорщик
-    description: 10 тестов уровня expert на 70% и выше
+    description: 10 тестов expert на 70%
     icon: 🥇
     group: level_expert
     threshold: 10
@@ -187,7 +187,7 @@ achievements:
   # ── Одиночные ────────────────────────────────────────────────────────────
   speedrun:
     title: Скоростной
-    description: Тест на 80% и выше, пройденный вдвое быстрее отведённого времени
+    description: Тест на 80%, пройденный вдвое быстрее отведённого времени
     icon: ⏱️
     position: 50
   code_runner:
