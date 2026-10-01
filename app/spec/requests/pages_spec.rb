@@ -32,9 +32,19 @@ RSpec.describe "Pages", type: :request do
   end
 
   describe "GET /stats" do
-    it "returns 200" do
+    it "returns 200 once the ranking has enough data" do
+      StatsController::RANKED_TESTS_REQUIRED.times do |i|
+        create(:test_metadatum, slug: "ranked-#{i}", attempts_count: StatsController::MIN_ATTEMPTS)
+      end
+
       get stats_path
       expect(response).to have_http_status(:ok)
+    end
+
+    # До порога рейтинг строить не на чем, и ссылки на него нет в шапке.
+    it "redirects home while the ranking is empty" do
+      get stats_path
+      expect(response).to redirect_to(root_path)
     end
   end
 

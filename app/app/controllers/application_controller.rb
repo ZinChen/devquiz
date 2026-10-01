@@ -7,6 +7,9 @@ class ApplicationController < ActionController::Base
     {
       current_user: current_user_props,
       guest_identity: current_user ? nil : GuestIdentity.from_cookie(cookies.signed[GUEST_IDENTITY_COOKIE]),
+      # Пункт «Общий рейтинг» показывается в шапке, только когда рейтинг есть
+      # из чего строить — см. StatsController.ranking_ready?
+      ranking_ready: StatsController.ranking_ready?,
       flash: flash.to_h
     }
   end
