@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <h1 class="stats-title">Общий рейтинг</h1>
+    <h1 class="stats-title">Рейтинг тестов</h1>
     <p class="stats-subtitle">Тесты, которые проходят чаще всего</p>
 
     <div class="top-tests">

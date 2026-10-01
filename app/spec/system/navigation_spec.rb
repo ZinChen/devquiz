@@ -51,7 +51,7 @@ RSpec.describe "Navigation", type: :system, js: true do
     end
   end
 
-  describe "страница общего рейтинга" do
+  describe "страница рейтинга тестов" do
     it "загружается по прямому переходу, когда набралось достаточно прохождений" do
       StatsController::RANKED_TESTS_REQUIRED.times do |i|
         create(:test_metadatum, slug: "ranked-#{i}", attempts_count: StatsController::MIN_ATTEMPTS)
@@ -59,7 +59,7 @@ RSpec.describe "Navigation", type: :system, js: true do
 
       visit stats_path
       expect(page).to have_current_path(stats_path)
-      expect(page).to have_text("Общий рейтинг")
+      expect(page).to have_text("Рейтинг тестов")
     end
 
     it "уводит на главную, пока рейтинг не набрался" do
