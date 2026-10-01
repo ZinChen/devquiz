@@ -10,6 +10,10 @@ class AchievementsCatalog
 
   Entry = Struct.new(:slug, :title, :description, :icon, :group, :threshold, :shareable, :position, keyword_init: true)
 
+  # Цвет, которым красится подложка иконки, когда в yml его не задали.
+  DEFAULT_COLOR = { "bg" => "#F3F4F6", "fg" => "#6B7280" }.freeze
+  SINGLES_KEY   = "singles".freeze
+
   class << self
     # В разработке файл перечитывается на каждый запрос, чтобы правки в yml
     # были видны без перезапуска; в проде читается один раз. Тот же приём,
@@ -27,7 +31,7 @@ class AchievementsCatalog
       current
     end
 
-    delegate :entries, :slugs, :find, to: :current
+    delegate :entries, :slugs, :find, :color_for, to: :current
 
     # YAML → база. Новые ачивки создаются, изменившиеся обновляются, лишние
     # (выпавшие из каталога) удаляются вместе с выдачами — иначе кабинет
@@ -87,9 +91,10 @@ class AchievementsCatalog
     end
   end
 
-  attr_reader :entries
+  attr_reader :entries, :colors
 
   def initialize(raw)
+    @colors = (raw["colors"] || {}).transform_values(&:freeze).freeze
     @entries = (raw["achievements"] || {}).map { |slug, cfg|
       cfg ||= {}
       Entry.new(
@@ -117,5 +122,11 @@ class AchievementsCatalog
 
   def find(slug)
     @by_slug[slug.to_s]
+  end
+
+  # У одиночных ачивок группы нет — им отдаётся общий цвет, иначе каждая
+  # красилась бы серым по умолчанию и выпадала из общей палитры.
+  def color_for(group)
+    colors[group.presence || SINGLES_KEY] || colors[SINGLES_KEY] || DEFAULT_COLOR
   end
 end

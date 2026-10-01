@@ -44,7 +44,16 @@ class AchievementsSummary
 
     {
       count: shareable.size,
-      items: shareable.map { |a| { slug: a.slug, title: a.title, description: a.description, icon: a.icon } }
+      items: shareable.map do |a|
+        {
+          slug:        a.slug,
+          title:       a.title,
+          description: a.description,
+          icon:        a.icon,
+          color:       AchievementsCatalog.color_for(a.group_name),
+          earned:      true
+        }
+      end
     }
   end
 
@@ -54,19 +63,37 @@ class AchievementsSummary
   end
 
   # Последние полученные — для компактной полоски на вкладке «Тесты».
+  #
+  # Отдаются теми же полями, что и плитки профиля: мини-карточка показывает
+  # прогресс и ступень, отличаясь от большой только отсутствием описания.
+  # Прогресс берётся из плитки группы, а не считается заново — иначе два места
+  # показывали бы одно и то же число по-разному.
   def recent
-    @recent ||= user.user_achievements
-      .includes(:achievement)
-      .recent_first
-      .limit(RECENT_LIMIT)
-      .map do |ua|
-        {
-          slug:      ua.achievement.slug,
-          title:     ua.achievement.title,
-          icon:      ua.achievement.icon,
-          earned_at: ua.earned_at
-        }
-      end
+    @recent ||= begin
+      tiles_by_slug = items.index_by { |item| item[:slug] }
+
+      user.user_achievements
+        .includes(:achievement)
+        .recent_first
+        .limit(RECENT_LIMIT)
+        .map do |ua|
+          achievement = ua.achievement
+          tile = tiles_by_slug[achievement.slug]
+
+          {
+            slug:      achievement.slug,
+            title:     achievement.title,
+            icon:      achievement.icon,
+            color:     AchievementsCatalog.color_for(achievement.group_name),
+            # В полоске все карточки по определению получены — поле нужно
+            # компоненту, он по нему решает, зажигать ли цвет подложки.
+            earned:    true,
+            earned_at: ua.earned_at,
+            tier:      tile&.dig(:tier),
+            progress:  tile&.dig(:progress)
+          }
+        end
+    end
   end
 
   private
@@ -103,6 +130,7 @@ class AchievementsSummary
       title:       current.title,
       description: current.description,
       icon:        current.icon,
+      color:       AchievementsCatalog.color_for(current.group),
       earned:      earned_tiers.any?,
       earned_at:   earned_at_by_slug[current.slug],
       tier:        tiers.size > 1 ? { index: earned_tiers.size, total: tiers.size } : nil,

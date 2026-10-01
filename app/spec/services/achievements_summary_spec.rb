@@ -50,6 +50,20 @@ RSpec.describe AchievementsSummary do
     expect(tile("speedrun")[:progress]).to be_nil
   end
 
+  it "красит подложку иконки цветом группы, а одиночные — общим" do
+    expect(tile("tests_passed")[:color]).to eq(AchievementsCatalog.color_for("tests_passed"))
+    expect(tile("speedrun")[:color]).to eq(AchievementsCatalog.color_for(nil))
+  end
+
+  it "отдаёт в полоску ступень и прогресс той же группы, что и плитка" do
+    12.times { |i| complete(slug: "test-#{i}", at: i.hours.ago) }
+    AchievementsService.call(user)
+
+    recent = described_class.for(user: user).to_props[:recent].find { |r| r[:slug] == "ten_tests" }
+    expect(recent[:progress]).to eq(tile("tests_passed")[:progress])
+    expect(recent[:color]).to eq(tile("tests_passed")[:color])
+  end
+
   it "обрезает прогресс по порогу следующей ступени" do
     12.times { |i| complete(slug: "test-#{i}", at: i.hours.ago) }
     AchievementsService.call(user)
@@ -101,7 +115,8 @@ RSpec.describe AchievementsSummary do
     it "не отдаёт ни дату получения, ни прогресс" do
       item = described_class.for(user: user).to_public_props[:items].first
 
-      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon)
+      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon, :color, :earned)
+      expect(item).not_to include(:earned_at, :progress, :tier)
     end
 
     it "считает ачивки для бейджа" do

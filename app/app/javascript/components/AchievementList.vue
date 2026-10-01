@@ -6,7 +6,11 @@
       class="achievement"
       :class="{ 'achievement--locked': !item.earned && !compact }"
     >
-      <span class="achievement__icon" aria-hidden="true">{{ item.icon || '🏅' }}</span>
+      <span
+        class="achievement__icon"
+        :style="item.earned && item.color ? { background: item.color.bg } : null"
+        aria-hidden="true"
+      >{{ item.icon || '🏅' }}</span>
 
       <div class="achievement__body">
         <p class="achievement__title">
@@ -21,7 +25,7 @@
         <!-- Прогресс до следующей ступени. Название ступени не повторяем,
              когда плитка и так озаглавлена ею: у невзятой ачивки текущая
              ступень и следующая — одно и то же. -->
-        <div v-if="showProgress && !compact && item.progress" class="achievement__progress">
+        <div v-if="showProgress && item.progress" class="achievement__progress">
           <div class="achievement__bar">
             <div
               class="achievement__bar-fill"
@@ -29,7 +33,7 @@
             ></div>
           </div>
           <span class="achievement__progress-text">
-            <template v-if="item.progress.nextTitle !== item.title">{{ item.progress.nextTitle }} · </template>
+            <template v-if="!compact && item.progress.nextTitle !== item.title">{{ item.progress.nextTitle }} · </template>
             {{ item.progress.current }} / {{ item.progress.target }}
           </span>
         </div>
@@ -46,9 +50,10 @@ const props = defineProps({
   // В поповере чужих ачивок (#10) прогресс не показывается — это уже данные
   // об активности, а не о результате.
   showProgress: { type: Boolean, default: true },
-  // Уменьшенный вариант для полоски последних достижений: та же карточка, без
-  // описания, прогресса и даты. Намеренно не стилизован под тег — ачивка не
-  // должна читаться как ещё одна пометка теста рядом с тегами и уровнями.
+  // Уменьшенный вариант для полоски последних достижений: та же карточка со
+  // ступенью и прогрессом, только без строки описания и даты. Намеренно не
+  // стилизован под тег — ачивка не должна читаться как ещё одна пометка теста
+  // рядом с тегами и уровнями.
   compact:      { type: Boolean, default: false }
 })
 
@@ -78,20 +83,27 @@ function formatDate(value) {
 }
 
 .achievements--compact .achievement {
-  align-items: center;
   gap: 0.625rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.625rem 0.875rem;
   border-radius: 0.375rem;
+  min-width: 11rem;
 }
 
 .achievements--compact .achievement__icon {
-  font-size: 1.375rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  font-size: 1.125rem;
 }
 
 .achievements--compact .achievement__title {
   font-weight: 400;
   font-size: 0.8125rem;
   color: #374151;
+}
+
+.achievements--compact .achievement__progress {
+  margin-top: 0.3125rem;
 }
 
 .achievement {
@@ -115,9 +127,22 @@ function formatDate(value) {
   opacity: 0.55;
 }
 
+
+/* Цветная подложка под иконкой — единственное цветное пятно карточки: цвет
+   свой у каждой группы, поэтому он склеивает ступени одной лесенки и
+   различает группы, не заливая при этом весь профиль пастелью. У невзятой
+   ачивки цвет не отдаётся вовсе — цветное пятно читалось бы как «получено». */
 .achievement__icon {
-  font-size: 1.5rem;
-  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: #F3F4F6;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .achievement__body {

@@ -11,6 +11,21 @@
 #             speedrun, code_runner, comeback.
 # shareable — видна ли ачивка другим пользователям в live-активности (#10).
 #             false у тех, что раскрывают поведение, а не результат.
+# color     — подложка иконки. Задаётся у группы целиком (одинаковый у всех её
+#             ступеней) — цвет склеивает лесенку и различает группы между
+#             собой, поэтому разнобой внутри одной группы был бы ошибкой.
+# Подложка иконки: цвет на группу, а не на ачивку. Ступени одной лесенки
+# красятся одинаково — так цвет склеивает их и различает группы между собой.
+# singles — общий цвет для одиночных ачивок, у которых группы нет.
+colors:
+  tests_passed:   { bg: "#EEF0FE", fg: "#4F63F5" }
+  correct_answers: { bg: "#FEF3E2", fg: "#D98A0B" }
+  perfect:        { bg: "#FDF0F6", fg: "#D4498F" }
+  level_basic:    { bg: "#E8F7EF", fg: "#10B981" }
+  level_advanced: { bg: "#E6F4FD", fg: "#2A91D6" }
+  level_expert:   { bg: "#FDEBEB", fg: "#E05252" }
+  singles:        { bg: "#F1F0FB", fg: "#7C6BC9" }
+
 achievements:
   # ── Пройдено тестов (уникальных, без тренировок по ошибкам) ──────────────
   first_test:
@@ -44,49 +59,49 @@ achievements:
 
   # ── Верных ответов суммарно ──────────────────────────────────────────────
   correct_100:
-    title: Сотня
+    title: Набитая рука
     description: 100 верных ответов
     icon: 💯
     group: correct_answers
     threshold: 100
     position: 20
   correct_200:
-    title: Двести
+    title: Уверенный счёт
     description: 200 верных ответов
     icon: ✌️
     group: correct_answers
     threshold: 200
     position: 21
   correct_300:
-    title: Триста
+    title: Накатанный путь
     description: 300 верных ответов
     icon: 🎯
     group: correct_answers
     threshold: 300
     position: 22
   correct_400:
-    title: Четыреста
+    title: Матёрый
     description: 400 верных ответов
     icon: 📈
     group: correct_answers
     threshold: 400
     position: 23
   correct_500:
-    title: Пятьсот
+    title: Полтысячи позади
     description: 500 верных ответов
     icon: 🏋️
     group: correct_answers
     threshold: 500
     position: 24
   correct_600:
-    title: Шестьсот
+    title: Глубокий запас
     description: 600 верных ответов
     icon: 🧠
     group: correct_answers
     threshold: 600
     position: 25
   correct_700:
-    title: Семьсот
+    title: Ходячий справочник
     description: 700 верных ответов
     icon: 🔥
     group: correct_answers
@@ -95,21 +110,21 @@ achievements:
   # Ступени ниже недостижимы на текущем каталоге (728 вопросов) — засеяны
   # заранее, чтобы с ростом каталога не требовалась правка данных.
   correct_800:
-    title: Восемьсот
+    title: Эрудит
     description: 800 верных ответов
     icon: ⚡
     group: correct_answers
     threshold: 800
     position: 27
   correct_900:
-    title: Девятьсот
+    title: Энциклопедия
     description: 900 верных ответов
     icon: 💎
     group: correct_answers
     threshold: 900
     position: 28
   correct_1000:
-    title: Тысячник
+    title: Легенда
     description: 1000 верных ответов
     icon: 👑
     group: correct_answers
