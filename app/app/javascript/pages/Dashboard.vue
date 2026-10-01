@@ -325,12 +325,12 @@
         </div>
       </div>
 
-      <div class="profile__actions">
-        <button class="btn btn-primary" :disabled="!profileChanged || !nameInput.trim() || savingProfile" @click="saveProfile">
-          {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
-        </button>
+      <!-- Кнопки появляются только при несохранённых правках: вечно висящая
+           неактивная «Сохранить» с подписью «Изменений нет» занимала место и
+           сообщала ровно то же, что и её собственная неактивность. -->
+      <div v-if="profileChanged || savingProfile" class="profile__actions">
+        <span v-if="!nameInput.trim()" class="settings__hint">Имя не может быть пустым</span>
         <button
-          v-if="profileChanged"
           type="button"
           class="profile__cancel-btn"
           :disabled="savingProfile"
@@ -338,7 +338,9 @@
         >
           Отмена
         </button>
-        <span v-if="!profileChanged && !savingProfile" class="settings__hint">Изменений нет</span>
+        <button class="btn btn-primary" :disabled="!nameInput.trim() || savingProfile" @click="saveProfile">
+          {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
+        </button>
       </div>
 
       <div class="profile__achievements">
@@ -1262,6 +1264,10 @@ function adoptAvatar(provider) {
   line-height: 1.5;
 }
 
+.profile {
+  --profile-width: 32rem;
+}
+
 .profile__card {
   display: flex;
   gap: 1.25rem;
@@ -1271,7 +1277,7 @@ function adoptAvatar(provider) {
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   border-radius: var(--rounded-box, 0.75rem);
   padding: 1.25rem;
-  max-width: 32rem;
+  max-width: var(--profile-width);
 }
 
 .profile__avatar-block {
@@ -1369,11 +1375,15 @@ function adoptAvatar(provider) {
   color: #9CA3AF;
 }
 
+/* Правый край кнопок совпадает с краем карточки профиля — ширина у них
+   общая, --profile-width. */
 .profile__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 1.5rem;
   margin-top: 1rem;
+  max-width: var(--profile-width);
 }
 
 .profile__cancel-btn {
