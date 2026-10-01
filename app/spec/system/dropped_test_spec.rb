@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Тест из перетащенного файла", type: :system, js: true do
-  before { driven_by :cuprite }
-
   before(:each) { create(:test_metadatum, title: "Ruby основы", slug: "ror-basics") }
 
   def dismiss_tag_onboarding

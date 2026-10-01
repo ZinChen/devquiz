@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Кнопка «Снять» в строке тегов", type: :system, js: true do
-  before { driven_by :cuprite }
-
   before(:each) do
     create(:test_metadatum, slug: "ruby-one", title: "Тест про Ruby",   tags: "ruby")
     create(:test_metadatum, slug: "pg-one",   title: "Тест про Postgres", tags: "postgresql")

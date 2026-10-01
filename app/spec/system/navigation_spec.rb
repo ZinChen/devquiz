@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Navigation", type: :system, js: true do
-  before { driven_by :cuprite }
-
   # Создаём тест прямо в before чтобы данные были видны браузеру (truncation стратегия)
   before(:each) do
     @test_meta = create(:test_metadatum, title: "Ruby основы", slug: "ror-basics")
