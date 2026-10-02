@@ -278,6 +278,52 @@ RSpec.describe AchievementsService do
     expect(granted_slugs).not_to include("correct_100")
   end
 
+  describe "мастерство в теме" do
+    # q1/q2 в ror-basics.yml размечены topics: [mvc] — тема берётся с вопроса,
+    # а не с тегов теста.
+    let(:topic) { TopicAchievements.topics.first }
+
+    def answer_topic_questions(count)
+      slug, = topic
+      pairs = TopicIndex.question_ids_for(slug).flat_map { |test_slug, ids| ids.map { |id| [ test_slug, id ] } }
+
+      pairs.first(count).group_by(&:first).each do |test_slug, group|
+        attempt = complete(slug: test_slug)
+        group.each { |_, question_id| attempt.test_attempt_answers.create!(question_id: question_id, correct: true) }
+      end
+    end
+
+    it "выдаёт первую ступень за вопросы своей темы" do
+      slug, = topic
+      answer_topic_questions(TopicAchievements::TIERS.first[:threshold])
+
+      expect(granted_slugs).to include("topic_#{slug}_known")
+    end
+
+    it "не выдаёт ступень, пока вопросов темы недобрано" do
+      slug, = topic
+      answer_topic_questions(TopicAchievements::TIERS.first[:threshold] - 1)
+
+      expect(granted_slugs).not_to include("topic_#{slug}_known")
+    end
+
+    it "не засчитывает в тему вопросы из других тестов" do
+      slug, = topic
+      attempt = complete(slug: "unrelated-test")
+      30.times { |i| attempt.test_attempt_answers.create!(question_id: "q#{i}", correct: true) }
+
+      expect(granted_slugs).not_to include("topic_#{slug}_known")
+    end
+
+    it "не считает один вопрос темы дважды" do
+      slug, = topic
+      2.times { answer_topic_questions(TopicAchievements::TIERS.first[:threshold] - 1) }
+
+      expect(AchievementFacts.new(user).correct_by_topic[slug])
+        .to eq(TopicAchievements::TIERS.first[:threshold] - 1)
+    end
+  end
+
   it "обновляет денормализованный счётчик пользователя" do
     complete
     described_class.call(user)

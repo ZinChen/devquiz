@@ -109,7 +109,7 @@ class AchievementsCatalog
         shareable:   cfg.fetch("shareable", true),
         position:    cfg["position"].to_i
       ).freeze
-    }.sort_by(&:position).freeze
+    }.concat(topic_entries).sort_by(&:position).freeze
 
     @by_slug = @entries.index_by(&:slug).freeze
 
@@ -120,6 +120,12 @@ class AchievementsCatalog
     entries.map(&:slug)
   end
 
+  # Ачивки за темы не прописаны в yml: их список растёт вместе с
+  # tests/topics.yml, поэтому собирается из словаря (см. TopicAchievements).
+  def topic_entries
+    TopicAchievements.entries.map { |attrs| Entry.new(**attrs).freeze }
+  end
+
   def find(slug)
     @by_slug[slug.to_s]
   end
@@ -127,6 +133,19 @@ class AchievementsCatalog
   # У одиночных ачивок группы нет — им отдаётся общий цвет, иначе каждая
   # красилась бы серым по умолчанию и выпадала из общей палитры.
   def color_for(group)
+    topic = TopicAchievements.topic_of(group)
+    return topic_color(topic) if topic
+
     colors[group.presence || SINGLES_KEY] || colors[SINGLES_KEY] || DEFAULT_COLOR
+  end
+
+  # Тематическая плитка красится цветом своей темы из tests/topics.yml — тем
+  # же, которым она подсвечена в отчёте о слабых местах. Двадцать плиток
+  # одного оттенка не различались бы между собой.
+  def topic_color(topic_slug)
+    hex = TopicDictionary.find(topic_slug)&.color
+    return DEFAULT_COLOR if hex.blank?
+
+    { "bg" => "#{hex}1F", "fg" => hex }
   end
 end

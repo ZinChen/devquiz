@@ -32,10 +32,17 @@ class AchievementFacts
     when "weak_trainings"  then weak_trainings_count
     when "mistakes_fixed"  then fixed_mistakes_count
     else
-      case entry.slug
-      when "hoarder"                     then bookmarks_count
-      when "streak_three", "streak_week" then longest_streak
-      end
+      topic = TopicAchievements.topic_of(entry.group)
+      return correct_by_topic[topic].to_i if topic
+
+      value_for_single(entry)
+    end
+  end
+
+  def value_for_single(entry)
+    case entry.slug
+    when "hoarder"                     then bookmarks_count
+    when "streak_three", "streak_week" then longest_streak
     end
   end
 
@@ -141,6 +148,54 @@ class AchievementFacts
 
   def bookmarks_count
     @bookmarks_count ||= user.bookmarks.count
+  end
+
+  # Сколько уникальных вопросов каждой темы отвечено верно: { "queries" => 78 }.
+  #
+  # Темы живут в YAML вопросов, а не в БД, поэтому принадлежность берётся из
+  # TopicIndex: он уже держит обратный индекс «тема → тест → id вопросов» и
+  # строится один раз на процесс. Считать иначе значило бы читать все файлы
+  # тестов на каждую проверку ачивок.
+  #
+  # Вопрос с двумя темами засчитывается обеим — как и в отчёте о слабых
+  # местах, где одна ошибка добавляет балл каждой теме вопроса.
+  def correct_by_topic
+    # defined? вместо ||=: пустой хэш — валидный результат, и с ||= он
+    # пересчитывался бы на каждой из полусотни тематических ачивок, читая
+    # индекс тем заново.
+    return @correct_by_topic if defined?(@correct_by_topic)
+
+    answered = correct_question_keys
+
+    @correct_by_topic =
+      if answered.empty?
+        {}
+      else
+        TopicAchievements.topics.each_with_object({}) do |(slug, _label, _pool), acc|
+          count = TopicIndex.question_ids_for(slug).sum do |test_slug, question_ids|
+            question_ids.count { |qid| answered.include?([ test_slug, qid ]) }
+          end
+
+          acc[slug] = count if count.positive?
+        end
+      end
+  end
+
+  # Пары «слаг теста + id вопроса», отвеченные верно хотя бы раз.
+  def correct_question_keys
+    @correct_question_keys ||= begin
+      ids = attempts.map(&:id)
+
+      if ids.empty?
+        Set.new
+      else
+        TestAttemptAnswer
+          .where(attempt_id: ids, correct: true)
+          .joins("JOIN test_attempts ON test_attempts.id = test_attempt_answers.attempt_id")
+          .pluck("test_attempts.test_slug", :question_id)
+          .to_set
+      end
+    end
   end
 
   # Вопросы, которые были слабыми и закрыты двумя верными ответами подряд —
