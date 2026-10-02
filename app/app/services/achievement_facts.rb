@@ -68,10 +68,26 @@ class AchievementFacts
     @perfect_slugs ||= attempts.select { |a| a.score.to_f >= PERFECT_SCORE }.map(&:test_slug).uniq
   end
 
+  # Уникальные вопросы, а не ответы: повторное прохождение теста не должно
+  # двигать счётчик во второй раз — по той же причине, по которой десять
+  # повторов одного теста дают одну единицу в «пройдено тестов». Иначе
+  # лесенка меряла бы усидчивость, а не охват каталога.
+  #
+  # Вопрос опознаётся парой «слаг теста + id вопроса»: question_id уникален
+  # внутри теста, но не между тестами — q1 есть почти в каждом файле.
   def correct_answers_count
     @correct_answers_count ||= begin
       ids = attempts.map(&:id)
-      ids.empty? ? 0 : TestAttemptAnswer.where(attempt_id: ids, correct: true).count
+
+      if ids.empty?
+        0
+      else
+        TestAttemptAnswer
+          .where(attempt_id: ids, correct: true)
+          .joins("JOIN test_attempts ON test_attempts.id = test_attempt_answers.attempt_id")
+          .distinct
+          .count("(test_attempts.test_slug, test_attempt_answers.question_id)")
+      end
     end
   end
 

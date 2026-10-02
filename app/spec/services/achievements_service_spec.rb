@@ -250,6 +250,27 @@ RSpec.describe AchievementsService do
     expect(granted_slugs).to include("correct_100")
   end
 
+  it "не считает один и тот же вопрос дважды при повторном прохождении" do
+    2.times do |pass|
+      attempt = complete(at: pass.hours.ago)
+      100.times { |i| attempt.test_attempt_answers.create!(question_id: "q#{i}", correct: true) }
+    end
+
+    # Сто вопросов, пройденных дважды, — это сто вопросов, а не двести: иначе
+    # лесенка мерила бы усидчивость, а не охват каталога.
+    expect(AchievementFacts.new(user).correct_answers_count).to eq(100)
+  end
+
+  it "считает одинаковые id вопросов из разных тестов по отдельности" do
+    %w[ror-basics postgresql-basics].each_with_index do |slug, pass|
+      attempt = complete(slug: slug, at: pass.hours.ago)
+      50.times { |i| attempt.test_attempt_answers.create!(question_id: "q#{i}", correct: true) }
+    end
+
+    # q1 есть почти в каждом тесте — это разные вопросы.
+    expect(AchievementFacts.new(user).correct_answers_count).to eq(100)
+  end
+
   it "не считает неверные ответы" do
     attempt = complete
     100.times { |i| attempt.test_attempt_answers.create!(question_id: "q#{i}", correct: false) }
