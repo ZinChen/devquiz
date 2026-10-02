@@ -12,9 +12,19 @@
         </div>
       </div>
 
+      <div v-else-if="practice" class="result-preview-note">
+        <span class="result-preview-note__icon" aria-hidden="true">i</span>
+        <div>
+          <p class="result-preview-note__title">Тренировка по теме — в статистику тестов не идёт</p>
+          <p class="result-preview-note__text">
+            Ответы учтены: вопросы, на которые вы ответили верно, уйдут из слабых.
+          </p>
+        </div>
+      </div>
+
       <div class="result-summary">
         <p class="result-summary__label">
-          Тест завершён: {{ test.title }}
+          {{ practice ? 'Тренировка завершена' : 'Тест завершён' }}: {{ test.title }}
           <span v-if="challengeModeLabel" class="result-summary__mode-badge">{{ challengeModeLabel }}</span>
         </p>
         <div class="result-summary__score" :style="{ color: scoreColor }">
@@ -33,6 +43,12 @@
             Пройти снова
           </button>
           <Link href="/" class="btn btn-ghost">Завершить</Link>
+        </div>
+        <div v-else-if="practice" class="result-summary__actions">
+          <button type="button" class="btn btn-primary" @click="$emit('retry')">
+            Ещё раз
+          </button>
+          <Link href="/dashboard" class="btn btn-ghost">В кабинет</Link>
         </div>
         <div v-else class="result-summary__actions">
           <Link
@@ -159,10 +175,10 @@
       </div>
 
       <div
-        v-for="(item, idx) in visibleAnswers" :key="item.questionId"
-        :id="`question-${item.questionId}`"
+        v-for="(item, idx) in visibleAnswers" :key="itemKey(item)"
+        :id="`question-${itemKey(item)}`"
         class="result-item"
-        :class="{ 'result-item--highlight': highlightedQuestion === item.questionId }"
+        :class="{ 'result-item--highlight': highlightedQuestion === itemKey(item) }"
         :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
       >
         <div class="result-item__header">
@@ -173,8 +189,16 @@
             {{ item.correct ? '✓' : '✗' }}
           </span>
           <p class="result-item__question">
-            <span class="result-item__number">Вопрос {{ questionNumberById.get(item.questionId) }}.</span>
+            <span class="result-item__number">Вопрос {{ questionNumberById.get(itemKey(item)) }}.</span>
             <span v-html="formatText(item.questionText)"></span>
+            <!-- В тренировке вопросы собраны из разных тестов, поэтому к
+                 каждому нужен источник; в обычной попытке тест один и
+                 testSlug не приходит. -->
+            <Link
+              v-if="item.testSlug"
+              :href="`/tests/${item.testSlug}`"
+              class="result-item__source"
+            >{{ item.testTitle || item.testSlug }}</Link>
           </p>
           <BookmarkButton
             v-if="item.dbId"
@@ -203,8 +227,8 @@
                     'result-code-line--correct':  isCorrectLine(item, i + 1),
                     'result-code-line--selected': !item.correct && isSelectedLine(item, i + 1) && !isCorrectLine(item, i + 1),
                   }"
-                ><template v-if="tokenCache[item.questionId]"><span
-                    v-for="(tok, ti) in (tokenCache[item.questionId][i] || [])"
+                ><template v-if="tokenCache[itemKey(item)]"><span
+                    v-for="(tok, ti) in (tokenCache[itemKey(item)][i] || [])"
                     :key="ti"
                     :style="tok.color ? { color: tok.color } : {}"
                   >{{ tok.content }}</span></template><template v-else>{{ line || ' ' }}</template></div><div
@@ -237,9 +261,9 @@
           <!-- fix: show original code + word-level diff of typed answer vs correct -->
           <template v-else>
             <pre class="result-code-block"><code><template
-                v-if="tokenCache[item.questionId]"
+                v-if="tokenCache[itemKey(item)]"
               ><template
-                  v-for="(lineTokens, li) in tokenCache[item.questionId]" :key="li"
+                  v-for="(lineTokens, li) in tokenCache[itemKey(item)]" :key="li"
                 ><template v-if="li > 0">{{ '\n' }}</template><span
                     v-for="(tok, ti) in lineTokens" :key="ti"
                     :style="tok.color ? { color: tok.color } : {}"
@@ -306,12 +330,12 @@
         <div v-if="item.extendedExplanation || item.recommendation" class="result-item__details">
           <button
             class="result-item__details-toggle"
-            @click="toggleDetails(item.questionId)"
+            @click="toggleDetails(itemKey(item))"
           >
-            {{ openDetails[item.questionId] ? 'Скрыть подробности' : 'Подробнее' }}
-            <span class="result-item__details-arrow" :class="{ 'result-item__details-arrow--open': openDetails[item.questionId] }">▾</span>
+            {{ openDetails[itemKey(item)] ? 'Скрыть подробности' : 'Подробнее' }}
+            <span class="result-item__details-arrow" :class="{ 'result-item__details-arrow--open': openDetails[itemKey(item)] }">▾</span>
           </button>
-          <div v-if="openDetails[item.questionId]" class="result-item__details-body">
+          <div v-if="openDetails[itemKey(item)]" class="result-item__details-body">
             <div v-if="item.extendedExplanation" class="result-item__extended" v-html="formatMarkdown(item.extendedExplanation)"></div>
             <div v-if="item.recommendation" class="result-item__recommendation">
               <p class="result-item__recommendation-label">Что повторить</p>
@@ -343,6 +367,9 @@ const props = defineProps({
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
+  // Тренировка по слабой теме: попытки в БД тоже нет, но ответы учтены в
+  // истории — поэтому и пояснение, и кнопки другие, чем у preview.
+  practice:       { type: Boolean, default: false },
   // Ачивки, выданные за эту попытку: приезжают через flash из
   // RunsController#create. Блоком, а не тостом — тост уезжает раньше, чем
   // человек оторвётся от своего результата.
@@ -362,11 +389,18 @@ const visibleAnswers = computed(() =>
   onlyWrong.value ? props.answersDetail.filter(a => !a.correct) : props.answersDetail
 )
 
+// Ключ строки разбора. В обычной попытке это id вопроса, но в тренировке по
+// теме вопросы собраны из разных тестов, где id повторяются (q1 есть почти
+// везде) — там сервер присылает сквозной uid.
+function itemKey(item) {
+  return item.uid || item.questionId
+}
+
 // Номер вопроса — позиция в исходном тесте, а не в отфильтрованном списке,
 // иначе при «Только неправильные» номера сбивались бы на 1, 2, 3...
 const questionNumberById = computed(() => {
   const map = new Map()
-  props.answersDetail.forEach((item, i) => map.set(item.questionId, i + 1))
+  props.answersDetail.forEach((item, i) => map.set(itemKey(item), i + 1))
   return map
 })
 
@@ -430,7 +464,7 @@ const tokenCache = computed(() => {
   const cache = {}
   props.answersDetail?.forEach(item => {
     if (item.type === 'code_challenge' && item.code) {
-      cache[item.questionId] = tokenize(item.code, item.language || 'ruby')
+      cache[itemKey(item)] = tokenize(item.code, item.language || 'ruby')
     }
   })
   return cache
@@ -933,6 +967,19 @@ function optionLetterStyle(item, optId) {
   color: #6B7280;
   font-weight: 600;
   margin-right: 0.25rem;
+}
+
+.result-item__source {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9CA3AF;
+  transition: color 0.15s;
+}
+
+.result-item__source:hover {
+  color: #4F63F5;
 }
 
 .result-item__bookmark {

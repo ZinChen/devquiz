@@ -14,7 +14,7 @@
 
       <div class="achievement__body">
         <p class="achievement__title">
-          {{ item.title }}
+          <span class="achievement__title-text" :title="item.title">{{ item.title }}</span>
           <span v-if="item.tier && item.tier.index > 0" class="achievement__tier">
             {{ item.tier.index }}/{{ item.tier.total }}
           </span>
@@ -87,10 +87,13 @@ function formatDate(value) {
   gap: 0.75rem;
 }
 
-/* Полоска последних: те же карточки, только по содержимому и в строку. */
+/* Полоска последних — сетка с равными колонками, а не flex-wrap: при
+   раскладке по содержимому одно длинное название («Полтысячи позади»)
+   растягивало свою карточку, а соседние подстраивались под остаток строки, и
+   ряды не выстраивались в колонки. */
 .achievements--compact {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: 0.5rem;
   align-items: stretch;
 }
@@ -102,14 +105,26 @@ function formatDate(value) {
   gap: 0;
   padding: 0;
   border-radius: 0.5rem;
-  min-width: 14rem;
+  min-width: 0;
   overflow: hidden;
 }
 
-/* Название в одну строку: перенос ломает квадрат слева — он следует за
-   высотой карточки, и из-за второй строки соседние плитки разъезжаются. */
+/* Название в одну строку с многоточием: перенос ломает квадрат слева — он
+   следует за высотой карточки, и из-за второй строки ряд разъезжается по
+   высоте. Полное название видно в профиле и во всплывающей подсказке. */
 .achievements--compact .achievement__title {
   white-space: nowrap;
+}
+
+/* Ужимается название, а не бейдж: 1 1 auto против 0 0 auto у .achievement__tier.
+   Длинное название обрезается многоточием, число ступени видно целиком —
+   полное название остаётся в подсказке и в профиле. */
+.achievements--compact .achievement__title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Квадрат по высоте карточки: ширина следует за высотой, поэтому блок
@@ -207,7 +222,8 @@ function formatDate(value) {
 /* Нейтральный, а не фирменный синий: синим в интерфейсе покрашены кнопки и
    ссылки, и бейдж ступени читался бы как интерактивный. */
 .achievement__tier {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
   padding: 0.0625rem 0.375rem;
   border-radius: 999px;
   background: #F1F2F4;
