@@ -61,7 +61,15 @@
       </div>
 
       <div class="dashboard-col">
-        <h2 class="dashboard-section-title">Слабые темы</h2>
+        <h2
+          class="dashboard-section-title"
+          :class="{ 'dashboard-section-title--tight': weakTopics.length }"
+        >Слабые темы</h2>
+        <!-- Тег ведёт в тренировку, но сам по себе об этом не говорит:
+             без подписи список читается как приговор, а не как кнопка. -->
+        <p v-if="weakTopics.length" class="dashboard-section-hint">
+          Тренируй слабые темы, чтобы убрать их из этого списка.
+        </p>
         <template v-if="weakTopics.length">
           <div class="weak-summary">
             <!-- Фон кодирует число ошибок, точка слева — саму тему. -->
@@ -703,6 +711,18 @@ function adoptAvatar(provider) {
   font-weight: 600;
   font-size: 1.125rem;
   margin-bottom: 1rem;
+}
+
+/* Отступ забирает подпись, которая идёт следом. */
+.dashboard-section-title--tight {
+  margin-bottom: 0.375rem;
+}
+
+.dashboard-section-hint {
+  margin-bottom: 0.875rem;
+  font-size: 0.8125rem;
+  color: #9CA3AF;
+  line-height: 1.5;
 }
 
 .tabs {

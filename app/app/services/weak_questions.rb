@@ -32,6 +32,24 @@ class WeakQuestions
     entries.map(&:question_id)
   end
 
+  # Вопросы, которые были слабыми и закрыты: когда-то отвечены неверно, а
+  # последние STREAK_TO_CLEAR ответов подряд — верные. Это ровно те, что ушли
+  # из entries по правилу самоочистки, и именно их считает ачивка
+  # «Работа над ошибками».
+  #
+  # Отдельной таблицы под это нет, поэтому смотрим всю историю ответов по
+  # вопросу, а не окно: окно отвечает на вопрос «слаб ли он сейчас», а здесь
+  # нужно «была ли ошибка когда-либо».
+  def fixed_count
+    @fixed_count ||= grouped_answers.count do |(_question_id, _slug), answers|
+      streak = answers.first(STREAK_TO_CLEAR)
+
+      streak.size == STREAK_TO_CLEAR &&
+        streak.all? { |_id, _slug, correct, _at| correct } &&
+        answers.any? { |_id, _slug, correct, _at| !correct }
+    end
+  end
+
   def any?
     entries.any?
   end

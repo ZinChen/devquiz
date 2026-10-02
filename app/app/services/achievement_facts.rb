@@ -29,9 +29,10 @@ class AchievementFacts
     when "level_basic"     then level_counts["basic"].to_i
     when "level_advanced"  then level_counts["advanced"].to_i
     when "level_expert"    then level_counts["expert"].to_i
+    when "weak_trainings"  then weak_trainings_count
+    when "mistakes_fixed"  then fixed_mistakes_count
     else
       case entry.slug
-      when "weak_trained"                then weak_trainings_count
       when "hoarder"                     then bookmarks_count
       when "streak_three", "streak_week" then longest_streak
       end
@@ -41,9 +42,10 @@ class AchievementFacts
   # Ачивки без порога: условие либо выполнено, либо нет.
   def flag_for(slug)
     case slug
-    when "speedrun"    then speedrun?
-    when "code_runner" then code_runner?
-    when "comeback"    then comeback?
+    when "speedrun"       then speedrun?
+    when "code_runner"    then code_runner?
+    when "comeback"       then comeback?
+    when "mistakes_clear" then mistakes_clear?
     end
   end
 
@@ -125,6 +127,21 @@ class AchievementFacts
     @bookmarks_count ||= user.bookmarks.count
   end
 
+  # Вопросы, которые были слабыми и закрыты двумя верными ответами подряд —
+  # см. WeakQuestions#fixed_count.
+  def fixed_mistakes_count
+    weak_questions.fixed_count
+  end
+
+  # Список слабых вопросов доведён до нуля. Порог нужен, чтобы ачивка не
+  # досталась тому, у кого ошибок попросту не было: пустой список новичка —
+  # не разобранные ошибки, а их отсутствие.
+  MISTAKES_CLEAR_MINIMUM = 10
+
+  def mistakes_clear?
+    fixed_mistakes_count >= MISTAKES_CLEAR_MINIMUM && weak_questions.entries.empty?
+  end
+
   # Самая длинная серия дней подряд с хотя бы одним пройденным тестом.
   def longest_streak
     @longest_streak ||= begin
@@ -145,6 +162,10 @@ class AchievementFacts
   private
 
   attr_reader :user
+
+  def weak_questions
+    @weak_questions ||= WeakQuestions.for(user: user)
+  end
 
   def estimated_times
     @estimated_times ||= passed_slugs.empty? ? {} :

@@ -184,6 +184,71 @@ achievements:
     threshold: 10
     position: 44
 
+  # ── Работа над ошибками ──────────────────────────────────────────────────
+  # Две оси: сколько раз брался за тренировку и сколько вопросов реально
+  # закрыл. Усилие и результат — разные вещи, поэтому и группы разные.
+  weak_trained:
+    title: Работа над ошибками
+    description: 5 тренировок по слабым вопросам
+    icon: 🩹
+    group: weak_trainings
+    threshold: 5
+    shareable: false
+    position: 60
+  weak_trained_15:
+    title: Разбор полётов
+    description: 15 тренировок по слабым вопросам
+    icon: 🔧
+    group: weak_trainings
+    threshold: 15
+    shareable: false
+    position: 61
+  weak_trained_40:
+    title: Самому себе тренер
+    description: 40 тренировок по слабым вопросам
+    icon: 🛠️
+    group: weak_trainings
+    threshold: 40
+    shareable: false
+    position: 62
+
+  # Исправленным считается вопрос, в котором была ошибка, а два последних
+  # ответа подряд — верные (правило самоочистки в WeakQuestions).
+  mistakes_10:
+    title: Первый десяток
+    description: 10 вопросов исправлено после ошибок
+    icon: 🩺
+    group: mistakes_fixed
+    threshold: 10
+    shareable: false
+    position: 63
+  mistakes_50:
+    title: Разобрано и усвоено
+    description: 50 вопросов исправлено после ошибок
+    icon: 🧩
+    group: mistakes_fixed
+    threshold: 50
+    shareable: false
+    position: 64
+  mistakes_150:
+    title: Ни одной мимо
+    description: 150 вопросов исправлено после ошибок
+    icon: 🎖️
+    group: mistakes_fixed
+    threshold: 150
+    shareable: false
+    position: 65
+
+  # Выдаётся за факт: список слабых вопросов доведён до нуля. Новые ошибки её
+  # не отбирают — ачивка про то, что человек это сделал, а не про текущее
+  # состояние списка, которое меняется после каждого теста.
+  mistakes_clear:
+    title: Чистый лист
+    description: Все накопленные ошибки разобраны
+    icon: 🌤️
+    shareable: false
+    position: 66
+
   # ── Одиночные ────────────────────────────────────────────────────────────
   speedrun:
     title: Скоростной
@@ -201,13 +266,6 @@ achievements:
     icon: 🔁
     shareable: false
     position: 52
-  weak_trained:
-    title: Работа над ошибками
-    description: 5 тренировок по слабым вопросам
-    icon: 🩹
-    threshold: 5
-    shareable: false
-    position: 53
   streak_three:
     title: Три дня подряд
     description: Тесты три дня подряд
