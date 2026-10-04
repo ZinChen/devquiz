@@ -27,8 +27,13 @@ class TopicAchievements
     # Записи каталога — по одной на ступень каждой подходящей темы. Ступень,
     # которой не хватает вопросов, не создаётся вовсе: «Гуру» по теме из 20
     # вопросов недостижим, и показывать его как цель нечестно.
-    def entries
-      topics.flat_map.with_index do |(slug, label, pool), index|
+    #
+    # TopicIndex.current пересобирается в development на каждое обращение
+    # (полное сканирование tests/*.yml) — снимок берём один раз и передаём
+    # дальше, а не зовём TopicIndex.question_ids_for в цикле по 38 темам,
+    # где каждый вызов заново пересобирал бы индекс.
+    def entries(topic_index: TopicIndex.current)
+      topics(topic_index: topic_index).flat_map.with_index do |(slug, label, pool), index|
         TIERS.filter_map.with_index do |tier, tier_index|
           next if tier[:threshold] > pool
 
@@ -60,15 +65,15 @@ class TopicAchievements
 
     # Темы, по которым вообще заводятся ачивки: есть в словаре и набирают
     # MIN_POOL вопросов в текущем каталоге тестов.
-    def topics
+    def topics(topic_index: TopicIndex.current)
       TopicDictionary.topics.filter_map do |slug, topic|
-        pool = pool_size(slug)
+        pool = pool_size(slug, topic_index: topic_index)
         [ slug, topic.label, pool ] if pool >= MIN_POOL
       end.sort_by { |_slug, _label, pool| -pool }
     end
 
-    def pool_size(topic_slug)
-      TopicIndex.question_ids_for(topic_slug).values.sum(&:size)
+    def pool_size(topic_slug, topic_index: TopicIndex.current)
+      topic_index.question_ids_for(topic_slug).values.sum(&:size)
     end
 
     private

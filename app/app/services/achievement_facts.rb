@@ -171,8 +171,14 @@ class AchievementFacts
       if answered.empty?
         {}
       else
-        TopicAchievements.topics.each_with_object({}) do |(slug, _label, _pool), acc|
-          count = TopicIndex.question_ids_for(slug).sum do |test_slug, question_ids|
+        # Один снимок TopicIndex на оба обращения (список тем и вопросы
+        # каждой): TopicIndex.current пересобирается в development на любой
+        # вызов, включая question_ids_for — без явного снимка индекс читался
+        # бы заново на каждую из ~23 тем.
+        topic_index = TopicIndex.current
+
+        TopicAchievements.topics(topic_index: topic_index).each_with_object({}) do |(slug, _label, _pool), acc|
+          count = topic_index.question_ids_for(slug).sum do |test_slug, question_ids|
             question_ids.count { |qid| answered.include?([ test_slug, qid ]) }
           end
 

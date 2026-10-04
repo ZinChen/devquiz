@@ -145,4 +145,32 @@ RSpec.describe AchievementsSummary do
     expect(user.achievements.where(group_name: "tests_passed").count).to eq(2)
     expect(props[:items].count { |i| i[:key] == "tests_passed" }).to eq(1)
   end
+
+  # AchievementsCatalog.current/TopicIndex.current перечитывают свои
+  # источники (config/achievements.yml, tests/*.yml) на каждое обращение в
+  # development — дёшево само по себе, но to_props красит под сорок плиток
+  # через color_for, и без явного снимка каждая из них заново пересобирала бы
+  # оба индекса. На проде это разница только в скорости (current там
+  # кэшируется через @current ||=), но без снимка здесь то же самое число
+  # вызовов легко случайно вернуть любой будущей правкой.
+  it "берёт снимок каталога и индекса тем один раз, а не на каждую плитку" do
+    catalog_calls = 0
+    topic_index_calls = 0
+    allow(AchievementsCatalog).to receive(:current).and_wrap_original do |original|
+      catalog_calls += 1
+      original.call
+    end
+    allow(TopicIndex).to receive(:current).and_wrap_original do |original|
+      topic_index_calls += 1
+      original.call
+    end
+
+    described_class.for(user: user).to_props
+
+    expect(catalog_calls).to eq(1)
+    # Один снимок в AchievementsSummary#initialize плюс (опционально) один в
+    # AchievementFacts#correct_by_topic, если считался прогресс по темам —
+    # и ни одного больше, сколько бы плиток ни отрисовывалось.
+    expect(topic_index_calls).to be <= 2
+  end
 end

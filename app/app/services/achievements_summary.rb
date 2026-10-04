@@ -16,6 +16,13 @@ class AchievementsSummary
 
   def initialize(user:)
     @user = user
+    # Снимок каталога берётся один раз на запрос, а не на каждый вызов
+    # AchievementsCatalog.entries/color_for: в development current
+    # перечитывает config/achievements.yml и пересобирает TopicIndex (полное
+    # сканирование tests/*.yml) при каждом обращении. При 38 плитках
+    # color_for звался на них почти полсотни раз — пересборка на каждый
+    # вызов превращала загрузку кабинета в десятки секунд.
+    @catalog = AchievementsCatalog.current
   end
 
   # Счёт идёт по плиткам, а не по ступеням каталога: под шапкой «6 из 13»
@@ -52,7 +59,7 @@ class AchievementsSummary
           title:       a.title,
           description: a.description,
           icon:        a.icon,
-          color:       AchievementsCatalog.color_for(a.group_name),
+          color:       catalog.color_for(a.group_name),
           earned:      true
         }
       end
@@ -86,7 +93,7 @@ class AchievementsSummary
             slug:      achievement.slug,
             title:     achievement.title,
             icon:      achievement.icon,
-            color:     AchievementsCatalog.color_for(achievement.group_name),
+            color:     catalog.color_for(achievement.group_name),
             # В полоске все карточки по определению получены — поле нужно
             # компоненту, он по нему решает, зажигать ли цвет подложки.
             earned:    true,
@@ -100,7 +107,7 @@ class AchievementsSummary
 
   private
 
-  attr_reader :user
+  attr_reader :user, :catalog
 
   def facts
     @facts ||= AchievementFacts.new(user)
@@ -116,7 +123,7 @@ class AchievementsSummary
   # Ключ плитки — имя группы либо слаг одиночной ачивки. Порядок каталога
   # сохраняется: entries уже отсортированы по position.
   def grouped_entries
-    AchievementsCatalog.entries.group_by { |entry| entry.group.presence || entry.slug }
+    catalog.entries.group_by { |entry| entry.group.presence || entry.slug }
   end
 
   def tile_for(key, tiers)
@@ -132,7 +139,7 @@ class AchievementsSummary
       title:       current.title,
       description: current.description,
       icon:        current.icon,
-      color:       AchievementsCatalog.color_for(current.group),
+      color:       catalog.color_for(current.group),
       earned:      earned_tiers.any?,
       earned_at:   earned_at_by_slug[current.slug],
       tier:        tiers.size > 1 ? { index: earned_tiers.size, total: tiers.size } : nil,
