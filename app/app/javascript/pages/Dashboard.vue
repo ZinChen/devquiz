@@ -358,7 +358,26 @@
             {{ achievements.earnedCount }} из {{ achievements.totalCount }}
           </span>
         </h2>
-        <AchievementList :items="achievements.items" />
+        <AchievementList :items="generalAchievements" />
+      </div>
+
+      <div v-if="topicAchievements.length" class="profile__achievements">
+        <h2 class="dashboard-section-title">
+          Достижения по темам
+          <span class="profile__achievements-count">
+            {{ topicAchievementsEarned }} из {{ topicAchievementsTotal }} тем
+          </span>
+        </h2>
+        <AchievementList :items="visibleTopicAchievements" />
+        <div v-if="topicAchievements.length > TOPIC_ACHIEVEMENTS_PAGE_SIZE" class="profile__achievements-more-wrap">
+          <button
+            type="button"
+            class="btn btn-sm profile__achievements-more-btn"
+            @click="showAllTopicAchievements = !showAllTopicAchievements"
+          >
+            {{ showAllTopicAchievements ? 'Свернуть' : `Ещё ${topicAchievements.length - TOPIC_ACHIEVEMENTS_PAGE_SIZE}` }}
+          </button>
+        </div>
       </div>
     </section>
   </AppLayout>
@@ -514,6 +533,70 @@ function strongTopicTitle(topic) {
   parts.push(`Верно: ${topic.correctCount} из ${topic.totalCount}`)
   return parts.join(' • ')
 }
+
+// Два раздела вместо одной стены плиток: общие достижения отвечают на
+// «сколько прошёл и как», тематические — «что из предметных областей
+// освоил». Список тем растёт вместе с tests/topics.yml, поэтому без
+// разделения общий раздел размывался бы пропорционально росту каталога
+// тестов, а не пропорционально новым типам ачивок. Признак — ключ плитки:
+// у тематических групп он собран в AchievementsCatalog как "topic_<slug>".
+const generalAchievements = computed(() =>
+  props.achievements.items.filter(a => !a.key?.startsWith('topic_'))
+)
+
+// Темы, по которым нет вообще никакого прогресса (ни одной ступени и ни
+// одного верного ответа по теме), не показываем: это не цель, а шум — таких
+// тем много, и раздел про «что я осваиваю», а не каталог всех тем
+// приложения. Но тема с начатым, но ещё не взятым прогрессом (ответил верно
+// на часть вопросов, до первой ступени не дотянул) — это и есть то, что
+// человек сейчас осваивает, её скрывать нельзя.
+//
+// tier.index отражает число взятых ступеней (Знаток/Эксперт/Гуру), но у тем,
+// где вопросов хватает только на одну ступень, объекта tier нет вовсе — в
+// этом случае 0/1 даёт earned напрямую.
+function tierLevel(achievement) {
+  if (achievement.tier) return achievement.tier.index
+  return achievement.earned ? 1 : 0
+}
+
+// Доля пути до следующей ступени — используется только для сортировки тем
+// одного уровня между собой: 7 из 10 показываем выше, чем 2 из 10.
+function progressRatio(achievement) {
+  if (!achievement.progress?.target) return 0
+  return achievement.progress.current / achievement.progress.target
+}
+
+function hasAnyProgress(achievement) {
+  return tierLevel(achievement) > 0 || (achievement.progress?.current ?? 0) > 0
+}
+
+// Знаменатель — все темы, по которым вообще заведены ачивки (каталог тем),
+// числитель — темы, где взята хотя бы одна ступень. Не путать с длиной
+// списка ниже: в нём показаны ещё и темы с прогрессом без взятой ступени —
+// то, что человек только осваивает, не то, что уже достигнуто.
+const topicAchievementsTotal = computed(() =>
+  props.achievements.items.filter(a => a.key?.startsWith('topic_')).length
+)
+const topicAchievementsEarned = computed(() =>
+  props.achievements.items.filter(a => a.key?.startsWith('topic_') && a.earned).length
+)
+
+const topicAchievements = computed(() =>
+  props.achievements.items
+    .filter(a => a.key?.startsWith('topic_') && hasAnyProgress(a))
+    .sort((a, b) => tierLevel(b) - tierLevel(a) || progressRatio(b) - progressRatio(a))
+)
+
+// Изначально — три ряда по три карточки, остальное прячется за «Ещё»: список
+// тем растёт вместе с каталогом тестов, и показывать всё сразу значит
+// бесконечно растягивать профиль.
+const TOPIC_ACHIEVEMENTS_PAGE_SIZE = 9
+const showAllTopicAchievements = ref(false)
+const visibleTopicAchievements = computed(() =>
+  showAllTopicAchievements.value
+    ? topicAchievements.value
+    : topicAchievements.value.slice(0, TOPIC_ACHIEVEMENTS_PAGE_SIZE)
+)
 
 // Лучший балл убран намеренно: у любого, кто прошёл пару тестов, там 100%,
 // и строка ничего не сообщает.
@@ -1214,6 +1297,27 @@ function adoptAvatar(provider) {
   font-size: 0.8125rem;
   font-weight: 500;
   color: #6B7280;
+}
+
+.profile__achievements-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* btn-ghost в DaisyUI прозрачна по умолчанию и заливается только на hover —
+   здесь нужен виден сразу серый фон, поэтому цвет задан явно той же парой,
+   что и остальные нейтральные элементы страницы (#F3F4F6 / #6B7280). */
+.profile__achievements-more-btn {
+  padding: 1.1rem 1.5rem;
+  border: none;
+  background: #EEEEEE;
+  color: #6B7280;
+}
+
+.profile__achievements-more-btn:hover {
+  background: #E5E7EB;
+  color: #374151;
 }
 
 /* Статистика — в половину ширины секции, а не во всю. */
