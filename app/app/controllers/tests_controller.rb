@@ -12,9 +12,15 @@ class TestsController < ApplicationController
       .map(&:first)
 
     completed_modes_by_slug = user_completed_modes(tests_list.map(&:slug))
+    # Один снимок на весь список, а не TopicIndex.topics_of в цикле: в
+    # development индекс пересобирается (читает все tests/*.yml) на каждое
+    # обращение к классовому методу — 43 вызова означали бы 43 пересборки.
+    topic_index = TopicIndex.current
 
     render inertia: "Tests/Index", props: {
-      tests:    tests_list.map { |t| test_props(t, completed_modes_by_slug[t.slug] || []) },
+      tests: tests_list.map { |t|
+        test_props(t, completed_modes_by_slug[t.slug] || [], topic_index)
+      },
       all_tags: visible_tags,
       # nil (а не []) означает, что экран выбора ещё не показывали.
       preferred_tags:      preferred_tags,
@@ -48,12 +54,30 @@ class TestsController < ApplicationController
       .to_h
   end
 
-  def test_props(t, completed_modes = [])
+  # topic_index — опциональный снимок TopicIndex.current: нужен только для
+  # поиска по темам вопросов на главной (см. #index), а не для карточки
+  # отдельного теста (#show), где достаточно тегов.
+  def test_props(t, completed_modes = [], topic_index = nil)
+    topics = topic_index ? topic_index.topics_of(t.slug) : []
+
     {
       slug:                      t.slug,
       title:                     t.title,
       description:               t.description,
       tags:                      tags_for(t),
+      # Теги — голые слаги (sre, prometheus), по ним и так ищут сейчас, но
+      # искать «надёжность» по ним нельзя: слаги латиницей. Описание тега —
+      # единственный русский текст, который у него вообще есть (отдельного
+      # «названия» тега в таксономии нет, см. TagTaxonomy).
+      tags_translated:           tags_for(t).filter_map { |tag| TagTaxonomy.description_of(tag) },
+      # Темы — свойство вопроса, не теста (см. TopicAchievements): тест с
+      # тегом ruby может не содержать ни одного вопроса по теме reliability,
+      # и наоборот. topics.yml даёт каждой теме короткий русский label.
+      topics:                    topics,
+      # label_for отдаёт сам слаг как есть для незнакомых тем (это поведение
+      # для UI отчёта, где показать что-то лучше, чем ничего) — здесь это
+      # дало бы задвоенный мусор в поиске, поэтому непереведённые отфильтрованы.
+      topics_translated:         topics.select { |slug| TopicDictionary.known?(slug) }.map { |slug| TopicDictionary.label_for(slug) },
       difficulty:                t.difficulty,
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
