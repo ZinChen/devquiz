@@ -210,7 +210,7 @@
               </svg>
             </button>
           </div>
-          <p class="bookmark-card__text">{{ b.questionText }}</p>
+          <p class="bookmark-card__text" v-html="formatText(b.questionText)"></p>
 
           <div v-if="b.typeField === 'code_challenge'" class="bookmark-code">
             <template v-if="highlightModeFor(b)">
@@ -237,11 +237,11 @@
               v-for="opt in b.options" :key="opt.id"
               class="bookmark-option"
               :class="b.correctIds.includes(opt.id) ? 'bookmark-option--correct' : ''"
+              v-html="formatText(opt.text)"
             >
-              {{ opt.text }}
             </div>
           </div>
-          <p v-if="b.explanation" class="bookmark-card__explanation">{{ b.explanation }}</p>
+          <p v-if="b.explanation" class="bookmark-card__explanation" v-html="formatText(b.explanation)"></p>
         </div>
 
         <button
@@ -392,6 +392,7 @@ import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
 import AchievementList from '@/components/AchievementList.vue'
 import { detectAnimal } from '@/assets/animalIcons'
 import { useShiki } from '@/composables/useShiki.js'
+import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
 
 const props = defineProps({
   attempts:           Array,
@@ -494,6 +495,7 @@ function isCorrectLine(b, i) {
 }
 
 const { ready: shikiReady, init: initShiki, tokenize } = useShiki()
+const { formatText } = useCodeHighlight()
 onMounted(initShiki)
 
 function tokenizedFor(b) {
@@ -993,6 +995,12 @@ function adoptAvatar(provider) {
   background: #ECFDF5;
   color: #059669;
   font-weight: 500;
+}
+
+/* Shiki задаёт код-блоку свой фон инлайн-стилем (цвет темы) — он перебивает
+   зелёную подложку правильного варианта, если не переопределить явно. */
+.bookmark-option--correct :deep(.code-block) {
+  background: #e1f8ed !important;
 }
 
 .bookmark-card__explanation {
