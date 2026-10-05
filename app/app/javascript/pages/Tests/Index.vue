@@ -13,6 +13,7 @@
           type="search"
           placeholder="Поиск..."
           class="search-input"
+          autocomplete="off"
           @blur="onSearchBlur"
         />
       </div>
@@ -221,6 +222,13 @@ function onTagClick(e, tag) {
 // всегда стартовал закрытым, из-за чего поле с непустым v-model рисовалось
 // нулевой ширины (см. .search-input), а текст был не виден, пока не кликнуть
 // по иконке. Открываем сразу, если есть что показывать.
+//
+// autocomplete="off" на инпуте — отдельная причина того же симптома: при
+// полном обновлении страницы (F5) браузер сам восстанавливает value поля из
+// истории формы, в обход Vue. searchQuery при этом остаётся пустым («» —
+// честное исходное состояние после перезагрузки SPA), поле визуально узкое,
+// а текст в нём всё равно виден поверх — разъехавшееся состояние хуже, чем
+// просто пустое поле.
 const searchOpen = ref(!!searchQuery.value)
 const searchInputRef = ref(null)
 
@@ -423,6 +431,13 @@ function tagCount(tag) {
 
 .search-toggle__icon:hover {
   color: #4F63F5;
+}
+
+/* Встроенная кнопка очистки у type="search" (Chrome/Safari): браузер её
+   рисует сам, курсор по умолчанию не pointer — выглядит некликабельной
+   среди остальных интерактивных элементов интерфейса. */
+.search-input::-webkit-search-cancel-button {
+  cursor: pointer;
 }
 
 .search-input {

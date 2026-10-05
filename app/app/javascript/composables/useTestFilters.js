@@ -1,6 +1,16 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-const searchQuery      = ref('')
+// sessionStorage, а не localStorage: запрос должен пережить F5 (searchQuery
+// живёт в модуле и так переживает Inertia-навигацию, но не полную
+// перезагрузку, при которой JS-модуль пересоздаётся), но не обязан висеть
+// вечно между визитами через недели — это не настройка вроде sortBy.
+const SEARCH_STORAGE_KEY = 'devquiz_tests_search'
+const searchQuery = ref(sessionStorage.getItem(SEARCH_STORAGE_KEY) || '')
+watch(searchQuery, value => {
+  if (value) sessionStorage.setItem(SEARCH_STORAGE_KEY, value)
+  else sessionStorage.removeItem(SEARCH_STORAGE_KEY)
+})
+
 const selectedTags     = ref([])
 const excludedTags     = ref([])
 const filterDifficulty = ref(null)
