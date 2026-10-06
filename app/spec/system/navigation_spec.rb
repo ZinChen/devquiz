@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Navigation", type: :system, js: true do
-  before { driven_by :cuprite }
-
   # Создаём тест прямо в before чтобы данные были видны браузеру (truncation стратегия)
   before(:each) do
     @test_meta = create(:test_metadatum, title: "Ruby основы", slug: "ror-basics")
@@ -53,11 +51,20 @@ RSpec.describe "Navigation", type: :system, js: true do
     end
   end
 
-  describe "страница статистики" do
-    it "загружается по прямому переходу" do
+  describe "страница рейтинга тестов" do
+    it "загружается по прямому переходу, когда набралось достаточно прохождений" do
+      StatsController::RANKED_TESTS_REQUIRED.times do |i|
+        create(:test_metadatum, slug: "ranked-#{i}", attempts_count: StatsController::MIN_ATTEMPTS)
+      end
+
       visit stats_path
       expect(page).to have_current_path(stats_path)
-      expect(page).to have_text("Общая статистика")
+      expect(page).to have_text("Рейтинг тестов")
+    end
+
+    it "уводит на главную, пока рейтинг не набрался" do
+      visit stats_path
+      expect(page).to have_current_path(root_path)
     end
   end
 end

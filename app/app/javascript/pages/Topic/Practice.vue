@@ -1,198 +1,243 @@
 <template>
-  <AppLayout>
-    <nav class="topic-breadcrumbs">
-      <Link href="/dashboard" class="topic-breadcrumbs__link">← Мой кабинет</Link>
-    </nav>
+  <!-- Разбор рисует тот же компонент, что и обычную попытку: тренировка
+       отличается только источником вопросов, а не тем, как читается
+       результат. -->
+  <RunShow
+    v-if="result"
+    practice
+    :test="test"
+    :attempt="result.attempt"
+    :answers-detail="result.answersDetail"
+    :bookmarked-ids="bookmarkedIds"
+    @retry="retry"
+  />
 
-    <div class="topic-header">
-      <h1 class="topic-header__title">
-        <span
-          v-if="topic.color"
-          class="topic-header__dot"
-          :style="{ background: topic.color }"
-          aria-hidden="true"
-        ></span>
-        {{ topic.label }}
-      </h1>
-      <p v-if="topic.description" class="topic-header__description">{{ topic.description }}</p>
+  <AppLayout v-else>
+    <div class="practice-header">
+      <nav class="practice-breadcrumbs">
+        <Link href="/dashboard" class="practice-breadcrumbs__link">← Мой кабинет</Link>
+      </nav>
+      <div class="practice-header__right">
+        <div class="practice-header__progress">
+          {{ answeredCount }} / {{ sessionQuestions.length }}
+          <span class="practice-header__timer">{{ timeDisplay }}</span>
+        </div>
+        <button
+          type="button"
+          @click="settingsOpen = !settingsOpen"
+          class="practice-header__settings-btn"
+          title="Настройки"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <div class="topic-banner">
+    <h1 class="practice-title">
+      <span
+        v-if="topic.color"
+        class="practice-title__dot"
+        :style="{ background: topic.color }"
+        aria-hidden="true"
+      ></span>
+      {{ topic.label }}
+    </h1>
+    <p v-if="topic.description" class="practice-title__description">{{ topic.description }}</p>
+
+    <div class="practice-banner">
       Тренировка по теме: вопросы, где вы ошибались, собраны из разных тестов.
       В статистику тестов результат не идёт.
     </div>
 
-    <!-- Результат: разбор с указанием, из какого теста вопрос. -->
-    <template v-if="result">
-      <div class="topic-result">
-        <div class="topic-result__score">{{ result.correctCount }} из {{ result.total }}</div>
-        <p class="topic-result__text">{{ resultText }}</p>
-        <div class="topic-result__actions">
-          <button type="button" class="btn btn-primary btn-sm" @click="restart">Ещё раз</button>
-          <Link href="/dashboard" class="btn btn-ghost btn-sm">В кабинет</Link>
-        </div>
-      </div>
+    <div class="practice-settings-wrap">
+      <SettingsPanel
+        v-if="settingsOpen"
+        v-model:mode="mode"
+        v-model:challengeMode="challengeMode"
+        :hasCodeChallenge="false"
+        :locked="sessionStarted"
+        :completedChallengeModes="[]"
+        @reset="resetChallenge"
+      />
+    </div>
 
-      <div
-        v-for="item in result.details" :key="item.questionId"
-        class="topic-item"
-        :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
-      >
-        <div class="topic-item__header">
-          <span
-            class="topic-item__badge"
-            :style="item.correct ? 'background:#D1FAE5;color:#065F46' : 'background:#FEE2E2;color:#991B1B'"
-          >{{ item.correct ? '✓' : '✗' }}</span>
-          <div>
-            <p class="topic-item__question">{{ item.questionText }}</p>
-            <Link :href="`/tests/${item.testSlug}`" class="topic-item__source">{{ titleFor(item.testSlug) }}</Link>
-          </div>
-        </div>
+    <p v-if="gradeError" class="practice-error" role="alert">{{ gradeError }}</p>
 
-        <div class="topic-item__options">
-          <div
-            v-for="opt in item.options" :key="opt.id"
-            class="topic-option"
-            :style="optionStyle(item, opt.id)"
-          >{{ opt.text }}</div>
-        </div>
-
-        <p v-if="item.explanation" class="topic-item__explanation">{{ item.explanation }}</p>
-      </div>
-    </template>
-
-    <!-- Прохождение -->
-    <template v-else>
-      <div
-        v-for="(q, idx) in questions" :key="q.id"
-        class="topic-item"
-      >
-        <div class="topic-item__header">
-          <span class="topic-item__number">{{ idx + 1 }}</span>
-          <div>
-            <p class="topic-item__question">{{ q.text }}</p>
-            <span class="topic-item__source">{{ titleFor(q.testSlug) }}</span>
-          </div>
-        </div>
-
-        <div class="topic-item__options">
-          <button
-            v-for="opt in q.options" :key="opt.id"
-            type="button"
-            class="topic-option topic-option--clickable"
-            :class="{ 'topic-option--selected': answers[q.id] === opt.id }"
-            @click="answers[q.id] = opt.id"
-          >{{ opt.text }}</button>
-        </div>
-      </div>
-
-      <div class="topic-actions">
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="!answeredCount || submitting"
-          @click="submit"
-        >
-          Проверить {{ answeredCount }} из {{ questions.length }}
-        </button>
-      </div>
-    </template>
+    <component
+      :is="activeMode"
+      :questions="sessionQuestions"
+      :answers="answers"
+      :answeredCount="answeredCount"
+      :bookmarkedIds="bookmarkedIds"
+      :isAnswered="isAnswered"
+      :isHintShown="isHintShown"
+      :markHintUsed="markHintUsed"
+      :optionStyle="optionStyle"
+      :optionLetterStyle="optionLetterStyle"
+      :optionLetter="optionLetter"
+      :formatText="formatText"
+      :savedIndex="savedIndex"
+      :challengeMode="challengeMode"
+      @submit="submit"
+      @index-change="updateIndex"
+    />
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { ref, computed, watch } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
+import RunShow from '@/pages/Run/Show.vue'
+import SettingsPanel from '@/components/run/SettingsPanel.vue'
+import OneByOneMode from '@/components/run/OneByOneMode.vue'
+import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
+import { useQuizSession } from '@/composables/useQuizSession.js'
 
 const props = defineProps({
-  topic:     Object,
-  questions: { type: Array, default: () => [] },
+  topic:         Object,
+  questions:     { type: Array, default: () => [] },
+  bookmarkedIds: { type: Array, default: () => [] },
 })
 
-const answers    = reactive({})
-const result     = ref(null)
-const submitting = ref(false)
+const settingsOpen = ref(false)
+const mode         = ref(localStorage.getItem('devquiz_mode') || 'all')
+const result       = ref(null)
+const gradeError   = ref('')
 
-const answeredCount = computed(() => Object.keys(answers).length)
+watch(mode, val => localStorage.setItem('devquiz_mode', val))
 
-// Названия тестов приходят вместе с вопросами — отдельный запрос не нужен.
-const testTitles = computed(() => {
-  const map = {}
-  props.questions.forEach(q => { map[q.testSlug] = q.testTitle || q.testSlug })
-  return map
-})
+const modeComponents = { one: OneByOneMode, all: AllAtOnceMode }
+const activeMode = computed(() => modeComponents[mode.value])
 
-function titleFor(slug) {
-  return testTitles.value[slug] || slug
-}
+// Вопросы приходят из разных тестов, а id в YAML уникален только внутри
+// своего (q1 есть почти в каждом). Ключом вопроса на всё прохождение
+// становится сквозной uid: на голом id два вопроса делили бы один слот в
+// answers — ответ на один отмечался бы и у другого.
+const questions = computed(() =>
+  props.questions.map(q => ({ ...q, id: q.uid }))
+)
 
-const resultText = computed(() => {
-  if (!result.value) return ''
-  const { correctCount, total } = result.value
-  if (correctCount === total) return 'Все верно — тема закрывается'
-  if (correctCount === 0) return 'Пока мимо, стоит вернуться к теории'
-  return 'Часть вопросов ещё требует повторения'
-})
+// Тема подставляется вместо теста: общим компонентам нужен только slug,
+// заголовок и признаки, от которых зависит шапка результата. Code challenge
+// в тренировку не попадает — вопросы такого типа отфильтрованы на бэкенде.
+const test = computed(() => ({
+  slug:                      props.topic.slug,
+  title:                     props.topic.label,
+  hasCodeChallenge:          false,
+  completedChallengeModes:   [],
+}))
 
-async function submit() {
-  submitting.value = true
-
-  const payload = {}
-  props.questions.forEach(q => {
-    const selected = answers[q.id]
-    if (selected) payload[q.id] = { test_slug: q.testSlug, selected: [selected] }
-  })
+// Ответы уходят на свой grade: попытку по тренировке приписать одному тесту
+// нельзя, их пишется по одной на каждый исходный.
+async function gradeAnswers(payload) {
+  gradeError.value = ''
 
   try {
     // Через axios, а не fetch: его интерцептор уже приводит ключи ответа
     // к camelCase и подставляет CSRF-токен.
-    const { data } = await axios.post(`/practice/topic/${props.topic.slug}/grade`, { answers: payload })
-    result.value = {
-      details:      data.details,
-      correctCount: data.correctCount,
-      total:        data.total,
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } finally {
-    submitting.value = false
+    const { data } = await axios.post(`/practice/topic/${props.topic.slug}/grade`, payload)
+    result.value = data
+    window.scrollTo({ top: 0 })
+  } catch (e) {
+    gradeError.value = 'Не удалось проверить ответы. Попробуйте ещё раз.'
   }
 }
 
-function restart() {
-  router.reload()
-}
+const {
+  questions: sessionQuestions,
+  answers,
+  challengeMode,
+  savedIndex,
+  sessionStarted,
+  answeredCount,
+  timeDisplay,
+  isAnswered,
+  isHintShown,
+  markHintUsed,
+  optionStyle,
+  optionLetterStyle,
+  optionLetter,
+  formatText,
+  updateIndex,
+  resetChallenge,
+  submit,
+} = useQuizSession(test.value, questions.value, {
+  onSubmit: gradeAnswers,
+  // Свой ключ на тему: набор вопросов здесь сквозной, и на ключе теста
+  // незаконченная тренировка подменяла бы его обычное прохождение. v2 —
+  // потому что черновики до перехода на uid ключуются по голым id и к
+  // восстановлению уже не годятся.
+  storageKey: `devquiz_session_practice_v2_${props.topic.slug}`,
+})
 
-function optionStyle(item, optId) {
-  const isCorrect  = item.correctIds?.includes(optId)
-  const isSelected = item.selectedOptions?.includes(optId)
-  if (isCorrect)  return { background: '#D1FAE5', color: '#065F46' }
-  if (isSelected) return { background: '#FEE2E2', color: '#991B1B' }
-  return { background: '#F7F8FA', color: '#374151' }
+function retry() {
+  result.value = null
+  resetChallenge()
 }
 </script>
 
 <style scoped>
-.topic-breadcrumbs {
-  margin-bottom: 1rem;
+.practice-header {
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.topic-breadcrumbs__link {
+.practice-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.practice-breadcrumbs__link {
+  color: #9CA3AF;
+  transition: color 0.15s;
+}
+
+.practice-breadcrumbs__link:hover {
+  color: #4B5563;
+}
+
+.practice-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.practice-header__progress {
   font-size: 0.875rem;
   color: #6B7280;
-  text-decoration: none;
 }
 
-.topic-breadcrumbs__link:hover {
-  color: #4F63F5;
+.practice-header__timer {
+  margin-left: 1rem;
+  font-family: monospace;
+  color: #4B5563;
 }
 
-.topic-header {
-  margin-bottom: 1rem;
+.practice-header__settings-btn {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: #9CA3AF;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
 }
 
-.topic-header__title {
+.practice-header__settings-btn:hover {
+  color: #4B5563;
+  background: #F3F4F6;
+}
+
+.practice-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -200,22 +245,22 @@ function optionStyle(item, optId) {
   font-weight: 700;
 }
 
-.topic-header__dot {
+.practice-title__dot {
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.topic-header__description {
+.practice-title__description {
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: #6B7280;
 }
 
-.topic-banner {
+.practice-banner {
   padding: 0.625rem 0.875rem;
-  margin-bottom: 1.5rem;
+  margin: 1rem 0 1.25rem;
   border: 1px solid #FDE68A;
   border-radius: var(--rounded-box, 0.75rem);
   background: #FFFBEB;
@@ -224,125 +269,17 @@ function optionStyle(item, optId) {
   line-height: 1.45;
 }
 
-.topic-result {
-  background: #fff;
-  border: 1px solid #F3F4F6;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+.practice-settings-wrap {
+  margin-bottom: 0;
+}
+
+.practice-error {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #FCA5A5;
   border-radius: var(--rounded-box, 0.75rem);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.topic-result__score {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.topic-result__text {
-  margin-top: 0.25rem;
-  color: #6B7280;
+  background: #FEF2F2;
+  color: #991B1B;
   font-size: 0.875rem;
-}
-
-.topic-result__actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.topic-item {
-  background: #fff;
-  border: 1px solid #F3F4F6;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-  border-radius: var(--rounded-box, 0.75rem);
-  padding: 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.topic-item__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.topic-item__badge,
-.topic-item__number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
-  background: #F3F4F6;
-  color: #6B7280;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.topic-item__question {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.topic-item__source {
-  display: inline-block;
-  margin-top: 0.125rem;
-  font-size: 0.75rem;
-  color: #9CA3AF;
-  text-decoration: none;
-}
-
-a.topic-item__source:hover {
-  color: #4F63F5;
-}
-
-.topic-item__options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.topic-option {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  background: #F7F8FA;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-}
-
-.topic-option--clickable {
-  border: 1px solid transparent;
-  cursor: pointer;
-}
-
-.topic-option--clickable:hover {
-  border-color: #C7CDFA;
-}
-
-.topic-option--selected {
-  background: #EEF0FF;
-  border-color: #4F63F5;
-  color: #3730A3;
-}
-
-.topic-item__explanation {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #F3F4F6;
-  font-size: 0.75rem;
-  color: #6B7280;
-}
-
-.topic-actions {
-  display: flex;
-  justify-content: center;
-  margin: 1.5rem 0;
 }
 </style>

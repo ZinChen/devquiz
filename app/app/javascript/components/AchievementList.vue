@@ -1,0 +1,273 @@
+<template>
+  <div class="achievements" :class="{ 'achievements--compact': compact }">
+    <div
+      v-for="item in items"
+      :key="item.key || item.slug"
+      class="achievement"
+      :class="{ 'achievement--locked': !item.earned && !compact }"
+    >
+      <span
+        class="achievement__icon"
+        :style="item.earned && item.color ? { background: item.color.bg } : null"
+        aria-hidden="true"
+      >{{ item.icon || '🏅' }}</span>
+
+      <div class="achievement__body">
+        <p class="achievement__title">
+          <span class="achievement__title-text" :title="item.title">{{ item.title }}</span>
+          <span v-if="item.tier && item.tier.index > 0" class="achievement__tier">
+            {{ item.tier.index }}/{{ item.tier.total }}
+          </span>
+        </p>
+
+        <p v-if="item.description && !compact" class="achievement__description">{{ item.description }}</p>
+
+        <!-- Прогресс до следующей ступени. Название ступени не повторяем,
+             когда плитка и так озаглавлена ею: у невзятой ачивки текущая
+             ступень и следующая — одно и то же. -->
+        <div v-if="showProgress && item.progress" class="achievement__progress">
+          <div class="achievement__bar">
+            <div
+              class="achievement__bar-fill"
+              :style="{ width: barWidth(item.progress) }"
+            ></div>
+          </div>
+          <span class="achievement__progress-text">
+            <template v-if="!compact && item.progress.nextTitle !== item.title">{{ item.progress.nextTitle }} · </template>
+            {{ item.progress.current }} / {{ item.progress.target }}
+          </span>
+        </div>
+
+        <!-- Нижняя строка есть у каждой карточки: у ступенчатых это прогресс,
+             у остальных — дата получения. Иначе в одном ряду часть карточек
+             оказывается ниже и с пустотой под названием. -->
+        <p v-else-if="item.earnedAt" class="achievement__date">{{ formatDate(item.earnedAt) }}</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const props = defineProps({
+  items:        { type: Array, default: () => [] },
+  // В поповере чужих ачивок (#10) прогресс не показывается — это уже данные
+  // об активности, а не о результате.
+  showProgress: { type: Boolean, default: true },
+  // Уменьшенный вариант для полоски последних достижений: та же карточка со
+  // ступенью и прогрессом, только без строки описания и даты. Намеренно не
+  // стилизован под тег — ачивка не должна читаться как ещё одна пометка теста
+  // рядом с тегами и уровнями.
+  compact:      { type: Boolean, default: false }
+})
+
+function barWidth(progress) {
+  if (!progress?.target) return '0%'
+  return `${Math.min(100, Math.round((progress.current / progress.target) * 100))}%`
+}
+
+function formatDate(value) {
+  if (!value) return ''
+
+  const date = new Date(value)
+  // В мини-карточке на полную дату нет ширины: «1 октября 2026 г.» вытесняет
+  // всё остальное. Год там показываем только у прошлогодних.
+  if (props.compact) {
+    const sameYear = date.getFullYear() === new Date().getFullYear()
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) })
+  }
+
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+</script>
+
+<style scoped>
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Полоска последних — сетка с равными колонками, а не flex-wrap: при
+   раскладке по содержимому одно длинное название («Полтысячи позади»)
+   растягивало свою карточку, а соседние подстраивались под остаток строки, и
+   ряды не выстраивались в колонки. */
+.achievements--compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+/* Мини-карточка собрана иначе, чем большая: цвет занимает всю левую часть
+   целиком, а не квадратик внутри отступов. Поэтому у самой карточки отступов
+   нет — их несёт правая половина. */
+.achievements--compact .achievement {
+  gap: 0;
+  padding: 0;
+  border-radius: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Название в одну строку с многоточием: перенос ломает квадрат слева — он
+   следует за высотой карточки, и из-за второй строки ряд разъезжается по
+   высоте. Полное название видно в профиле и во всплывающей подсказке. */
+.achievements--compact .achievement__title {
+  white-space: nowrap;
+}
+
+/* Ужимается название, а не бейдж: 1 1 auto против 0 0 auto у .achievement__tier.
+   Длинное название обрезается многоточием, число ступени видно целиком —
+   полное название остаётся в подсказке и в профиле. */
+.achievements--compact .achievement__title-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Квадрат по высоте карточки: ширина следует за высотой, поэтому блок
+   остаётся квадратным и когда название переносится на две строки. */
+.achievements--compact .achievement__icon {
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 3.25rem;
+  aspect-ratio: 1;
+  border-radius: 0;
+  font-size: 1.55rem;
+}
+
+.achievements--compact .achievement__body {
+  padding: 0.5rem 0.875rem;
+}
+
+.achievements--compact .achievement__title {
+  font-weight: 400;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+
+.achievements--compact .achievement__progress {
+  margin-top: 0.3125rem;
+}
+
+.achievements--compact .achievement__date {
+  margin-top: 0.25rem;
+}
+
+.achievement {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #EFF1F4;
+  border-radius: 0.625rem;
+  background: #fff;
+  /* Та же мера, что у шапки приложения: карточка приподнимается над фоном,
+     но не спорит с остальным интерфейсом. */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Невзятая ачивка остаётся читаемой: это не «секрет», а цель — по ней
+   ориентируются, что делать дальше. */
+.achievement--locked {
+  background: #FAFAFB;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.achievement--locked .achievement__icon {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+
+/* Цветная подложка под иконкой — единственное цветное пятно карточки: цвет
+   свой у каждой группы, поэтому он склеивает ступени одной лесенки и
+   различает группы, не заливая при этом весь профиль пастелью. У невзятой
+   ачивки цвет не отдаётся вовсе — цветное пятно читалось бы как «получено». */
+.achievement__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: #F3F4F6;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.achievement__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.achievement__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.achievement--locked .achievement__title {
+  color: #6B7280;
+}
+
+/* Нейтральный, а не фирменный синий: синим в интерфейсе покрашены кнопки и
+   ссылки, и бейдж ступени читался бы как интерактивный. */
+.achievement__tier {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 999px;
+  background: #F1F2F4;
+  color: #6B7280;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.achievement__description {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.achievement__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.achievement__bar {
+  flex: 1;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: #F3F4F6;
+  overflow: hidden;
+}
+
+.achievement__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #4F63F5;
+}
+
+.achievement__progress-text {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: #6B7280;
+}
+
+.achievement__date {
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+  color: #9CA3AF;
+}
+</style>

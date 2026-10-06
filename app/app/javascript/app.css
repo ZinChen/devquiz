@@ -190,7 +190,7 @@ body {
 }
 
 .code-block {
-  background: #F3F4F6;
+  background: #F3F4F6 !important;
   color: #1F2937;
   border: 1px solid #E5E7EB;
   border-radius: 0.5rem;

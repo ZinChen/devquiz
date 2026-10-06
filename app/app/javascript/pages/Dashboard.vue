@@ -27,6 +27,14 @@
         </dl>
       </div>
 
+      <div v-if="achievements.recent.length" class="dashboard-col">
+        <h2 class="dashboard-section-title">Последние достижения</h2>
+        <AchievementList :items="achievements.recent" compact />
+        <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
+          Все достижения →
+        </button>
+      </div>
+
       <div class="dashboard-col">
         <h2 class="dashboard-section-title">Сильные темы</h2>
         <template v-if="strongTopics.length">
@@ -53,7 +61,15 @@
       </div>
 
       <div class="dashboard-col">
-        <h2 class="dashboard-section-title">Слабые темы</h2>
+        <h2
+          class="dashboard-section-title"
+          :class="{ 'dashboard-section-title--tight': weakTopics.length }"
+        >Слабые темы</h2>
+        <!-- Тег ведёт в тренировку, но сам по себе об этом не говорит:
+             без подписи список читается как приговор, а не как кнопка. -->
+        <p v-if="weakTopics.length" class="dashboard-section-hint">
+          Тренируй слабые темы, чтобы убрать их из этого списка.
+        </p>
         <template v-if="weakTopics.length">
           <div class="weak-summary">
             <!-- Фон кодирует число ошибок, точка слева — саму тему. -->
@@ -76,7 +92,24 @@
           </div>
         </template>
         <p v-else class="dashboard-col__empty">
-          Пока нечего подтягивать — пройдите тест, и слабые темы появятся здесь.
+          Пройдите тест, и слабые темы появятся здесь.
+        </p>
+      </div>
+
+      <div class="dashboard-col">
+        <h2 class="dashboard-section-title">Частые ошибки</h2>
+        <template v-if="recentMistakes.length">
+          <ul class="mistakes-list">
+            <li v-for="m in recentMistakes" :key="`${m.testSlug}-${m.questionId}`">
+              <Link :href="`/tests/${m.testSlug}`" class="mistakes-list__link">{{ m.text }}</Link>
+              <span v-if="m.wrongCount > 1" class="mistakes-list__count">
+                {{ m.wrongCount }} {{ timesLabel(m.wrongCount) }}
+              </span>
+            </li>
+          </ul>
+        </template>
+        <p v-else class="dashboard-col__empty">
+          Частые ошибки появятся здесь, если вопрос собьёт вас несколько раз.
         </p>
       </div>
 
@@ -94,7 +127,7 @@
           </Link>
         </div>
         <p v-else class="dashboard-col__empty">
-          Пока нет рекомендаций — они появятся, когда наберутся слабые темы.
+          Пока нет рекомендаций.
         </p>
       </div>
 
@@ -177,7 +210,7 @@
               </svg>
             </button>
           </div>
-          <p class="bookmark-card__text">{{ b.questionText }}</p>
+          <p class="bookmark-card__text" v-html="formatText(b.questionText)"></p>
 
           <div v-if="b.typeField === 'code_challenge'" class="bookmark-code">
             <template v-if="highlightModeFor(b)">
@@ -204,11 +237,11 @@
               v-for="opt in b.options" :key="opt.id"
               class="bookmark-option"
               :class="b.correctIds.includes(opt.id) ? 'bookmark-option--correct' : ''"
+              v-html="formatText(opt.text)"
             >
-              {{ opt.text }}
             </div>
           </div>
-          <p v-if="b.explanation" class="bookmark-card__explanation">{{ b.explanation }}</p>
+          <p v-if="b.explanation" class="bookmark-card__explanation" v-html="formatText(b.explanation)"></p>
         </div>
 
         <button
@@ -231,7 +264,7 @@
     <section v-else-if="tab === 'profile'" class="profile">
       <h2 class="dashboard-section-title">Профиль</h2>
       <p class="profile__intro">
-        Ваши данные, которые могут увидеть остальные при прохождении тестов
+        Ваши данные, остальные видят только аватарку и имя
       </p>
 
       <div class="profile__card">
@@ -300,12 +333,12 @@
         </div>
       </div>
 
-      <div class="profile__actions">
-        <button class="btn btn-primary" :disabled="!profileChanged || !nameInput.trim() || savingProfile" @click="saveProfile">
-          {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
-        </button>
+      <!-- Кнопки появляются только при несохранённых правках: вечно висящая
+           неактивная «Сохранить» с подписью «Изменений нет» занимала место и
+           сообщала ровно то же, что и её собственная неактивность. -->
+      <div v-if="profileChanged || savingProfile" class="profile__actions">
+        <span v-if="!nameInput.trim()" class="settings__hint">Имя не может быть пустым</span>
         <button
-          v-if="profileChanged"
           type="button"
           class="profile__cancel-btn"
           :disabled="savingProfile"
@@ -313,7 +346,38 @@
         >
           Отмена
         </button>
-        <span v-if="!profileChanged && !savingProfile" class="settings__hint">Изменений нет</span>
+        <button class="btn btn-primary" :disabled="!nameInput.trim() || savingProfile" @click="saveProfile">
+          {{ savingProfile ? 'Сохранение…' : 'Сохранить' }}
+        </button>
+      </div>
+
+      <div class="profile__achievements">
+        <h2 class="dashboard-section-title">
+          Достижения
+          <span class="profile__achievements-count">
+            {{ achievements.earnedCount }} из {{ achievements.totalCount }}
+          </span>
+        </h2>
+        <AchievementList :items="generalAchievements" />
+      </div>
+
+      <div v-if="topicAchievements.length" class="profile__achievements">
+        <h2 class="dashboard-section-title">
+          Достижения по темам
+          <span class="profile__achievements-count">
+            {{ topicAchievementsEarned }} из {{ topicAchievementsTotal }} тем
+          </span>
+        </h2>
+        <AchievementList :items="visibleTopicAchievements" />
+        <div v-if="topicAchievements.length > TOPIC_ACHIEVEMENTS_PAGE_SIZE" class="profile__achievements-more-wrap">
+          <button
+            type="button"
+            class="btn btn-sm profile__achievements-more-btn"
+            @click="showAllTopicAchievements = !showAllTopicAchievements"
+          >
+            {{ showAllTopicAchievements ? 'Свернуть' : `Ещё ${topicAchievements.length - TOPIC_ACHIEVEMENTS_PAGE_SIZE}` }}
+          </button>
+        </div>
       </div>
     </section>
   </AppLayout>
@@ -325,8 +389,10 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import axios from 'axios'
 import AppLayout from '@/components/AppLayout.vue'
 import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
+import AchievementList from '@/components/AchievementList.vue'
 import { detectAnimal } from '@/assets/animalIcons'
 import { useShiki } from '@/composables/useShiki.js'
+import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
 
 const props = defineProps({
   attempts:           Array,
@@ -334,8 +400,10 @@ const props = defineProps({
   bookmarks:          { type: Array, default: () => [] },
   weakTopics:         { type: Array, default: () => [] },
   strongTopics:       { type: Array, default: () => [] },
+  recentMistakes:     { type: Array, default: () => [] },
   recommendedTests:   { type: Array, default: () => [] },
   identities:         { type: Array, default: () => [] },
+  achievements:       { type: Object, default: () => ({ earnedCount: 0, totalCount: 0, items: [], recent: [] }) },
   hasMoreAttempts:    { type: Boolean, default: false },
   hasMoreBookmarks:   { type: Boolean, default: false },
   pageSize:           { type: Number, default: 5 },
@@ -427,6 +495,7 @@ function isCorrectLine(b, i) {
 }
 
 const { ready: shikiReady, init: initShiki, tokenize } = useShiki()
+const { formatText } = useCodeHighlight()
 onMounted(initShiki)
 
 function tokenizedFor(b) {
@@ -451,6 +520,14 @@ function topicTitle(topic) {
 }
 
 const strongTopics = computed(() => props.strongTopics)
+const recentMistakes = computed(() => props.recentMistakes)
+
+// «2 раза», но «5 раз» и «11 раз» — вторая форма нужна для 5..20 и хвостов 0, 5-9.
+function timesLabel(count) {
+  const tail    = count % 10
+  const hundred = count % 100
+  return tail >= 2 && tail <= 4 && (hundred < 12 || hundred > 14) ? 'раза' : 'раз'
+}
 
 function strongTopicTitle(topic) {
   const parts = []
@@ -459,12 +536,77 @@ function strongTopicTitle(topic) {
   return parts.join(' • ')
 }
 
+// Два раздела вместо одной стены плиток: общие достижения отвечают на
+// «сколько прошёл и как», тематические — «что из предметных областей
+// освоил». Список тем растёт вместе с tests/topics.yml, поэтому без
+// разделения общий раздел размывался бы пропорционально росту каталога
+// тестов, а не пропорционально новым типам ачивок. Признак — ключ плитки:
+// у тематических групп он собран в AchievementsCatalog как "topic_<slug>".
+const generalAchievements = computed(() =>
+  props.achievements.items.filter(a => !a.key?.startsWith('topic_'))
+)
+
+// Темы, по которым нет вообще никакого прогресса (ни одной ступени и ни
+// одного верного ответа по теме), не показываем: это не цель, а шум — таких
+// тем много, и раздел про «что я осваиваю», а не каталог всех тем
+// приложения. Но тема с начатым, но ещё не взятым прогрессом (ответил верно
+// на часть вопросов, до первой ступени не дотянул) — это и есть то, что
+// человек сейчас осваивает, её скрывать нельзя.
+//
+// tier.index отражает число взятых ступеней (Знаток/Эксперт/Гуру), но у тем,
+// где вопросов хватает только на одну ступень, объекта tier нет вовсе — в
+// этом случае 0/1 даёт earned напрямую.
+function tierLevel(achievement) {
+  if (achievement.tier) return achievement.tier.index
+  return achievement.earned ? 1 : 0
+}
+
+// Доля пути до следующей ступени — используется только для сортировки тем
+// одного уровня между собой: 7 из 10 показываем выше, чем 2 из 10.
+function progressRatio(achievement) {
+  if (!achievement.progress?.target) return 0
+  return achievement.progress.current / achievement.progress.target
+}
+
+function hasAnyProgress(achievement) {
+  return tierLevel(achievement) > 0 || (achievement.progress?.current ?? 0) > 0
+}
+
+// Знаменатель — все темы, по которым вообще заведены ачивки (каталог тем),
+// числитель — темы, где взята хотя бы одна ступень. Не путать с длиной
+// списка ниже: в нём показаны ещё и темы с прогрессом без взятой ступени —
+// то, что человек только осваивает, не то, что уже достигнуто.
+const topicAchievementsTotal = computed(() =>
+  props.achievements.items.filter(a => a.key?.startsWith('topic_')).length
+)
+const topicAchievementsEarned = computed(() =>
+  props.achievements.items.filter(a => a.key?.startsWith('topic_') && a.earned).length
+)
+
+const topicAchievements = computed(() =>
+  props.achievements.items
+    .filter(a => a.key?.startsWith('topic_') && hasAnyProgress(a))
+    .sort((a, b) => tierLevel(b) - tierLevel(a) || progressRatio(b) - progressRatio(a))
+)
+
+// Изначально — три ряда по три карточки, остальное прячется за «Ещё»: список
+// тем растёт вместе с каталогом тестов, и показывать всё сразу значит
+// бесконечно растягивать профиль.
+const TOPIC_ACHIEVEMENTS_PAGE_SIZE = 9
+const showAllTopicAchievements = ref(false)
+const visibleTopicAchievements = computed(() =>
+  showAllTopicAchievements.value
+    ? topicAchievements.value
+    : topicAchievements.value.slice(0, TOPIC_ACHIEVEMENTS_PAGE_SIZE)
+)
+
 // Лучший балл убран намеренно: у любого, кто прошёл пару тестов, там 100%,
 // и строка ничего не сообщает.
 const summaryCards = computed(() => [
   { label: 'Всего попыток',   value: props.stats.totalAttempts },
   { label: 'Тестов пройдено', value: props.stats.testsCompleted },
   { label: 'Средний балл',    value: props.stats.avgScore.toFixed(1) + '%' },
+  { label: 'Достижений',      value: `${props.achievements.earnedCount} из ${props.achievements.totalCount}` },
 ])
 
 // Карточка остаётся в списке, помеченная как удалённая: из БД запись уже
@@ -656,6 +798,18 @@ function adoptAvatar(provider) {
   margin-bottom: 1rem;
 }
 
+/* Отступ забирает подпись, которая идёт следом. */
+.dashboard-section-title--tight {
+  margin-bottom: 0.375rem;
+}
+
+.dashboard-section-hint {
+  margin-bottom: 0.875rem;
+  font-size: 0.8125rem;
+  color: #9CA3AF;
+  line-height: 1.5;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -843,6 +997,12 @@ function adoptAvatar(provider) {
   font-weight: 500;
 }
 
+/* Shiki задаёт код-блоку свой фон инлайн-стилем (цвет темы) — он перебивает
+   зелёную подложку правильного варианта, если не переопределить явно. */
+.bookmark-option--correct :deep(.code-block) {
+  background: #e1f8ed !important;
+}
+
 .bookmark-card__explanation {
   font-size: 0.8rem;
   color: #9CA3AF;
@@ -885,6 +1045,47 @@ function adoptAvatar(provider) {
   border-left-color: #10B981;
   color: #059669;
   font-weight: 500;
+}
+
+/* Тот же вид карточки, что у «Слабые темы» ниже — список внутри неё,
+   а не отдельные теги, так как тут не темы, а конкретные вопросы. */
+.mistakes-list {
+  list-style: disc;
+  margin: 0;
+  padding: 1rem 1rem 1rem 2.125rem;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: var(--rounded-box, 0.75rem);
+  color: #D1D5DB;
+}
+
+.mistakes-list li {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 0.3125rem;
+}
+
+.mistakes-list li:last-child {
+  margin-bottom: 0;
+}
+
+.mistakes-list__link {
+  color: #374151;
+  text-decoration: none;
+}
+
+.mistakes-list__link:hover {
+  color: #4F63F5;
+  text-decoration: underline;
+}
+
+.mistakes-list__count {
+  margin-left: 0.375rem;
+  color: #9CA3AF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Слабые темы и рекомендации: та же карточка и та же градация,
@@ -1080,6 +1281,53 @@ function adoptAvatar(provider) {
   margin-bottom: 0;
 }
 
+/* Ссылка уходит под полоску вправо — к концу ряда карточек, а не к началу:
+   взгляд доходит до последней и упирается в неё. */
+.achievements-strip__more {
+  display: block;
+  margin-top: 0.625rem;
+  margin-left: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #4F63F5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile__achievements {
+  margin-top: 2rem;
+}
+
+.profile__achievements-count {
+  margin-left: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6B7280;
+}
+
+.profile__achievements-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* btn-ghost в DaisyUI прозрачна по умолчанию и заливается только на hover —
+   здесь нужен виден сразу серый фон, поэтому цвет задан явно той же парой,
+   что и остальные нейтральные элементы страницы (#F3F4F6 / #6B7280). */
+.profile__achievements-more-btn {
+  padding: 1.1rem 1.5rem;
+  border: none;
+  background: #EEEEEE;
+  color: #6B7280;
+}
+
+.profile__achievements-more-btn:hover {
+  background: #E5E7EB;
+  color: #374151;
+}
+
 /* Статистика — в половину ширины секции, а не во всю. */
 .dashboard-col--half {
   max-width: calc(50% - 0.5rem);
@@ -1152,6 +1400,10 @@ function adoptAvatar(provider) {
   line-height: 1.5;
 }
 
+.profile {
+  --profile-width: 32rem;
+}
+
 .profile__card {
   display: flex;
   gap: 1.25rem;
@@ -1161,7 +1413,7 @@ function adoptAvatar(provider) {
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
   border-radius: var(--rounded-box, 0.75rem);
   padding: 1.25rem;
-  max-width: 32rem;
+  max-width: var(--profile-width);
 }
 
 .profile__avatar-block {
@@ -1187,8 +1439,13 @@ function adoptAvatar(provider) {
   gap: 0.375rem;
 }
 
+/* Столбиком, а не в ряд: колонка аватара не сжимается, поэтому кнопки в
+   строку задавали ей ширину — с двумя провайдерами («Взять из GitHub» и
+   «Взять из Google») она раздувала карточку. */
 .profile__avatar-actions {
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
 }
 
 .profile__name-actions {
@@ -1259,11 +1516,15 @@ function adoptAvatar(provider) {
   color: #9CA3AF;
 }
 
+/* Правый край кнопок совпадает с краем карточки профиля — ширина у них
+   общая, --profile-width. */
 .profile__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 1.5rem;
   margin-top: 1rem;
+  max-width: var(--profile-width);
 }
 
 .profile__cancel-btn {

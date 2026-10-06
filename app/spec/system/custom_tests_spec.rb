@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Локальные тесты из tests_custom", type: :system, js: true do
-  before { driven_by :cuprite }
-
   let(:repo_dir)   { Rails.root.join("tmp/badge_repo") }
   let(:custom_dir) { Rails.root.join("tmp/badge_custom") }
 

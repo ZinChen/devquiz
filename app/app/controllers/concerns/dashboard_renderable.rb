@@ -23,9 +23,11 @@ module DashboardRenderable
         avg_score:       attempts.average(:score).to_f.round(1),
         tests_completed: slugs.count
       },
+      achievements:      achievements_summary.to_props,
       weak_topics:       weak_topics.entries.map(&:to_h),
       strong_topics:     strong_topics.entries.map(&:to_h),
       recommended_tests: recommended_tests(slugs),
+      recent_mistakes:   recent_mistakes,
       identities: current_user.identities.map { |i|
         { provider: i.provider, raw_name: i.raw_name, raw_avatar_url: i.raw_avatar_url }
       }
@@ -106,12 +108,37 @@ module DashboardRenderable
     end
   end
 
+  def achievements_summary
+    @achievements_summary ||= AchievementsSummary.for(user: current_user)
+  end
+
   def weak_topics
     @weak_topics ||= WeakTopicsSummary.for(user: current_user)
   end
 
   def strong_topics
     @strong_topics ||= StrongTopicsSummary.for(user: current_user, exclude_slugs: weak_topics.slugs)
+  end
+
+  RECENT_MISTAKES_LIMIT = 5
+
+  # Топ-5 самых часто неверно отвечаемых вопросов по всем тестам — то же,
+  # что показывается на странице результата (RunsController#recent_mistakes),
+  # только без фильтра по тесту: здесь это сводка по всей истории.
+  def recent_mistakes
+    questions_cache = {}
+
+    WeakQuestions.for(user: current_user).entries.first(RECENT_MISTAKES_LIMIT).map do |entry|
+      cache = questions_cache[entry.test_slug] ||= YamlSyncService.load_questions(entry.test_slug).index_by { |q| q["id"] }
+      text  = cache[entry.question_id]&.fetch("text", nil) || entry.question_id
+
+      {
+        question_id: entry.question_id,
+        test_slug:   entry.test_slug,
+        text:        text.to_s.truncate(140),
+        wrong_count: entry.wrong_count
+      }
+    end
   end
 
   # Тесты, где реально есть вопросы по слабым темам. Ищем через TopicIndex, а

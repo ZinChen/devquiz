@@ -12,7 +12,7 @@
 
         <nav v-if="!hideNav" class="layout__nav">
           <template v-if="currentUser">
-            <Link href="/stats" class="nav-link">Статистика</Link>
+            <Link v-if="rankingReady" href="/stats" class="nav-link">Рейтинг</Link>
             <Link href="/dashboard" class="nav-link">Кабинет</Link>
             <Link href="/logout" method="delete" as="button" class="btn btn-sm btn-primary">
               Выйти
@@ -83,6 +83,7 @@ defineProps({ hideNav: { type: Boolean, default: false } })
 const page = usePage()
 const currentUser = computed(() => page.props.currentUser)
 const flash       = computed(() => page.props.flash)
+const rankingReady = computed(() => page.props.rankingReady)
 
 const noticeVisible = ref(!!flash.value?.notice)
 const alertVisible  = ref(!!flash.value?.alert)

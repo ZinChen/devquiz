@@ -1,15 +1,8 @@
 <template>
   <AppLayout>
-    <h1 class="stats-title">Общая статистика</h1>
+    <h1 class="stats-title">Рейтинг тестов</h1>
+    <p class="stats-subtitle">Тесты, которые проходят чаще всего</p>
 
-    <div class="stats-cards">
-      <div v-for="s in globalCards" :key="s.label" class="stat-card">
-        <div class="stat-card__value">{{ s.value }}</div>
-        <div class="stat-card__label">{{ s.label }}</div>
-      </div>
-    </div>
-
-    <h2 class="stats-section-title">Топ тестов по популярности</h2>
     <div class="top-tests">
       <Link
         v-for="(t, i) in topTests" :key="t.slug"
@@ -17,15 +10,18 @@
         class="top-test-row"
       >
         <span class="top-test-row__rank">{{ i + 1 }}</span>
-        <div class="top-test-row__info">
-          <p class="top-test-row__title">{{ t.title }}</p>
-          <p class="top-test-row__meta">{{ t.attemptsCount }} попыток · avg {{ (t.avgScore ?? 0).toFixed(0) }}%</p>
+        <p class="top-test-row__title">{{ t.title }}</p>
+
+        <div class="top-test-row__metric">
+          <div class="top-test-row__value">{{ t.attemptsCount }}</div>
+          <div class="top-test-row__label">{{ attemptsLabel(t.attemptsCount) }}</div>
         </div>
-        <div class="top-test-row__pass">
-          <div class="top-test-row__pass-rate" :style="{ color: passColor(t.passRate) }">
+
+        <div class="top-test-row__metric">
+          <div class="top-test-row__value" :style="{ color: passColor(t.passRate) }">
             {{ (t.passRate ?? 0).toFixed(0) }}%
           </div>
-          <div class="top-test-row__pass-label">проходят</div>
+          <div class="top-test-row__label">проходят</div>
         </div>
       </Link>
     </div>
@@ -33,22 +29,25 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 
-const props = defineProps({
-  global:         Object,
-  topTests:       Array,
-  recentAttempts: Array,
+defineProps({
+  topTests: { type: Array, default: () => [] }
 })
 
-const globalCards = computed(() => [
-  { label: 'Всего попыток',  value: props.global.totalAttempts },
-  { label: 'Пользователей',  value: props.global.totalUsers },
-  { label: 'Тестов',         value: props.global.totalTests },
-  { label: 'Средний балл',   value: (props.global.avgScore ?? 0).toFixed(1) + '%' },
-])
+function attemptsLabel(count) {
+  const n = Math.abs(count) % 100
+  if (n >= 11 && n <= 14) return 'прохождений'
+
+  switch (n % 10) {
+    case 1:  return 'прохождение'
+    case 2:
+    case 3:
+    case 4:  return 'прохождения'
+    default: return 'прохождений'
+  }
+}
 
 function passColor(r) {
   if (r >= 70) return '#10B981'
@@ -61,45 +60,12 @@ function passColor(r) {
 .stats-title {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
 }
 
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-bottom: 2.5rem;
-}
-
-@media (min-width: 768px) {
-  .stats-cards { grid-template-columns: repeat(4, 1fr); }
-}
-
-.stat-card {
-  background: #fff;
-  border: 1px solid #F3F4F6;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-  border-radius: var(--rounded-box, 0.75rem);
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.stat-card__value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #4F63F5;
-}
-
-.stat-card__label {
-  font-size: 0.75rem;
+.stats-subtitle {
+  margin: 0.25rem 0 1.5rem;
+  font-size: 0.875rem;
   color: #6B7280;
-  margin-top: 0.25rem;
-}
-
-.stats-section-title {
-  font-weight: 600;
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
 }
 
 .top-tests {
@@ -133,30 +99,29 @@ function passColor(r) {
   flex-shrink: 0;
 }
 
-.top-test-row__info {
-  flex: 1;
-}
-
 .top-test-row__title {
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
   font-size: 0.875rem;
 }
 
-.top-test-row__meta {
-  font-size: 0.75rem;
-  color: #9CA3AF;
-}
-
-.top-test-row__pass {
+/* Две цифры одной высоты и в фиксированных колонках: иначе числа разной
+   длины («5» и «128») сдвигали бы процент от строки к строке. */
+.top-test-row__metric {
+  flex-shrink: 0;
+  width: 6.5rem;
   text-align: right;
 }
 
-.top-test-row__pass-rate {
-  font-size: 0.875rem;
-  font-weight: 600;
+.top-test-row__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #374151;
+  line-height: 1.2;
 }
 
-.top-test-row__pass-label {
+.top-test-row__label {
   font-size: 0.75rem;
   color: #9CA3AF;
 }

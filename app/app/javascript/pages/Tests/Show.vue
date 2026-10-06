@@ -40,7 +40,7 @@
         </div>
 
         <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary test-detail__start">
-          Начать тест
+          {{ hasStartedSession ? 'Продолжить тест' : 'Начать тест' }}
         </Link>
       </div>
     </div>
@@ -48,12 +48,27 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 
-defineProps({ test: Object })
+const props = defineProps({ test: Object })
+
+// Ключ и формат совпадают с useQuizSession.js — там же сессия и сохраняется.
+const hasStartedSession = ref(false)
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(`devquiz_session_${props.test.slug}`)
+    const saved = raw ? JSON.parse(raw) : null
+    const answers = saved?.answers || {}
+    hasStartedSession.value = Object.values(answers).some(a =>
+      Array.isArray(a) ? a.length > 0 : (a !== null && a !== '')
+    )
+  } catch {}
+})
 </script>
 
 <style scoped>

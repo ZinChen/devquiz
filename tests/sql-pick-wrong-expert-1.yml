@@ -1,0 +1,699 @@
+---
+slug: sql-pick-wrong-expert-1
+title: "PostgreSQL: найди неправильный запрос"
+description: "Формат наоборот: дана задача и 4 SQL-запроса, три из них решают её (обычно разными способами), один — нет. Нужно найти лишний."
+tags:
+- postgresql
+- sql
+difficulty: expert
+estimated_time: 30
+questions:
+- id: q1
+  text: |-
+    Нужно получить всех сотрудников вместе с их отделом (employees, departments, связь по department_id) — ровно по одной строке на сотрудника. Какой из запросов не даёт нужный результат?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT * FROM employees, departments
+      WHERE employees.department_id = departments.department_id
+        OR departments.name IS NOT NULL;
+      ```
+    correct: true
+    explanation: "OR departments.name IS NOT NULL истинно почти всегда — практически у каждой строки departments заполнено name. Условие связи (department_id = department_id) перестаёт быть решающим: строка проходит фильтр, даже если department_id не совпал, а достаточно того, что у отдела вообще есть имя. В результате остаётся почти полное декартово произведение — каждый сотрудник умножается почти на все отделы, а не только на свой."
+  - id: b
+    text: |-
+      ```sql
+      SELECT * FROM employees JOIN departments
+        ON employees.department_id = departments.department_id;
+      ```
+    correct: false
+    explanation: "Каноничная форма явного соединения — условие связи задано напрямую в ON."
+  - id: c
+    text: |-
+      ```sql
+      SELECT * FROM employees, departments
+      WHERE employees.department_id = departments.department_id;
+      ```
+    correct: false
+    explanation: "Устаревший синтаксис SQL-92: перечисление таблиц через запятую и условие связи в WHERE — эквивалент INNER JOIN."
+  - id: d
+    text: |-
+      ```sql
+      SELECT * FROM employees JOIN departments USING (department_id);
+      ```
+    correct: false
+    explanation: "USING(department_id) — сокращённая форма ON для одноимённых столбцов, результат идентичен обычному JOIN."
+  difficulty: easy
+  topics: [queries]
+  explanation: "Условие связи по department_id в запросе есть — но добавленное через OR второе условие (department.name IS NOT NULL) почти всегда истинно само по себе, и по правилам приоритета OR в WHERE строка проходит фильтр целиком, если истинно хотя бы одно из двух условий. Реальную работу выполняет только AND между условиями — OR превращает точное совпадение по ключу в необязательное."
+  extended_explanation: "Запрос не упадёт и вернёт результат — просто заметно больше строк, чем сотрудников: почти N сотрудников × M отделов вместо N. Такую ошибку легко не заметить при чтении запроса, потому что условие связи (department_id = department_id) там действительно присутствует и выглядит правильно — проблема только в том, что OR делает его необязательным."
+  recommendation: "Проверять приоритет AND и OR в составных условиях WHERE — OR, добавленный к условию связи между таблицами, делает эту связь необязательной и превращает JOIN обратно в декартово произведение, даже когда правильное условие явно присутствует в запросе."
+
+- id: q2
+  text: |-
+    Нужно вывести всех студентов и их результат по экзамену 'CS305' — включая тех, кто этот экзамен не сдавал (для них score должен быть NULL). Какой запрос не решает эту задачу?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT students.name, exams.score FROM students
+      LEFT JOIN exams ON students.s_id = exams.s_id AND exams.c_no = 'CS305';
+      ```
+    correct: false
+    explanation: "Условие на присоединяемую таблицу в ON применяется до LEFT JOIN, поэтому студенты без экзамена CS305 всё равно остаются в результате с NULL."
+  - id: b
+    text: |-
+      ```sql
+      SELECT students.name, exams.score FROM students
+      LEFT JOIN exams ON students.s_id = exams.s_id
+      WHERE exams.c_no = 'CS305';
+      ```
+    correct: true
+    explanation: "WHERE применяется после LEFT JOIN и отбрасывает строки, где exams.c_no не равен 'CS305' — включая NULL для студентов без экзамена, поэтому LEFT JOIN фактически превращается в INNER JOIN."
+  - id: c
+    text: |-
+      ```sql
+      SELECT students.name, exams.score FROM students
+      LEFT JOIN (SELECT * FROM exams WHERE c_no = 'CS305') exams
+        ON students.s_id = exams.s_id;
+      ```
+    correct: false
+    explanation: "Подзапрос уже содержит только строки с c_no = 'CS305', а LEFT JOIN всё равно сохраняет студентов без совпадения — семантика та же, что и у варианта с фильтром в ON."
+  - id: d
+    text: |-
+      ```sql
+      SELECT students.name, exams.score FROM students
+      LEFT JOIN exams ON students.s_id = exams.s_id
+      WHERE exams.c_no = 'CS305' OR exams.c_no IS NULL;
+      ```
+    correct: false
+    explanation: "Добавка OR exams.c_no IS NULL возвращает в выборку и те строки, где LEFT JOIN не нашёл совпадения — задача решается, хоть и многословнее."
+  difficulty: medium
+  topics: [queries]
+  explanation: "Условие на присоединяемую таблицу, помещённое в WHERE после LEFT JOIN, отсекает и настоящие несовпадения по c_no, и NULL-строки, которые LEFT JOIN должен был сохранить — в результате студенты без экзамена CS305 пропадают из выборки вовсе."
+  extended_explanation: "Правило простое: условие, которое должно определять сам факт присоединения (в том числе 'присоединять только такие строки'), — место в ON; условие, фильтрующее уже готовый результат, — в WHERE. Перепутать их — самая частая практическая ошибка с LEFT JOIN."
+  recommendation: "Прочитать про разницу между условием в ON и в WHERE при LEFT JOIN — постгрес документация, раздел про Outer Joins."
+
+- id: q3
+  text: |-
+    В таблице weather несколько городов могут делить между собой одинаковое максимальное значение temp_lo. Нужно вывести их все — ни одного не пропустить и не потерять при равенстве. Какой из запросов не гарантирует такой результат?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT city FROM weather WHERE temp_lo = (SELECT MAX(temp_lo) FROM weather);
+      ```
+    correct: false
+    explanation: "Подзапрос MAX(temp_lo) вычисляется один раз и возвращает единственное скалярное значение — сравнение temp_lo с ним в WHERE отбирает все строки, где достигнут максимум, включая случай, когда таких городов несколько."
+  - id: b
+    text: |-
+      ```sql
+      SELECT city FROM (
+        SELECT city, temp_lo, ROW_NUMBER() OVER (ORDER BY temp_lo DESC) AS r
+        FROM weather
+      ) t WHERE r = 1;
+      ```
+    correct: true
+    explanation: "В отличие от RANK(), ROW_NUMBER() присваивает каждой строке уникальный порядковый номер даже при равных значениях temp_lo — среди городов с максимумом только один случайно получит номер 1, и условие r = 1 отбросит всех остальных обладателей того же максимума."
+  - id: c
+    text: |-
+      ```sql
+      SELECT city FROM (
+        SELECT city, temp_lo, RANK() OVER (ORDER BY temp_lo DESC) AS r
+        FROM weather
+      ) t WHERE r = 1;
+      ```
+    correct: false
+    explanation: "RANK() присваивает одинаковый ранг 1 всем строкам с максимальным temp_lo — фильтр r = 1 во внешнем запросе оставит их все, а не одну случайную."
+  - id: d
+    text: |-
+      ```sql
+      SELECT city FROM weather
+      WHERE temp_lo >= ALL (SELECT temp_lo FROM weather);
+      ```
+    correct: false
+    explanation: ">= ALL сравнивает temp_lo каждой строки со всеми значениями temp_lo в таблице сразу — условию удовлетворяют ровно те города, чей temp_lo не меньше любого другого, то есть все обладатели максимума."
+  difficulty: medium
+  topics: [queries]
+  explanation: "Все четыре запроса построены вокруг одной и той же идеи — сравнить или проранжировать строки по temp_lo — но только один из способов ранжирования учитывает повторы. ROW_NUMBER() присваивает уникальный номер каждой строке даже при равных значениях, поэтому при ничьей отбирает только одну из них произвольным образом. Подзапрос с MAX(), RANK() и >= ALL сравнивают каждую строку со значением максимума напрямую и оставляют все совпадения."
+  extended_explanation: "Ошибка проявляется не всегда: на данных без повторяющегося максимума ROW_NUMBER() и RANK() дают одинаковый результат — единственный город с r = 1. Расхождение видно только на данных с реальной ничьёй по temp_lo, поэтому тестировать top-N запросы стоит именно на таких данных, а не только на 'чистых' наборах без совпадений."
+  recommendation: "Разобрать разницу между ROW_NUMBER() и RANK() при равных значениях сортировки — ROW_NUMBER() всегда присваивает уникальные номера, RANK() присваивает одинаковый ранг всем строкам с одинаковым значением. Путаница между ними — частая причина потери части top-N результата при ничьей."
+
+- id: q4
+  text: |-
+    Нужно посчитать по городам общее число записей и отдельно — сколько из них с temp_lo < 45, одним запросом. Какой вариант не даёт верного второго числа?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT city, COUNT(*) FILTER (WHERE temp_lo < 45), COUNT(*) FROM weather GROUP BY city;
+      ```
+    correct: false
+    explanation: "FILTER — стандартный синтаксис PostgreSQL для условной агрегации: считает только строки, удовлетворяющие условию внутри скобок."
+  - id: b
+    text: |-
+      ```sql
+      SELECT city, COUNT(CASE WHEN temp_lo < 45 THEN 1 END), COUNT(*) FROM weather GROUP BY city;
+      ```
+    correct: false
+    explanation: "CASE без ELSE возвращает NULL для строк, не подошедших под условие, а COUNT считает только не-NULL значения — переносимый между СУБД аналог FILTER."
+  - id: c
+    text: |-
+      ```sql
+      SELECT city, SUM((temp_lo < 45)::int), COUNT(*) FROM weather GROUP BY city;
+      ```
+    correct: false
+    explanation: "Приведение boolean к integer даёт 0 или 1 на каждую строку — SUM по такому столбцу равнозначен подсчёту строк, удовлетворивших условию."
+  - id: d
+    text: |-
+      ```sql
+      SELECT city, COUNT(CASE WHEN temp_lo < 45 THEN 1 ELSE 0 END), COUNT(*) FROM weather GROUP BY city;
+      ```
+    correct: true
+    explanation: "ELSE 0 подставляет ноль вместо NULL для строк, не прошедших условие — а COUNT считает любое не-NULL значение, включая сам 0. В итоге COUNT возвращает общее число строк в группе, то есть повторяет второй столбец COUNT(*), а не число строк с temp_lo < 45."
+  difficulty: medium
+  topics: [queries]
+  explanation: "PostgreSQL предлагает несколько равнозначных способов посчитать агрегат с условием в одном запросе — FILTER, CASE WHEN без ELSE внутри COUNT и приведение boolean к числу под SUM. Но стоит в CASE добавить ELSE 0, и COUNT перестаёт различать 'условие не выполнено' от 'условие выполнено с результатом 0' — оба случая дают не-NULL значение и засчитываются в счётчик."
+  extended_explanation: "COUNT(expr) считает строки, где expr не NULL, независимо от того, каким было само значение — 0, false или любое другое не-NULL. Различие между FILTER/CASE-без-ELSE и CASE-с-ELSE-0 не бросается в глаза при чтении запроса, но даёт совершенно разные числа: без ELSE — реальный подсчёт условия, с ELSE 0 — общее число строк."
+  recommendation: "Прочитать про предложение FILTER и разницу между CASE с ELSE и без ELSE внутри COUNT — в документации PostgreSQL, раздел Aggregate Expressions."
+
+- id: q5
+  text: |-
+    Таблица sample(json jsonb) хранит документы вида {"tags": ["sql", "postgres", ...]}. Нужно развернуть массив tags в отдельные строки. Какой запрос не даёт такого результата?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT tag FROM sample JOIN LATERAL (
+        SELECT jsonb_array_elements_text(json->'tags') AS tag FROM sample
+      ) t ON true;
+      ```
+    correct: true
+    explanation: "Подзапрос внутри LATERAL заново выбирает из всей таблицы sample вместо того, чтобы использовать json текущей внешней строки — теряется связь между строкой sample и её собственными тегами, и результат перемножает все строки со всеми тегами всех строк."
+  - id: b
+    text: |-
+      ```sql
+      SELECT tag FROM sample, LATERAL jsonb_array_elements_text(json->'tags') AS tag;
+      ```
+    correct: false
+    explanation: "Любое множество-возвращающее выражение в FROM автоматически ведёт себя как LATERAL по отношению к предыдущим элементам, даже без явного слова LATERAL."
+  - id: c
+    text: |-
+      ```sql
+      SELECT tag FROM sample JOIN LATERAL jsonb_array_elements_text(json->'tags') AS tag ON true;
+      ```
+    correct: false
+    explanation: "Каноничная форма: функция вызывается для каждой строки sample, ON true просто не добавляет дополнительной фильтрации к уже построенным парам."
+  - id: d
+    text: |-
+      ```sql
+      SELECT jsonb_array_elements_text(json->'tags') AS tag FROM sample;
+      ```
+    correct: false
+    explanation: "Функция, возвращающая множество строк, вызванная в списке SELECT, разворачивает по одному тегу на строку исходной таблицы."
+  difficulty: hard
+  topics: [queries]
+  explanation: "LATERAL позволяет подзапросу ссылаться на столбцы предыдущих элементов FROM — но только если он это делает. Если внутри LATERAL-подзапроса заново обратиться к исходной таблице по имени вместо использования колонки текущей строки, связь с внешним контекстом теряется, и запрос вместо построчного разворота даёт декартово перемножение."
+  extended_explanation: "Признак живой ошибки такого рода — подзапрос внутри LATERAL синтаксически корректен и выполняется без исключений, поэтому её не ловит ни валидатор, ни EXPLAIN — только сравнение фактического количества строк в результате с ожидаемым."
+  recommendation: "Проверить на маленьком примере: LATERAL-подзапрос должен использовать псевдоним внешней таблицы (например, sample.json), а не имя таблицы напрямую."
+
+
+- id: q6
+  text: |-
+    Таблица table_a(id, key) и table_b(id, key), в table_b.key встречаются NULL-значения. Нужно найти все строки table_a, для чьего key нет совпадения в table_b. Какой из запросов не решает эту задачу корректно при наличии NULL в table_b.key?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT a.id FROM table_a a
+      WHERE NOT EXISTS (SELECT 1 FROM table_b b WHERE a.key = b.key);
+      ```
+    correct: false
+    explanation: "NOT EXISTS проверяет только сам факт отсутствия совпадающей строки и не чувствителен к NULL в остальных строках table_b, не участвующих в сравнении для конкретного a.key."
+  - id: b
+    text: |-
+      ```sql
+      SELECT a.id FROM table_a a
+      LEFT JOIN table_b b ON a.key = b.key
+      WHERE b.key IS NULL;
+      ```
+    correct: false
+    explanation: "LEFT JOIN сохраняет строки table_a без совпадения с NULL вместо значений table_b, и WHERE b.key IS NULL корректно отбирает именно такие строки, независимо от NULL где-либо ещё в table_b."
+  - id: c
+    text: |-
+      ```sql
+      SELECT a.id FROM table_a a
+      WHERE a.key NOT IN (SELECT key FROM table_b);
+      ```
+    correct: true
+    explanation: "Если подзапрос SELECT key FROM table_b возвращает хотя бы один NULL, весь NOT IN становится неопределённым (UNKNOWN) для каждой строки table_a и запрос не вернёт ни одной строки — даже для тех a.key, у которых точно нет совпадения."
+  - id: d
+    text: |-
+      ```sql
+      SELECT a.id FROM table_a a
+      WHERE a.key NOT IN (SELECT key FROM table_b WHERE key IS NOT NULL);
+      ```
+    correct: false
+    explanation: "WHERE key IS NOT NULL внутри подзапроса убирает единственную причину поломки NOT IN — после этого его поведение снова эквивалентно NOT EXISTS."
+  difficulty: hard
+  topics: [queries]
+  explanation: "NOT IN (subquery) сравнивает значение с каждым элементом списка через равенство, а сравнение с NULL всегда даёт NEITHER true NEITHER false, а UNKNOWN — и стоит в списке хотя бы одному NULL попасться, вся конструкция NOT IN перестаёт быть истинной для любого значения. NOT EXISTS и LEFT JOIN...IS NULL этой ловушки не имеют, потому что не сравнивают напрямую с каждым элементом списка."
+  extended_explanation: "Коварство этой ошибки в том, что на тестовых данных без NULL все четыре запроса дают одинаковый результат — баг проявляется только когда в реальных данных production появляется хотя бы одна строка с NULL в key, что обычно происходит не сразу после написания запроса."
+  recommendation: "Повторить, как NULL ведёт себя внутри NOT IN (subquery) — трёхзначная логика SQL здесь превращает весь список в неопределённый, источник одной из самых частых практических ошибок."
+
+- id: q7
+  text: |-
+    Нужно обновить value в таблице target(id, value) для конкретного списка пар (id, new_value) — скажем, пары (1, 'a') и (2, 'b'). Какой запрос не выполнит обновление обеих строк верными значениями?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      WITH updates (id, new_value) AS (
+        VALUES (1, 'a'::text), (2, 'b'::text)
+      )
+      UPDATE target t SET value = u.new_value
+      FROM updates u WHERE t.id = u.id;
+      ```
+    correct: false
+    explanation: "CTE updates формирует набор пар (id, new_value), и UPDATE...FROM сопоставляет каждую строку target с соответствующей строкой из этого набора по id — обе строки обновятся своими значениями."
+  - id: b
+    text: |-
+      ```sql
+      UPDATE target t SET value = u.new_value
+      FROM (VALUES (1, 'a'::text), (2, 'b'::text)) AS u(id, new_value)
+      WHERE t.id = u.id;
+      ```
+    correct: false
+    explanation: "Та же конструкция, что и запрос с CTE, но без промежуточного имени — VALUES с указанием алиасов столбцов сразу используется как источник в FROM."
+  - id: c
+    text: |-
+      ```sql
+      UPDATE target SET value = CASE id WHEN 1 THEN 'a' WHEN 2 THEN 'b' END
+      WHERE id IN (1, 2);
+      ```
+    correct: false
+    explanation: "CASE id WHEN 1 THEN 'a' WHEN 2 THEN 'b' END вычисляется для каждой обновляемой строки и подставляет соответствующее её id значение — WHERE id IN (1, 2) гарантирует, что затронуты только нужные строки."
+  - id: d
+    text: |-
+      ```sql
+      UPDATE target t SET value = u.new_value
+      FROM (VALUES (1, 'a'::text), (2, 'b'::text)) AS u(id, new_value)
+      WHERE t.id = u.id OR t.value IS NULL;
+      ```
+    correct: true
+    explanation: "Условие связи t.id = u.id в запросе есть и само по себе верное — но добавленный через OR t.value IS NULL делает его необязательным: строке target достаточно иметь пустой value, чтобы пройти фильтр вообще без совпадения id с парой из VALUES. Такая строка target соединится сразу с обеими парами из VALUES через декартово произведение и обновится значением той, что обработана последней, вместо того чтобы остаться нетронутой."
+  difficulty: medium
+  topics: [queries]
+  explanation: "UPDATE...FROM с источником VALUES работает как обычный JOIN между обновляемой таблицей и списком пар — условие связи t.id = u.id в этом запросе присутствует и корректно. Но OR t.value IS NULL превращает его в необязательное для строк с пустым value: они проходят фильтр независимо от id, соединяются сразу со всеми парами из VALUES и получают значение той пары, что применена последней — тот же класс ошибки, что и OR у условия связи в обычном SELECT, просто для UPDATE его сложнее заметить."
+  extended_explanation: "Формально такой запрос не ошибка и не упадёт — он просто обновит не то, что задумано, причём для строк с NULL в value результат может отличаться от прогона к прогону в зависимости от порядка обработки. На данных без NULL в value ошибка вообще не проявится — OR-часть условия останется недостижимой, и запрос будет неотличим от рабочего."
+  recommendation: "Проверять приоритет AND/OR в условиях UPDATE...FROM так же внимательно, как в обычном WHERE у SELECT — OR, добавленный к условию связи с источником в FROM, делает эту связь необязательной для части строк."
+
+- id: q8
+  text: |-
+    Таблица t(a, b, c). Нужно найти значения a, для которых в таблице существует больше одной разной комбинации значений c (то есть a связан минимум с двумя разными c, не считая повторов). Какой запрос не решает эту задачу?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT a FROM t GROUP BY a HAVING COUNT(DISTINCT c) > 1;
+      ```
+    correct: false
+    explanation: "COUNT(DISTINCT c) внутри группы по a считает именно число различных значений c — больше одного означает минимум два разных c для этого a."
+  - id: b
+    text: |-
+      ```sql
+      SELECT a FROM t GROUP BY a HAVING COUNT(*) > 1;
+      ```
+    correct: true
+    explanation: "COUNT(*) считает общее число строк в группе a, включая повторяющиеся значения c: если у a есть 5 строк с одним и тем же c, условие COUNT(*) > 1 всё равно выполнится, хотя разных значений c на самом деле только одно."
+  - id: c
+    text: |-
+      ```sql
+      SELECT a FROM (SELECT DISTINCT a, c FROM t) s GROUP BY a HAVING COUNT(*) > 1;
+      ```
+    correct: false
+    explanation: "Вложенный SELECT DISTINCT a, c схлопывает повторяющиеся пары (a, c) до уникальных заранее, поэтому последующий COUNT(*) в группе по a уже фактически считает число разных значений c."
+  - id: d
+    text: |-
+      ```sql
+      SELECT DISTINCT t1.a FROM t t1
+      JOIN t t2 ON t1.a = t2.a AND t1.c <> t2.c;
+      ```
+    correct: false
+    explanation: "JOIN таблицы с собой по совпадению a и несовпадению c находит именно те a, у которых есть хотя бы два разных значения c одновременно, DISTINCT убирает дубликаты из-за симметричности самосоединения."
+  difficulty: medium
+  topics: [queries]
+  explanation: "COUNT(*) внутри GROUP BY считает количество строк в группе — если у одного значения a просто много повторяющихся строк с одинаковым c, условие COUNT(*) > 1 сработает ложно. COUNT(DISTINCT c), предварительный DISTINCT по паре (a, c) и самосоединение с условием на неравенство c — три способа считать именно число различных значений, а не строк."
+  extended_explanation: "Эта пара — классическая путаница при поиске дублей: COUNT(*) > 1 находит группы с более чем одной строкой, а не с более чем одним различным значением какого-то столбца внутри группы — разница проявляется ровно тогда, когда в данных есть точные повторы."
+  recommendation: "Повторить разницу между COUNT(*) и COUNT(DISTINCT ...) внутри GROUP BY/HAVING — источник частых ложных срабатываний при поиске записей с несколькими разными значениями."
+
+- id: q9
+  text: |-
+    Нужно объединить результаты двух запросов SELECT id FROM table_1 и SELECT id FROM table_2 так, чтобы одинаковые id, встречающиеся в обеих таблицах, не дублировались в итоговом наборе. Какой вариант не убирает такие межтабличные дубликаты?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT id FROM table_1
+      UNION
+      SELECT id FROM table_2;
+      ```
+    correct: false
+    explanation: "UNION без ALL по умолчанию удаляет дубликаты не только внутри каждого SELECT, но и между результатами обоих запросов."
+  - id: b
+    text: |-
+      ```sql
+      SELECT DISTINCT id FROM (
+        SELECT id FROM table_1
+        UNION ALL
+        SELECT id FROM table_2
+      ) t;
+      ```
+    correct: false
+    explanation: "UNION ALL сохраняет все строки без исключения, но внешний DISTINCT по объединённому набору убирает повторяющиеся id так же, как это сделал бы обычный UNION."
+  - id: c
+    text: |-
+      ```sql
+      SELECT id FROM table_1
+      UNION ALL
+      SELECT id FROM table_2
+      ORDER BY id;
+      ```
+    correct: true
+    explanation: "ORDER BY только сортирует итоговый набор строк — он не убирает совпадения, и одинаковые id из разных таблиц просто окажутся рядом в отсортированном результате. UNION ALL по-прежнему объединяет результаты без какой-либо дедупликации: если один и тот же id есть в обеих таблицах, в итоговом наборе он встретится минимум дважды."
+  - id: d
+    text: |-
+      ```sql
+      SELECT DISTINCT id FROM table_1
+      UNION
+      SELECT DISTINCT id FROM table_2;
+      ```
+    correct: false
+    explanation: "DISTINCT в каждом отдельном запросе убирает повторы внутри одной таблицы, а внешний UNION дополнительно убирает совпадения между результатами двух запросов — двойная, но корректная дедупликация."
+  difficulty: easy
+  topics: [queries]
+  explanation: "UNION (без ALL) всегда проверяет уникальность по всему объединённому набору строк, поэтому одинаковый id из разных таблиц схлопнется в одну запись. UNION ALL — это буквальная конкатенация результатов без какой-либо проверки на совпадения, и без внешнего DISTINCT межтабличные дубликаты останутся."
+  extended_explanation: "UNION ALL предпочтительнее по производительности, когда дубликаты заведомо невозможны или не важны — сортировка/хеширование для дедупликации в обычном UNION не бесплатны на больших наборах данных."
+  recommendation: "Разница между UNION и UNION ALL по дедупликации стоит того, чтобы держать её в голове отдельно от INTERSECT/EXCEPT — у каждой операции своё поведение с повторами."
+
+- id: q10
+  text: |-
+    Таблица sample(json jsonb) хранит документы вида {"tags": ["sql", "postgres", "database"]}. Нужно найти строки, где массив tags содержит хотя бы один элемент из списка ['sql', 'mongodb'] (то есть достаточно совпадения по одному элементу). Какой запрос не решает эту задачу?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT * FROM sample WHERE json->'tags' ?| array['sql', 'mongodb'];
+      ```
+    correct: false
+    explanation: "?| — оператор существования 'хотя бы один из списка': возвращает true, если в jsonb-массиве есть совпадение хотя бы с одним элементом переданного массива."
+  - id: b
+    text: |-
+      ```sql
+      SELECT * FROM sample WHERE json->'tags' ?& array['sql', 'mongodb'];
+      ```
+    correct: true
+    explanation: "?& проверяет прямо противоположное условие — наличие всех перечисленных элементов одновременно. Строка с одним лишь 'sql' в tags не пройдёт это условие, хотя формально удовлетворяет исходной задаче ('хотя бы один элемент из списка')."
+  - id: c
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements_text(json->'tags') t
+        WHERE t = ANY(array['sql', 'mongodb'])
+      );
+      ```
+    correct: false
+    explanation: "Явный разворот jsonb-массива в строки и проверка на вхождение через ANY — более многословный, но семантически эквивалентный ?| способ: истинно, если хотя бы один элемент tags совпал с элементом списка."
+  - id: d
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE (json->'tags')::jsonb ?| array['sql', 'mongodb']::text[];
+      ```
+    correct: false
+    explanation: "Явные касты к jsonb и text[] не меняют семантику оператора ?| — они здесь избыточны, но не ошибочны, и результат идентичен запросу с ?|."
+  difficulty: medium
+  topics: [queries]
+  explanation: "?| и ?& — операторы существования для jsonb-массивов и ключей объекта с прямо противоположной семантикой: ?| требует совпадения хотя бы с одним элементом переданного списка, ?& — сразу со всеми. Для задачи 'достаточно одного совпадения' годится только ?|, а ?& на тех же данных вернёт true заметно реже."
+  extended_explanation: "Третий оператор той же группы — ? (без модификатора) — проверяет наличие ровно одного конкретного ключа или элемента, переданного как скалярное значение, а не массив: json->'tags' ? 'database'."
+  recommendation: "Прочитать про jsonb-операторы существования в разделе документации PostgreSQL JSON Functions and Operators — там же таблица с ?, ?| и ?&."
+
+- id: q11
+  text: |-
+    Даны два массива integer[]. Нужно проверить, есть ли у них хотя бы один общий элемент (пересечение множеств, а не полное вхождение одного в другой). Какой запрос не проверяет именно пересечение?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT ARRAY[1,4,3] && ARRAY[1,3,9];
+      ```
+    correct: false
+    explanation: "&& — специализированный оператор пересечения множеств для массивов: истинно, если у двух массивов есть хотя бы один общий элемент, независимо от того, сколько элементов не совпадает."
+  - id: b
+    text: |-
+      ```sql
+      SELECT EXISTS (
+        SELECT 1 FROM unnest(ARRAY[1,4,3]) a WHERE a = ANY(ARRAY[1,3,9])
+      );
+      ```
+    correct: false
+    explanation: "Развёрнутая через unnest и ANY проверка воспроизводит ровно ту же логику, что и &&, только явным вложенным запросом вместо специализированного оператора."
+  - id: c
+    text: |-
+      ```sql
+      SELECT ARRAY[1,4,3] @> ARRAY[1,3,9];
+      ```
+    correct: true
+    explanation: "@> проверяет вхождение — что все элементы правого массива присутствуют в левом, а не наличие хотя бы одного общего элемента. На массивах из примера результат совпадает с && случайно (оба true), но на массивах без полного вхождения одного в другой @> и && дадут разные ответы: например, ARRAY[1,2] @> ARRAY[1,3] — false, хотя пересечение по 1 есть."
+  - id: d
+    text: |-
+      ```sql
+      SELECT (ARRAY[1,4,3])::int[] && (ARRAY[1,3,9])::int[];
+      ```
+    correct: false
+    explanation: "Явное приведение к int[] ничего не меняет в семантике оператора && — результат идентичен запросу без приведения."
+  difficulty: medium
+  topics: [queries]
+  explanation: "&& (overlap) и @> (contains) — разные проверки над массивами: && ищет хотя бы одно общее значение, @> требует полного вхождения правого массива в левый. Подмена одного оператора другим — коварная ошибка именно потому, что на некоторых входных данных (когда общий элемент один и он же весь правый массив) оба оператора дают одинаковый результат."
+  extended_explanation: "Показательный контрпример: ARRAY[1,2] @> ARRAY[1,3] — false (тройки нет в левом массиве), но ARRAY[1,2] && ARRAY[1,3] — true (единица общая для обоих). Спутать эти операторы легко именно потому, что на простых тестовых данных ошибка не проявляется."
+  recommendation: "Операторы && и @>/<@ для массивов путают чаще всего именно на простых тестовых данных, где пересечение выглядит как включение — стоит прорешать пару контрпримеров вручную."
+
+- id: q12
+  text: |-
+    Таблица events(id, event_type, goods_id) — нужна ровно одна, последняя по id, полная строка (все колонки) на каждую пару (event_type, goods_id). Какой запрос не даёт такого результата?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT DISTINCT ON (event_type, goods_id) *
+      FROM events
+      ORDER BY event_type, goods_id, id DESC;
+      ```
+    correct: false
+    explanation: "DISTINCT ON (event_type, goods_id) в связке с ORDER BY по тем же колонкам и id DESC — специфичный для PostgreSQL способ оставить ровно одну, первую после сортировки строку на каждую комбинацию значений."
+  - id: b
+    text: |-
+      ```sql
+      SELECT * FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY event_type, goods_id ORDER BY id DESC
+        ) AS rn
+        FROM events
+      ) t WHERE rn = 1;
+      ```
+    correct: false
+    explanation: "PARTITION BY по обеим колонкам нумерует строки внутри каждой пары отдельно, ORDER BY id DESC делает последнюю запись первой в нумерации, фильтр rn = 1 оставляет её одну."
+  - id: c
+    text: |-
+      ```sql
+      SELECT e.* FROM events e
+      JOIN (
+        SELECT event_type, MAX(id) AS max_id
+        FROM events GROUP BY event_type
+      ) last ON e.event_type = last.event_type
+        AND e.id = last.max_id;
+      ```
+    correct: true
+    explanation: "Подзапрос группирует только по event_type, без goods_id, поэтому находит id последней записи в рамках всего типа события целиком, а не отдельно для каждой пары (event_type, goods_id) — JOIN вернёт полную строку для единственной пары, чей id совпал с этим общим максимумом, и полностью потеряет последние записи всех остальных пар с тем же event_type."
+  - id: d
+    text: |-
+      ```sql
+      SELECT e.* FROM events e
+      JOIN (
+        SELECT event_type, goods_id, MAX(id) AS max_id
+        FROM events GROUP BY event_type, goods_id
+      ) last ON e.event_type = last.event_type
+        AND e.goods_id = last.goods_id AND e.id = last.max_id;
+      ```
+    correct: false
+    explanation: "Подзапрос группирует именно по обеим колонкам (event_type, goods_id), поэтому находит id последней записи отдельно для каждой пары — JOIN по event_type, goods_id и id корректно возвращает по одной полной строке events на каждую пару."
+  difficulty: medium
+  topics: [queries]
+  explanation: "Все четыре запроса выполняются и возвращают результат — ошибка в неверном варианте не в синтаксисе, а в том, по каким колонкам считается 'последняя запись': группировка только по event_type (без goods_id) находит максимум id в рамках всего типа события, а не отдельно для каждой пары, и в итоге теряет последние записи всех пар, кроме одной на каждый event_type."
+  extended_explanation: "DISTINCT ON и оконная функция с PARTITION BY сразу группируют по обеим нужным колонкам в самом OVER/DISTINCT ON, поэтому в них так легко не ошибиться — а вот в отдельном подзапросе с обычным GROUP BY список колонок группировки нужно набирать руками, и пропустить одну из них — частая практическая ошибка, которая не проявляется на данных, где у каждого event_type только один goods_id."
+  recommendation: "Сравнить план выполнения (EXPLAIN) DISTINCT ON и оконной функции ROW_NUMBER на одной и той же задаче top-1-per-group — на некоторых версиях планировщика они оптимизируются по-разному. При использовании отдельного подзапроса с GROUP BY отдельно сверять список колонок группировки со списком колонок связи в JOIN."
+
+- id: q13
+  text: |-
+    В таблице sample(json jsonb) документ выглядит как {"projects": [{"name": "API", "status": "completed"}, {"name": "UI", "status": "planned"}]}. Нужно найти строки, где среди projects есть хотя бы один с status = 'completed'. Какой запрос не решает эту задачу?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE jsonb_path_exists(json, '$.projects[*] ? (@.status == "completed")');
+      ```
+    correct: false
+    explanation: "jsonb_path_exists с фильтром ?(@.status == \"completed\") — именно тот механизм, который создан для проверки условия на вложенный элемент массива объектов."
+  - id: b
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(json->'projects') p
+        WHERE p->>'status' = 'completed'
+      );
+      ```
+    correct: false
+    explanation: "jsonb_array_elements разворачивает массив projects в отдельные jsonb-объекты по одному на строку, а условие в EXISTS проверяет status каждого из них — эквивалент jsonb_path_exists, только явным подзапросом."
+  - id: c
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE json->'projects' @> '[{"status": "completed"}]';
+      ```
+    correct: false
+    explanation: "@> для jsonb проверяет containment рекурсивно, в том числе внутри элементов массива: наличие в массиве projects хотя бы одного объекта, содержащего пару status: 'completed', даёт true — остальные поля объекта (например, name) для сравнения не важны."
+  - id: d
+    text: |-
+      ```sql
+      SELECT * FROM sample
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(json->'projects') p
+        WHERE p ? 'completed'
+      );
+      ```
+    correct: true
+    explanation: "Разворот массива через jsonb_array_elements сделан правильно — но внутри EXISTS проверяется не значение status, а p ? 'completed', то есть наличие ключа с именем 'completed' в объекте проекта. У объектов вида {\"name\": ..., \"status\": ...} такого ключа нет и быть не может — условие ложно для любой строки, даже если среди projects реально есть объект со status = 'completed'."
+  difficulty: hard
+  topics: [queries]
+  explanation: "Все четыре запроса честно разворачивают или обходят массив projects — ошибка не в механизме доступа к вложенным элементам, а в том, что именно сравнивается. Оператор ? проверяет наличие ключа с данным именем в объекте, а не значение конкретного поля — p ? 'completed' ищет ключ 'completed', которого в объекте проекта нет, вместо сравнения p->>'status' с 'completed'."
+  extended_explanation: "Спутать 'ключ с таким именем' и 'значение поля равно этой строке' легко именно потому, что оператор ? синтаксически похож на сравнение — но проверяет структуру объекта, а не его содержимое. @> для jsonb, в отличие от этого, сравнивает структуры рекурсивно и умеет находить частичное совпадение внутри элементов массива, включая совпадение по значению конкретного поля."
+  recommendation: "Прочитать про разницу между оператором ? (наличие ключа) и containment @> (совпадение по значению) в документации PostgreSQL — раздел jsonb Containment and Existence. Проверять на вложенных объектах: p ? 'key' и p->>'key' = 'value' — два разных вопроса."
+- id: q14
+  text: |-
+    Таблица posts(id) и comments(id, post_id, created_at). Нужно получить для каждого поста ровно 3 последних (по created_at) комментария. Какой запрос не решает эту задачу?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT posts.id, c.* FROM posts
+      JOIN LATERAL (
+        SELECT * FROM comments
+        WHERE post_id = posts.id
+        ORDER BY created_at DESC LIMIT 3
+      ) AS c ON true;
+      ```
+    correct: false
+    explanation: "LATERAL выполняет вложенный SELECT отдельно для каждой строки posts, поэтому LIMIT 3 внутри него ограничивает именно комментарии этого конкретного поста."
+  - id: b
+    text: |-
+      ```sql
+      SELECT post_id, MAX(created_at), COUNT(*) FROM comments
+      GROUP BY post_id
+      ORDER BY MAX(created_at) DESC LIMIT 3;
+      ```
+    correct: true
+    explanation: "GROUP BY схлопывает все комментарии поста в одну строку агрегата, а LIMIT 3 после этого ограничивает общее число строк результата целиком — три поста с самым свежим комментарием максимум, а не три комментария на каждый пост."
+  - id: c
+    text: |-
+      ```sql
+      SELECT * FROM (
+        SELECT comments.*,
+          ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY created_at DESC) AS rn
+        FROM comments
+      ) t WHERE rn <= 3;
+      ```
+    correct: false
+    explanation: "PARTITION BY post_id обнуляет нумерацию для каждого поста отдельно — условие rn <= 3 оставляет ровно по 3 (или меньше) на пост."
+  - id: d
+    text: |-
+      ```sql
+      SELECT * FROM (
+        SELECT comments.*,
+          DENSE_RANK() OVER (PARTITION BY post_id ORDER BY created_at DESC) AS rnk
+        FROM comments
+      ) t WHERE rnk <= 3;
+      ```
+    correct: false
+    explanation: "DENSE_RANK с той же партицией по post_id корректно нумерует комментарии внутри каждого поста; отличие от ROW_NUMBER проявится только при полном совпадении created_at у нескольких комментариев."
+  difficulty: hard
+  topics: [queries]
+  explanation: "Наивная попытка ограничить число строк на группу через GROUP BY + LIMIT не работает: GROUP BY схлопывает каждую группу в одну строку задолго до применения LIMIT, поэтому LIMIT в таком запросе ограничивает количество получившихся групп, а не строк внутри каждой из них."
+  extended_explanation: "LATERAL с LIMIT внутри и оконные функции с PARTITION BY — два принципиально разных, но одинаково рабочих подхода к top-N-per-group: первый выполняет отдельный маленький запрос на каждую внешнюю строку, второй нумерует все строки сразу и фильтрует уже готовую нумерацию."
+  recommendation: "Разобрать паттерн top-N per group в обеих реализациях — через LATERAL и через оконные функции — чтобы не тянуться к неподходящему GROUP BY по привычке."
+
+- id: q15
+  text: |-
+    Нужно сгруппировать события events(created_at) по 5-минутным интервалам и посчитать количество в каждом. Какой из запросов не группирует события корректно по 5 минутам?
+  type: single
+  options:
+  - id: a
+    text: |-
+      ```sql
+      SELECT date_trunc('hour', created_at)
+        + (floor(date_part('minute', created_at) / 5) * interval '5 minute') AS bucket,
+        COUNT(*)
+      FROM events GROUP BY bucket;
+      ```
+    correct: false
+    explanation: "Номер 5-минутного бакета внутри часа (0..11) умножается на согласованный шаг в 5 минут — интервалы получаются 0, 5, 10, 15... минут от начала часа."
+  - id: b
+    text: |-
+      ```sql
+      SELECT to_timestamp(floor(extract(epoch FROM created_at) / 300) * 300) AS bucket,
+        COUNT(*)
+      FROM events GROUP BY bucket;
+      ```
+    correct: false
+    explanation: "300 секунд — это ровно 5 минут; округление эпохи вниз до кратного 300 и обратное преобразование в timestamp — эквивалентный, но не завязанный на date_trunc способ получить те же 5-минутные бакеты."
+  - id: c
+    text: |-
+      ```sql
+      SELECT date_trunc('hour', created_at)
+        + (floor(date_part('minute', created_at) / 5) * interval '15 minute') AS bucket,
+        COUNT(*)
+      FROM events GROUP BY bucket;
+      ```
+    correct: true
+    explanation: "Номер бакета вычислен верно (шаг деления — 5 минут), но множитель для перевода номера бакета обратно во временной сдвиг — 15 минут, а не 5: интервалы получаются 0, 15, 30, 45... минут вместо 0, 5, 10, 15, растягивая шаг между группами втрое."
+  - id: d
+    text: |-
+      ```sql
+      SELECT date_bin('5 minutes', created_at, TIMESTAMP '2000-01-01') AS bucket,
+        COUNT(*)
+      FROM events GROUP BY bucket;
+      ```
+    correct: false
+    explanation: "date_bin (PostgreSQL 14+) — специализированная функция именно для этой задачи: округляет метку времени до ближайшей границы заданного интервала от указанной точки отсчёта."
+  difficulty: hard
+  topics: [queries]
+  explanation: "Номер 5-минутного бакета внутри часа (0, 1, 2... 11) нужно домножить обратно на длину самого бакета — 5 минут — чтобы получить сдвиг времени начала интервала. Домножение на 15 минут оставляет верную группировку по номерам бакетов, но искажает подписанное время начала каждого интервала и фактическое расстояние между соседними бакетами."
+  extended_explanation: "Ошибка такого рода особенно коварна: запрос не падает и возвращает правдоподобные на вид группы — обнаружить несоответствие можно только сверив реальные границы интервалов с ожидаемыми (0:00, 0:05, 0:10...), а не по факту успешного выполнения."
+  recommendation: "Разобрать паттерн time bucketing в PostgreSQL: ручную арифметику через date_trunc/floor и специализированную функцию date_bin (14+), решающую ту же задачу без риска перепутать множитель."

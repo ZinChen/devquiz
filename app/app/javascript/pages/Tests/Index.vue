@@ -13,6 +13,7 @@
           type="search"
           placeholder="Поиск..."
           class="search-input"
+          autocomplete="off"
           @blur="onSearchBlur"
         />
       </div>
@@ -215,7 +216,20 @@ function onTagClick(e, tag) {
   if (tagCount(tag) > 0) toggleTag(tag, tagCount(tag))
 }
 
-const searchOpen = ref(false)
+// searchQuery живёт на уровне модуля (useTestFilters), поэтому переживает
+// Inertia-навигацию «вперёд/назад»: вернулся с карточки теста — запрос на
+// месте. Но searchOpen — локальный для этого маунта компонента и раньше
+// всегда стартовал закрытым, из-за чего поле с непустым v-model рисовалось
+// нулевой ширины (см. .search-input), а текст был не виден, пока не кликнуть
+// по иконке. Открываем сразу, если есть что показывать.
+//
+// autocomplete="off" на инпуте — отдельная причина того же симптома: при
+// полном обновлении страницы (F5) браузер сам восстанавливает value поля из
+// истории формы, в обход Vue. searchQuery при этом остаётся пустым («» —
+// честное исходное состояние после перезагрузки SPA), поле визуально узкое,
+// а текст в нём всё равно виден поверх — разъехавшееся состояние хуже, чем
+// просто пустое поле.
+const searchOpen = ref(!!searchQuery.value)
 const searchInputRef = ref(null)
 
 function openSearch() {
@@ -284,8 +298,15 @@ const baseFilteredTests = computed(() => {
   if (q) {
     result = result.filter(t =>
       t.title.toLowerCase().includes(q) ||
+      t.slug?.toLowerCase().includes(q) ||
       t.description?.toLowerCase().includes(q) ||
-      t.tags?.some(tag => tag.toLowerCase().includes(q))
+      // Теги и темы — в исходном виде (sre, reliability) и в переводе
+      // («надёжность»): перевод — единственный русский текст у тега, у темы
+      // есть явный label в tests/topics.yml.
+      t.tags?.some(tag => tag.toLowerCase().includes(q)) ||
+      t.tagsTranslated?.some(text => text.toLowerCase().includes(q)) ||
+      t.topics?.some(topic => topic.toLowerCase().includes(q)) ||
+      t.topicsTranslated?.some(text => text.toLowerCase().includes(q))
     )
   }
 
@@ -410,6 +431,13 @@ function tagCount(tag) {
 
 .search-toggle__icon:hover {
   color: #4F63F5;
+}
+
+/* Встроенная кнопка очистки у type="search" (Chrome/Safari): браузер её
+   рисует сам, курсор по умолчанию не pointer — выглядит некликабельной
+   среди остальных интерактивных элементов интерфейса. */
+.search-input::-webkit-search-cancel-button {
+  cursor: pointer;
 }
 
 .search-input {

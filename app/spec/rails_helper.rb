@@ -41,4 +41,22 @@ RSpec.configure do |config|
   config.after(:each) do
     DatabaseCleaner.clean
   end
+
+  # TopicIndex/AchievementsCatalog кэшируются на уровне класса на весь
+  # процесс (test-окружение не перечитывает их на каждый вызов, в отличие от
+  # development — см. TopicIndex#current). System-спеки живут в одном Puma-
+  # процессе весь прогон suite, поэтому спек, подменяющий TestSource.repo_dir/
+  # custom_dir через allow(...).to receive(...) (см. custom_tests_spec),
+  # может навсегда закэшировать урезанный индекс для всех спек после себя —
+  # первый же visit построит TopicIndex по фейковым временным файлам.
+  #
+  # Сброс нужен именно здесь, а не в after конкретного спека: RSpec снимает
+  # моки уже после пользовательских after-хуков, поэтому TestSource.repo_dir
+  # внутри чужого after всё ещё возвращает подменённое значение — reload!
+  # там пересобрал бы индекс неправильно (и один раз даже по уже удалённой
+  # временной папке, из-за FileUtils.rm_rf, выполненного в том же хуке).
+  config.after(:each, type: :system) do
+    TopicIndex.reload!
+    AchievementsCatalog.reload!
+  end
 end

@@ -5,6 +5,9 @@ RSpec.describe WeakTopicsSummary do
 
   # q1/q2 в ror-basics.yml помечены topics: [mvc], q5 — [controllers].
   def answer(question_id, correct, slug: "ror-basics", at: Time.current)
+    # Слабые вопросы считаются только по живым тестам, а запись в
+    # test_metadata в жизни есть у каждого — её заводит YamlSyncService.
+    TestMetadatum.find_or_create_by!(slug: slug) { |m| m.title = slug }
     attempt = TestAttempt.create!(user_id: user.id, test_slug: slug, total_questions: 1, created_at: at)
     attempt.test_attempt_answers.create!(
       question_id: question_id, selected_options: [ "a" ], correct: correct, created_at: at

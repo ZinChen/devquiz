@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Сортировка тестов на главной", type: :system, js: true do
-  before { driven_by :cuprite }
-
   before(:each) do
     create(:test_metadatum, slug: "b-test", title: "Бета тест",   attempts_count: 5,  difficulty: "expert",
                              created_at: 2.days.ago)

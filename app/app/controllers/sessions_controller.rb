@@ -20,7 +20,13 @@ class SessionsController < ApplicationController
     adopt_guest_preferences(user, guest_tags)
     cookies.delete(GUEST_IDENTITY_COOKIE)
 
-    redirect_to root_path, notice: "Добро пожаловать, #{user.name.presence || user.email}!"
+    # Перенесённая гостевая история — уже своя, поэтому ачивки за неё
+    # начисляются сразу: ждать следующего теста незачем. Тостами их не
+    # показываем — после нескольких пройденных тестов их упадёт разом
+    # несколько, и они перекроют приветствие.
+    earned = AchievementsService.call(user)
+
+    redirect_to root_path, notice: welcome_notice(user, earned)
   rescue User::OmniauthError, ActiveRecord::RecordInvalid => e
     redirect_to login_path, alert: "Не удалось войти: #{e.message}"
   end
@@ -48,6 +54,13 @@ class SessionsController < ApplicationController
   # Попытки, пройденные до входа, достаются владельцу аккаунта. Дубликаты по
   # тому же тесту не схлопываем: история и так многозаписная, а best_score
   # считается по максимуму.
+  def welcome_notice(user, earned)
+    greeting = "Добро пожаловать, #{user.name.presence || user.email}!"
+    return greeting if earned.empty?
+
+    "#{greeting} Начислены достижения за пройденное — смотрите в профиле: #{earned.size}."
+  end
+
   def claim_guest_attempts(user, token)
     return if token.blank?
 

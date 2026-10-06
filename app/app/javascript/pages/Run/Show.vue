@@ -12,9 +12,19 @@
         </div>
       </div>
 
+      <div v-else-if="practice" class="result-preview-note">
+        <span class="result-preview-note__icon" aria-hidden="true">i</span>
+        <div>
+          <p class="result-preview-note__title">Тренировка по теме — в статистику тестов не идёт</p>
+          <p class="result-preview-note__text">
+            Ответы учтены: вопросы, на которые вы ответили верно, уйдут из слабых.
+          </p>
+        </div>
+      </div>
+
       <div class="result-summary">
         <p class="result-summary__label">
-          Тест завершён: {{ test.title }}
+          {{ practice ? 'Тренировка завершена' : 'Тест завершён' }}: {{ test.title }}
           <span v-if="challengeModeLabel" class="result-summary__mode-badge">{{ challengeModeLabel }}</span>
         </p>
         <div class="result-summary__score" :style="{ color: scoreColor }">
@@ -32,7 +42,13 @@
           <button type="button" class="btn btn-ghost" @click="$emit('retry')">
             Пройти снова
           </button>
-          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+          <Link href="/" class="btn btn-ghost">Завершить</Link>
+        </div>
+        <div v-else-if="practice" class="result-summary__actions">
+          <button type="button" class="btn btn-primary" @click="$emit('retry')">
+            Ещё раз
+          </button>
+          <Link href="/dashboard" class="btn btn-ghost">В кабинет</Link>
         </div>
         <div v-else class="result-summary__actions">
           <Link
@@ -45,8 +61,34 @@
           <Link :href="`/tests/${test.slug}/run/new`" :class="suggestedNextMode ? 'btn btn-ghost' : 'btn btn-primary'">
             Пройти снова
           </Link>
-          <Link href="/" class="btn btn-ghost">Все тесты</Link>
+          <Link href="/" class="btn btn-ghost">Завершить</Link>
         </div>
+      </div>
+
+      <div v-if="newAchievements.length" class="result-achievements">
+        <h2 class="result-achievements__title">
+          {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
+        </h2>
+        <div class="result-achievements__list">
+          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
+            <span class="result-achievement__icon" aria-hidden="true">{{ a.icon || '🏅' }}</span>
+            <div>
+              <p class="result-achievement__name">{{ a.title }}</p>
+              <p v-if="a.description" class="result-achievement__text">{{ a.description }}</p>
+            </div>
+          </div>
+        </div>
+        <Link href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
+      </div>
+
+      <div v-if="guestPrompt" class="result-guest">
+        <p class="result-guest__title">Первый тест пройден</p>
+        <p class="result-guest__text">
+          Войдите, чтобы статистика сохранялась, а за пройденные тесты начислялись
+          достижения — псевдоним и аватар останутся теми же. Email и настоящее имя
+          из Google или GitHub другим пользователям не показываются.
+        </p>
+        <Link href="/login" class="btn btn-sm btn-primary">Войти</Link>
       </div>
 
       <!-- От частного к общему: конкретные вопросы, затем их темы, затем куда идти дальше. -->
@@ -133,10 +175,10 @@
       </div>
 
       <div
-        v-for="(item, idx) in visibleAnswers" :key="item.questionId"
-        :id="`question-${item.questionId}`"
+        v-for="(item, idx) in visibleAnswers" :key="itemKey(item)"
+        :id="`question-${itemKey(item)}`"
         class="result-item"
-        :class="{ 'result-item--highlight': highlightedQuestion === item.questionId }"
+        :class="{ 'result-item--highlight': highlightedQuestion === itemKey(item) }"
         :style="{ borderColor: item.correct ? '#10B98130' : '#EF444430' }"
       >
         <div class="result-item__header">
@@ -146,7 +188,18 @@
           >
             {{ item.correct ? '✓' : '✗' }}
           </span>
-          <p class="result-item__question" v-html="formatText(item.questionText)"></p>
+          <p class="result-item__question">
+            <span class="result-item__number">Вопрос {{ questionNumberById.get(itemKey(item)) }}.</span>
+            <span v-html="formatText(item.questionText)"></span>
+            <!-- В тренировке вопросы собраны из разных тестов, поэтому к
+                 каждому нужен источник; в обычной попытке тест один и
+                 testSlug не приходит. -->
+            <Link
+              v-if="item.testSlug"
+              :href="`/tests/${item.testSlug}`"
+              class="result-item__source"
+            >{{ item.testTitle || item.testSlug }}</Link>
+          </p>
           <BookmarkButton
             v-if="item.dbId"
             :question-id="item.dbId"
@@ -174,8 +227,8 @@
                     'result-code-line--correct':  isCorrectLine(item, i + 1),
                     'result-code-line--selected': !item.correct && isSelectedLine(item, i + 1) && !isCorrectLine(item, i + 1),
                   }"
-                ><template v-if="tokenCache[item.questionId]"><span
-                    v-for="(tok, ti) in (tokenCache[item.questionId][i] || [])"
+                ><template v-if="tokenCache[itemKey(item)]"><span
+                    v-for="(tok, ti) in (tokenCache[itemKey(item)][i] || [])"
                     :key="ti"
                     :style="tok.color ? { color: tok.color } : {}"
                   >{{ tok.content }}</span></template><template v-else>{{ line || ' ' }}</template></div><div
@@ -208,9 +261,9 @@
           <!-- fix: show original code + word-level diff of typed answer vs correct -->
           <template v-else>
             <pre class="result-code-block"><code><template
-                v-if="tokenCache[item.questionId]"
+                v-if="tokenCache[itemKey(item)]"
               ><template
-                  v-for="(lineTokens, li) in tokenCache[item.questionId]" :key="li"
+                  v-for="(lineTokens, li) in tokenCache[itemKey(item)]" :key="li"
                 ><template v-if="li > 0">{{ '\n' }}</template><span
                     v-for="(tok, ti) in lineTokens" :key="ti"
                     :style="tok.color ? { color: tok.color } : {}"
@@ -262,11 +315,12 @@
               {{ optionLetter(oi) }}
             </span>
             <span class="result-option__body">
-              <span>{{ opt.text }}</span>
+              <span v-html="formatText(opt.text)"></span>
               <span
                 v-if="opt.explanation && (item.correctIds.includes(opt.id) || item.selectedOptions.includes(opt.id))"
                 class="result-option__explanation"
-              >{{ opt.explanation }}</span>
+                v-html="formatMarkdown(opt.explanation)"
+              ></span>
             </span>
           </div>
         </div>
@@ -276,12 +330,12 @@
         <div v-if="item.extendedExplanation || item.recommendation" class="result-item__details">
           <button
             class="result-item__details-toggle"
-            @click="toggleDetails(item.questionId)"
+            @click="toggleDetails(itemKey(item))"
           >
-            {{ openDetails[item.questionId] ? 'Скрыть подробности' : 'Подробнее' }}
-            <span class="result-item__details-arrow" :class="{ 'result-item__details-arrow--open': openDetails[item.questionId] }">▾</span>
+            {{ openDetails[itemKey(item)] ? 'Скрыть подробности' : 'Подробнее' }}
+            <span class="result-item__details-arrow" :class="{ 'result-item__details-arrow--open': openDetails[itemKey(item)] }">▾</span>
           </button>
-          <div v-if="openDetails[item.questionId]" class="result-item__details-body">
+          <div v-if="openDetails[itemKey(item)]" class="result-item__details-body">
             <div v-if="item.extendedExplanation" class="result-item__extended" v-html="formatMarkdown(item.extendedExplanation)"></div>
             <div v-if="item.recommendation" class="result-item__recommendation">
               <p class="result-item__recommendation-label">Что повторить</p>
@@ -300,6 +354,7 @@ import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
+import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
 import { CHALLENGE_MODE_LABELS, isChallengeModeUnlocked, nextChallengeMode } from '@/composables/challengeModes.js'
 import { buildReport, reportFilename } from '@/composables/quizReport.js'
 
@@ -312,6 +367,16 @@ const props = defineProps({
   // Разовое прохождение из перетащенного файла: попытки в БД нет, поэтому
   // вместо ссылок на /tests/:slug показываем скачивание отчёта.
   preview:        { type: Boolean, default: false },
+  // Тренировка по слабой теме: попытки в БД тоже нет, но ответы учтены в
+  // истории — поэтому и пояснение, и кнопки другие, чем у preview.
+  practice:       { type: Boolean, default: false },
+  // Ачивки, выданные за эту попытку: приезжают через flash из
+  // RunsController#create. Блоком, а не тостом — тост уезжает раньше, чем
+  // человек оторвётся от своего результата.
+  newAchievements: { type: Array, default: () => [] },
+  // Гость ачивок не получает: после первого пройденного теста показываем,
+  // что даёт регистрация.
+  guestPrompt:    { type: Boolean, default: false },
 })
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
@@ -323,6 +388,21 @@ const wrongCount = computed(() => props.answersDetail?.filter(a => !a.correct).l
 const visibleAnswers = computed(() =>
   onlyWrong.value ? props.answersDetail.filter(a => !a.correct) : props.answersDetail
 )
+
+// Ключ строки разбора. В обычной попытке это id вопроса, но в тренировке по
+// теме вопросы собраны из разных тестов, где id повторяются (q1 есть почти
+// везде) — там сервер присылает сквозной uid.
+function itemKey(item) {
+  return item.uid || item.questionId
+}
+
+// Номер вопроса — позиция в исходном тесте, а не в отфильтрованном списке,
+// иначе при «Только неправильные» номера сбивались бы на 1, 2, 3...
+const questionNumberById = computed(() => {
+  const map = new Map()
+  props.answersDetail.forEach((item, i) => map.set(itemKey(item), i + 1))
+  return map
+})
 
 // Подсветка гасится по таймеру, поэтому его надо снимать при уходе со страницы.
 const highlightedQuestion = ref(null)
@@ -384,7 +464,7 @@ const tokenCache = computed(() => {
   const cache = {}
   props.answersDetail?.forEach(item => {
     if (item.type === 'code_challenge' && item.code) {
-      cache[item.questionId] = tokenize(item.code, item.language || 'ruby')
+      cache[itemKey(item)] = tokenize(item.code, item.language || 'ruby')
     }
   })
   return cache
@@ -407,12 +487,8 @@ function toggleDetails(questionId) {
 
 function formatMarkdown(text) {
   if (!text) return ''
-  const codeBlocks = []
-  const withoutCode = text.replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
-    codeBlocks.push(code.trimEnd())
-    return '@@CODE_BLOCK_' + (codeBlocks.length - 1) + '@@'
-  })
-  const formatted = withoutCode
+  const { withPlaceholders, blocks } = splitCodeBlocks(text)
+  const formatted = withPlaceholders
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -426,7 +502,7 @@ function formatMarkdown(text) {
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="result-link">$1</a>')
   return formatted.replace(/@@CODE_BLOCK_(\d+)@@/g, (_, i) =>
     '<div class="result-code-caption">Пример решения:</div>' +
-    '<pre class="result-code-block"><code>' + escapeHtml(codeBlocks[Number(i)]) + '</code></pre>'
+    resolveCodeBlockHtml(blocks[Number(i)])
   )
 }
 
@@ -462,16 +538,7 @@ function formatTime(seconds) {
   return `${m}м ${s}с`
 }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function formatText(text) {
-  if (!text) return ''
-  return text
-    .replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${escapeHtml(code.trimEnd())}</code></pre>`)
-    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-}
+const { formatText, splitCodeBlocks, resolveCodeBlockHtml } = useCodeHighlight()
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 function optionLetter(idx) { return LETTERS[idx] || String(idx + 1) }
@@ -525,6 +592,81 @@ function optionLetterStyle(item, optId) {
 </script>
 
 <style scoped>
+/* Новые ачивки — сразу под результатом: это событие той же попытки, и
+   человек как раз смотрит сюда. */
+.result-achievements {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #DDE1FD;
+  border-radius: 0.75rem;
+  background: #F7F8FF;
+}
+
+.result-achievements__title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.result-achievements__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+
+.result-achievement {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.result-achievement__icon {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.result-achievement__name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.result-achievement__text {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.result-achievements__link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #4F63F5;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-guest {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #F3F4F6;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.result-guest__title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: #111827;
+}
+
+.result-guest__text {
+  margin: 0.375rem 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #6B7280;
+}
+
 .result-wrap {
   max-width: 42rem;
   margin: 0 auto;
@@ -821,6 +963,25 @@ function optionLetterStyle(item, optId) {
   flex: 1;
 }
 
+.result-item__number {
+  color: #6B7280;
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.result-item__source {
+  display: block;
+  margin-top: 0.1875rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9CA3AF;
+  transition: color 0.15s;
+}
+
+.result-item__source:hover {
+  color: #4F63F5;
+}
+
 .result-item__bookmark {
   margin-top: -0.125rem;
 }
@@ -835,7 +996,7 @@ function optionLetterStyle(item, optId) {
 
 .result-option {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
@@ -845,12 +1006,35 @@ function optionLetterStyle(item, optId) {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .result-option__explanation {
   font-size: 0.75rem;
   opacity: 0.75;
   font-style: italic;
+}
+
+/* Вариант ответа может содержать SQL-блок (```sql), как в основном
+   тексте вопроса — тот же порядок переопределения, что в QuestionOptions.vue:
+   Shiki красит фон инлайн-стилем, здесь код должен сливаться с фоном
+   строки, а не быть белым прямоугольником поверх подсветки правильного/
+   неправильного ответа. */
+.result-option__body :deep(.code-block) {
+  display: block;
+  border: none;
+  background: none !important;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+}
+
+.result-option__body :deep(.shiki .line) {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 .result-option__letter {

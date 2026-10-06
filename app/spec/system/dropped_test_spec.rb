@@ -1,8 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Тест из перетащенного файла", type: :system, js: true do
-  before { driven_by :cuprite }
-
   before(:each) { create(:test_metadatum, title: "Ruby основы", slug: "ror-basics") }
 
   def dismiss_tag_onboarding
@@ -93,7 +91,7 @@ RSpec.describe "Тест из перетащенного файла", type: :sys
     expect(page).to have_text("Разбор ответов")
 
     # Возвращаемся на главную и бросаем другой файл.
-    click_link "Все тесты"
+    click_link "Завершить"
     expect(page).to have_text("Тесты для разработчиков")
 
     drop_yaml(<<~YML)
