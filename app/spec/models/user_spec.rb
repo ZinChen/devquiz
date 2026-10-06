@@ -18,6 +18,58 @@ RSpec.describe User, type: :model do
     it { is_expected.to validate_presence_of(:email) }
   end
 
+  describe "avatar_url validation" do
+    subject(:user) { build(:user, avatar_url: avatar_url) }
+
+    context "when blank" do
+      let(:avatar_url) { "" }
+
+      it "is valid — пустая ссылка значит «вернуться к сгенерированному аватару»" do
+        expect(user).to be_valid
+      end
+    end
+
+    context "when a normal http(s) URL" do
+      let(:avatar_url) { "https://example.com/avatar.png" }
+
+      it { is_expected.to be_valid }
+    end
+
+    context "when a javascript: URI" do
+      let(:avatar_url) { "javascript:alert(1)" }
+
+      it "is rejected" do
+        expect(user).not_to be_valid
+        expect(user.errors[:avatar_url]).to be_present
+      end
+    end
+
+    context "when a data: URI" do
+      let(:avatar_url) { "data:text/html,<script>alert(1)</script>" }
+
+      it "is rejected" do
+        expect(user).not_to be_valid
+      end
+    end
+
+    context "when not a valid URI at all" do
+      let(:avatar_url) { "not a url \u0000" }
+
+      it "is rejected without raising" do
+        expect(user).not_to be_valid
+      end
+    end
+
+    context "when excessively long" do
+      let(:avatar_url) { "https://example.com/" + ("a" * 2048) }
+
+      it "is rejected" do
+        expect(user).not_to be_valid
+        expect(user.errors[:avatar_url]).to be_present
+      end
+    end
+  end
+
   describe "associations" do
     it { is_expected.to have_many(:identities).dependent(:destroy) }
     it { is_expected.to have_many(:test_attempts).with_foreign_key(:user_id) }
