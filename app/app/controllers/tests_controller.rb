@@ -12,14 +12,20 @@ class TestsController < ApplicationController
       .map(&:first)
 
     completed_modes_by_slug = user_completed_modes(tests_list.map(&:slug))
+    # Цифры про прохождения на карточках — только личные (см. UserTestStats);
+    # гость видит нули и ничего чужого. tests_list уже отсортирован по общему
+    # числу попыток, поэтому «популярность» отдаём местом в списке, а не числом:
+    # сортировка «По популярности» работает, а сами чужие счётчики не уходят.
+    user_stats = UserTestStats.for(current_user, tests_list.map(&:slug))
     # Один снимок на весь список, а не TopicIndex.topics_of в цикле: в
     # development индекс пересобирается (читает все tests/*.yml) на каждое
     # обращение к классовому методу — 43 вызова означали бы 43 пересборки.
     topic_index = TopicIndex.current
 
     render inertia: "Tests/Index", props: {
-      tests: tests_list.map { |t|
+      tests: tests_list.each_with_index.map { |t, rank|
         test_props(t, completed_modes_by_slug[t.slug] || [], topic_index)
+          .merge(personal_props(user_stats[t.slug]), popularity_rank: rank)
       },
       all_tags: visible_tags,
       # nil (а не []) означает, что экран выбора ещё не показывали.
@@ -32,7 +38,9 @@ class TestsController < ApplicationController
 
   def show
     test = TestMetadatum.find_by!(slug: params[:slug])
-    render inertia: "Tests/Show", props: { test: test_props(test) }
+    render inertia: "Tests/Show", props: {
+      test: test_props(test).merge(personal_props(UserTestStats.for(current_user, [ test.slug ])[test.slug]))
+    }
   end
 
   private
@@ -81,16 +89,20 @@ class TestsController < ApplicationController
       difficulty:                t.difficulty,
       estimated_time:            t.estimated_time,
       questions_count:           t.questions_count,
-      attempts_count:            t.attempts_count,
       created_at:                t.created_at,
-      avg_score:                 t.avg_score.to_f,
-      pass_rate:                 t.pass_rate.to_f,
-      best_score:                t.best_score&.to_f,
-      best_attempt_id:           t.best_attempt_id,
       has_code_challenge:        t.has_code_challenge?,
       custom:                    t.custom?,
       overrides_repo:            t.overrides_repo,
       completed_challenge_modes: completed_modes
+    }
+  end
+
+  def personal_props(stat)
+    {
+      attempts_count:  stat.attempts_count,
+      avg_score:       stat.avg_score,
+      best_score:      stat.best_score,
+      best_attempt_id: stat.best_attempt_id
     }
   end
 

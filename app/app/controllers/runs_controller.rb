@@ -86,7 +86,10 @@ class RunsController < ApplicationController
   end
 
   def show
-    attempt = TestAttempt.includes(:test_attempt_answers).find(params[:id])
+    # Только своя попытка: аккаунт — по user_id, гость — по токену из куки
+    # (после теста он попадает сюда редиректом). Чужая и несуществующая
+    # неотличимы — оба дают 404, чтобы по id нельзя было перебирать результаты.
+    attempt = own_attempts.includes(:test_attempt_answers).find(params[:id])
     questions_map = load_questions.index_by { |q| q["id"] }
 
     bookmarked_ids = current_user ? current_user.bookmarks
@@ -130,6 +133,14 @@ class RunsController < ApplicationController
     return false if current_user || guest_token.blank?
 
     TestAttempt.where(guest_token: guest_token).where.not(completed_at: nil).count == 1
+  end
+
+  def own_attempts
+    scope = TestAttempt.where(test_slug: @meta.slug)
+    return scope.where(user_id: current_user.id) if current_user
+    return scope.where(user_id: nil, guest_token: guest_token) if guest_token.present?
+
+    scope.none
   end
 
   def load_test

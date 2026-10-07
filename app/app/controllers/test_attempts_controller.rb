@@ -1,7 +1,11 @@
+# История попыток по тесту — личные данные, поэтому только для вошедшего
+# пользователя и только его собственные попытки.
 class TestAttemptsController < ApplicationController
+  before_action :require_auth
+
   def index
     meta = TestMetadatum.find_by!(slug: params[:test_slug])
-    attempts = TestAttempt.where(test_slug: params[:test_slug])
+    attempts = current_user.test_attempts.where(test_slug: params[:test_slug])
                           .where.not(completed_at: nil)
                           .order(completed_at: :desc)
 

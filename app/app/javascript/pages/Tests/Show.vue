@@ -28,15 +28,17 @@
             <div class="test-detail__meta-value">~{{ test.estimatedTime }}<span class="test-detail__meta-unit"> мин</span></div>
             <div class="test-detail__meta-label">примерно</div>
           </div>
-          <div class="test-detail__meta-cell">
+          <div v-if="currentUser" class="test-detail__meta-cell">
             <div class="test-detail__meta-value">{{ test.attemptsCount }}</div>
-            <div class="test-detail__meta-label">попыток</div>
+            <div class="test-detail__meta-label">ваших попыток</div>
           </div>
         </div>
 
-        <div v-if="test.attemptsCount > 0" class="test-detail__stats">
-          <span>Средний балл: <b>{{ test.avgScore.toFixed(1) }}%</b></span>
-          <span>Проходят: <b>{{ test.passRate.toFixed(0) }}%</b></span>
+        <!-- Только личные цифры и только для вошедшего: общая статистика по
+             всем прохождениям здесь не показывается (см. UserTestStats). -->
+        <div v-if="currentUser && test.attemptsCount > 0" class="test-detail__stats">
+          <span>Ваш средний балл: <b>{{ test.avgScore.toFixed(1) }}%</b></span>
+          <span>Лучший результат: <b>{{ test.bestScore.toFixed(0) }}%</b></span>
         </div>
 
         <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary test-detail__start">
@@ -49,12 +51,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 
 const props = defineProps({ test: Object })
+const currentUser = computed(() => usePage().props.currentUser)
 
 // Ключ и формат совпадают с useQuizSession.js — там же сессия и сохраняется.
 const hasStartedSession = ref(false)
