@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_120002) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_07_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,6 +27,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_120002) do
     t.datetime "updated_at", null: false
     t.index ["group_name"], name: "index_achievements_on_group_name"
     t.index ["slug"], name: "index_achievements_on_slug", unique: true
+  end
+
+  create_table "activity_presences", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "guest_avatar_seed"
+    t.string "guest_name"
+    t.datetime "last_seen_at", null: false
+    t.string "question_id"
+    t.string "test_slug", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.string "viewer_key", null: false
+    t.index ["last_seen_at"], name: "index_activity_presences_on_last_seen_at"
+    t.index ["viewer_key", "test_slug"], name: "index_activity_presences_on_viewer_key_and_test_slug", unique: true
   end
 
   create_table "bookmarks", force: :cascade do |t|
@@ -141,6 +155,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_120002) do
 
   create_table "users", force: :cascade do |t|
     t.integer "achievements_count", default: 0, null: false
+    t.boolean "activity_visible", default: true, null: false
     t.string "avatar_seed"
     t.string "avatar_url"
     t.datetime "created_at", null: false

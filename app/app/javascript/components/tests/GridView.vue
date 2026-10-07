@@ -30,6 +30,10 @@
           @touchcancel.stop="lp.cancel()"
         >{{ tag }}</button>
       </div>
+      <div v-if="activity[test.slug]?.length" class="test-card__live" title="Сейчас проходят этот тест">
+        <span class="test-card__live-label">Сейчас проходят: </span>
+        <AvatarStack :viewers="activity[test.slug]" />
+      </div>
       <div class="test-card__meta">
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
@@ -87,6 +91,8 @@ import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
+import { useActivity } from '@/composables/useActivity.js'
 import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
 const props = defineProps({
@@ -97,6 +103,7 @@ const props = defineProps({
 const emit = defineEmits(['clear-filters', 'toggle-tag', 'exclude-tag'])
 
 const currentUser = computed(() => usePage().props.currentUser)
+const { activity } = useActivity()
 
 function useLongPress(onLong, delay = 500) {
   let timer = null
@@ -204,6 +211,26 @@ const duplicateTitles = computed(() => {
   flex-wrap: wrap;
   gap: 0.25rem;
   margin-bottom: 0.75rem;
+}
+
+.test-card__live {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+/* meta сам прижимается к низу карточки через margin-top: auto — когда над ним
+   есть строка активности, прижимать к низу надо уже её, иначе auto-отступы
+   поделят свободное место пополам и строка зависнет посреди карточки.
+   Возможно правило не нужно */
+.test-card__live + .test-card__meta {
+  margin-top: 0;
 }
 
 .test-card__meta {

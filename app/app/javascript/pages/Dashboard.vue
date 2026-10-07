@@ -326,6 +326,23 @@
             placeholder="https://…"
           />
 
+          <label class="profile__toggle" for="profile-activity">
+            <input
+              id="profile-activity"
+              type="checkbox"
+              class="toggle toggle-sm profile__toggle-input"
+              :checked="currentUser?.activityVisible !== false"
+              :disabled="savingVisibility"
+              @change="saveActivityVisible($event.target.checked)"
+            />
+            <span class="profile__toggle-text">
+              Показывать мою активность
+              <span class="profile__toggle-hint">
+                Аватарка видна другим, пока вы проходите тест. Выключите — и вас не будет в списке
+              </span>
+            </span>
+          </label>
+
           <p class="profile__email">{{ currentUser?.email }}</p>
           <p v-if="currentUser?.providers?.length" class="profile__providers">
             Вход через: {{ currentUser.providers.join(', ') }}
@@ -700,6 +717,22 @@ function saveProfile() {
     // partial reload молча отдавал бы ПОЛНЫЙ дашборд вместо одного пропа.
     only: [ 'current_user' ],
     onFinish: () => { savingProfile.value = false }
+  })
+}
+
+// Переключатель видимости сохраняется сразу, без кнопки «Сохранить»: это
+// настройка приватности, а не поле профиля, и откладывать её применение
+// значило бы дольше светить аватарку, чем человек хотел.
+const savingVisibility = ref(false)
+
+function saveActivityVisible(visible) {
+  if (savingVisibility.value) return
+  savingVisibility.value = true
+
+  router.patch(`/dashboard${window.location.hash}`, { activity_visible: visible }, {
+    preserveScroll: true,
+    only: [ 'current_user' ],
+    onFinish: () => { savingVisibility.value = false }
   })
 }
 
@@ -1509,6 +1542,31 @@ function adoptAvatar(provider) {
   font-size: 0.8125rem;
   color: #9CA3AF;
   margin-top: 0.5rem;
+}
+
+.profile__toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+.profile__toggle-input {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.profile__toggle-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.profile__toggle-hint {
+  font-size: 0.75rem;
+  color: #9CA3AF;
 }
 
 .profile__providers {

@@ -20,6 +20,8 @@ class DashboardController < ApplicationController
   # на клиенте, но прямой запрос не должен ронять сервер.
   def update
     if current_user.update(profile_params)
+      # Скрыл активность — исчезает из live-списка сразу, а не по истечении TTL.
+      ActivityPresence.forget_user(current_user) unless current_user.activity_visible?
       render_dashboard
     else
       flash.now[:alert] = current_user.errors.full_messages.to_sentence
@@ -52,6 +54,6 @@ class DashboardController < ApplicationController
   end
 
   def profile_params
-    params.permit(:name, :avatar_url, :avatar_seed)
+    params.permit(:name, :avatar_url, :avatar_seed, :activity_visible)
   end
 end

@@ -26,6 +26,7 @@
       >
         <div class="question-item__header">
           <p class="question-item__counter">Вопрос {{ idx + 1 }}</p>
+          <AvatarStack :viewers="viewersByQuestion[q.id] || []" :size="24" class="question-item__viewers" />
           <BookmarkButton v-if="q.dbId" :question-id="q.dbId" :initial="bookmarkedIds.includes(q.dbId)" />
         </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
@@ -73,6 +74,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
 import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
 
 const props = defineProps({
   questions:         Array,
@@ -87,6 +89,7 @@ const props = defineProps({
   optionLetter:      Function,
   formatText:        Function,
   challengeMode:     { type: String, default: 'highlight' },
+  viewersByQuestion: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['submit', 'index-change'])
@@ -425,6 +428,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.25rem;
+}
+
+.question-item__viewers {
+  margin-left: auto;
+  margin-right: 0.75rem;
 }
 
 .question-item__counter {

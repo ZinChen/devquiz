@@ -81,6 +81,7 @@ class ApplicationController < ActionController::Base
       email:       current_user.email,
       avatar_url:  current_user.avatar_url,
       avatar_seed: current_user.avatar_seed,
+      activity_visible: current_user.activity_visible,
       providers:   current_user.connected_providers
     }
   end

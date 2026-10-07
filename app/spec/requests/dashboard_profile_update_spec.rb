@@ -42,4 +42,22 @@ RSpec.describe "Обновление профиля в кабинете", type: 
 
     expect(user.reload.avatar_url).to be_blank
   end
+
+  it "по умолчанию делает активность видимой" do
+    expect(user.activity_visible).to be(true)
+  end
+
+  it "скрывает активность по флагу activity_visible" do
+    patch "/dashboard", params: { name: user.name, activity_visible: false }
+
+    expect(user.reload.activity_visible).to be(false)
+  end
+
+  it "не трогает activity_visible, если флаг не передан" do
+    user.update!(activity_visible: false)
+
+    patch "/dashboard", params: { name: "Новое имя" }
+
+    expect(user.reload.activity_visible).to be(false)
+  end
 end

@@ -2,6 +2,12 @@ class RunsController < ApplicationController
   before_action :load_test
 
   def new
+    # Гостю нужна личность (имя + аватар) уже сейчас: страница откроет
+    # WebSocket и объявит его в live-активности, а читать идентичность канал
+    # может только из куки. Ленивость из ApplicationController#guest_token!
+    # здесь не нарушается — начать тест это и есть «что-то делать».
+    guest_identity! unless current_user
+
     questions = questions_with_db_ids
     weak_only = params[:only] == "weak"
 

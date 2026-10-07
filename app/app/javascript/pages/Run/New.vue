@@ -69,6 +69,7 @@
       :formatText="formatText"
       :savedIndex="savedIndex"
       :challengeMode="challengeMode"
+      :viewersByQuestion="viewersByQuestion"
       @submit="submit"
       @index-change="updateIndex"
     />
@@ -76,13 +77,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import SettingsPanel from '@/components/run/SettingsPanel.vue'
 import OneByOneMode from '@/components/run/OneByOneMode.vue'
 import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
 import { useQuizSession } from '@/composables/useQuizSession.js'
+import { useActivity } from '@/composables/useActivity.js'
 import { CHALLENGE_MODE_LABELS, CHALLENGE_MODE_HINTS } from '@/composables/challengeModes.js'
 
 const props = defineProps({
@@ -129,6 +131,24 @@ const {
 const hasCodeChallenge = computed(() =>
   props.questions.some(q => q.type === 'code_challenge')
 )
+
+// Live-активность: объявляем, что проходим тест, и сообщаем, какой вопрос в
+// фокусе. Остальные участники приходят снимком {slug: [зрители]} — раскладываем
+// их по вопросам, а самих себя убираем: свой аватар рядом с вопросом — шум.
+const { activity, me, join, focus, leave } = useActivity()
+
+const viewersByQuestion = computed(() => {
+  const byQuestion = {}
+  for (const v of activity.value[props.test.slug] || []) {
+    if (v.key === me.value || !v.questionId) continue
+    ;(byQuestion[v.questionId] ||= []).push(v)
+  }
+  return byQuestion
+})
+
+onMounted(() => join(props.test.slug, props.questions[savedIndex.value]?.id))
+onBeforeUnmount(leave)
+watch(savedIndex, idx => focus(props.questions[idx]?.id))
 </script>
 
 <style scoped>
