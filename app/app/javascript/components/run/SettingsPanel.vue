@@ -1,5 +1,17 @@
 <template>
-  <div class="settings-panel">
+  <!-- Поповер под шестерёнкой, а не блок в потоке страницы: не сдвигает вопросы
+       при открытии, закрывается кликом мимо (клик ничего больше не делает), Esc
+       или прокруткой — всё это внутри AnchoredPopover. -->
+  <AnchoredPopover
+    :anchor="anchor"
+    :width="340"
+    align="end"
+    prefer="below"
+    padding="1.25rem"
+    popover-class="settings-panel"
+    label="Настройки прохождения"
+    @close="$emit('close')"
+  >
     <h3 class="settings-panel__title">Настройки прохождения</h3>
 
     <div class="settings-panel__options">
@@ -61,11 +73,13 @@
         >Сброс</button>
       </div>
     </template>
-  </div>
+  </AnchoredPopover>
 </template>
 
 <script setup>
 const props = defineProps({
+  // Положение кнопки-шестерёнки в окне (getBoundingClientRect).
+  anchor:                  { type: Object, required: true },
   mode:                    String,
   challengeMode:           { type: String, default: 'highlight' },
   hasCodeChallenge:        { type: Boolean, default: false },
@@ -73,9 +87,10 @@ const props = defineProps({
   completedChallengeModes: { type: Array, default: () => [] },
 })
 
-defineEmits(['update:mode', 'update:challengeMode', 'reset'])
+defineEmits(['update:mode', 'update:challengeMode', 'reset', 'close'])
 
 import { computed } from 'vue'
+import AnchoredPopover from '@/components/AnchoredPopover.vue'
 import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_HINTS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
 const challengeModeOptions = CHALLENGE_MODE_ORDER.map(value => ({
@@ -97,15 +112,6 @@ const activeIndex = computed(
 </script>
 
 <style scoped>
-.settings-panel {
-  border: 1px solid #F3F4F6;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-  background: #fff;
-  border-radius: var(--rounded-box, 1rem);
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
 .settings-panel__title {
   font-weight: 600;
   font-size: 0.875rem;

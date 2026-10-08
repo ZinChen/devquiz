@@ -25,7 +25,7 @@
         </div>
         <button
           type="button"
-          @click="settingsOpen = !settingsOpen"
+          @click="toggleSettings"
           class="run-header__settings-btn"
           title="Настройки"
         >
@@ -42,17 +42,17 @@
       Результат не идёт в статистику теста.
     </div>
 
-    <div class="run-settings-wrap">
-      <SettingsPanel
-        v-if="settingsOpen"
-        v-model:mode="mode"
-        v-model:challengeMode="challengeMode"
-        :hasCodeChallenge="hasCodeChallenge"
-        :locked="sessionStarted"
-        :completedChallengeModes="test.completedChallengeModes || []"
-        @reset="resetChallenge"
-      />
-    </div>
+    <SettingsPanel
+      v-if="settingsOpen"
+      v-model:mode="mode"
+      v-model:challengeMode="challengeMode"
+      :anchor="settingsAnchor"
+      :hasCodeChallenge="hasCodeChallenge"
+      :locked="sessionStarted"
+      :completedChallengeModes="test.completedChallengeModes || []"
+      @reset="resetChallenge"
+      @close="settingsOpen = false"
+    />
 
     <component
       :is="activeMode"
@@ -95,6 +95,16 @@ const props = defineProps({
 })
 
 const settingsOpen     = ref(false)
+const settingsAnchor   = ref({ top: 0, left: 0, width: 0, height: 0 })
+
+// Панель встаёт под шестерёнкой, поэтому ей нужно знать, где та сейчас. Пока
+// панель открыта, подложка закрывает кнопку, так что повторный клик по ней
+// закрывает панель через подложку, а не через этот переключатель.
+function toggleSettings(event) {
+  const { top, left, width, height } = event.currentTarget.getBoundingClientRect()
+  settingsAnchor.value = { top, left, width, height }
+  settingsOpen.value = !settingsOpen.value
+}
 const modeTooltipOpen  = ref(false)
 const mode             = ref(localStorage.getItem('devquiz_mode') || 'all')
 
@@ -157,10 +167,6 @@ watch(savedIndex, idx => focus(props.questions[idx]?.id))
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.run-settings-wrap {
-  margin-bottom: 0;
 }
 
 .run-weak-banner {
