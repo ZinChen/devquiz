@@ -16,6 +16,15 @@ RSpec.describe ActivityPresence do
       expect(entry).to include(name: user.name, question_id: "q1")
     end
 
+    it "не светит почту, если у пользователя нет avatar_seed" do
+      user.update!(avatar_seed: nil)
+      described_class.join(viewer, test_slug: "ruby-basics")
+
+      entry = described_class.snapshot.fetch("ruby-basics").first
+      expect(entry[:avatar_seed]).to eq("user-#{user.id}")
+      expect(entry.values.map(&:to_s).join).not_to include(user.email)
+    end
+
     it "записывает гостя под сгенерированным именем и без сырого токена" do
       described_class.join(guest, test_slug: "ruby-basics")
 

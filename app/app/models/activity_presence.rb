@@ -82,11 +82,18 @@ class ActivityPresence < ApplicationRecord
         return nil unless user&.activity_visible?
 
         { key: row.viewer_key, name: user.name, avatar_url: user.avatar_url,
-          avatar_seed: user.avatar_seed || user.email, question_id: row.question_id }
+          avatar_seed: public_avatar_seed(user), question_id: row.question_id }
       else
         { key: row.viewer_key, name: row.guest_name, avatar_url: nil,
           avatar_seed: row.guest_avatar_seed, question_id: row.question_id }
       end
+    end
+
+    # Запасной seed — не email (в кабинете у самого пользователя он как раз
+    # email): снимок уходит всем подписчикам, а почта не должна. Идентификатор
+    # так же стабилен, и цвет аватарки не мигает между сессиями.
+    def public_avatar_seed(user)
+      user.avatar_seed.presence || "user-#{user.id}"
     end
 
     def sanitize_question_id(value)
