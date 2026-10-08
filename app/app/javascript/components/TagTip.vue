@@ -17,7 +17,7 @@
       <span
         v-if="text && mounted"
         class="tag-tip__bubble"
-        :class="{ 'tag-tip__bubble--visible': visible }"
+        :class="{ 'tag-tip__bubble--visible': visible, 'tag-tip__bubble--over-modal': overModal }"
         :style="style"
         role="tooltip"
       >{{ text }}</span>
@@ -30,6 +30,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   text: { type: String, default: '' },
+  // Подсказка поверх карточки участника (z-index 1000): иначе у плиток ачивок
+  // внутри неё пузырь оказывался бы под самой карточкой.
+  overModal: { type: Boolean, default: false },
 })
 
 // Задержка перед показом: подсказка не должна выскакивать, когда курсор
@@ -121,6 +124,10 @@ function hide() {
   pointer-events: none;
   transform: translateX(calc(-50% + var(--tip-shift, 0px))) translateY(-0.25rem);
   transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.tag-tip__bubble--over-modal {
+  z-index: 1100;
 }
 
 .tag-tip__bubble--visible {

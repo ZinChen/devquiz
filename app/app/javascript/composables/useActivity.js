@@ -8,7 +8,7 @@ import { createConsumer } from '@rails/actioncable'
 
 const HEARTBEAT_MS = 30_000
 
-const activity = ref({})   // { slug: [{ key, name, avatarUrl, avatarSeed, questionId }] }
+const activity = ref({})   // { slug: [{ key, name, avatarUrl, avatarSeed, questionId, userId, achievementsCount }] }
 const me       = ref(null)
 
 let consumer      = null
@@ -24,6 +24,8 @@ function camelizeViewer(v) {
     avatarUrl:  v.avatar_url,
     avatarSeed: v.avatar_seed,
     questionId: v.question_id,
+    userId:     v.user_id,
+    achievementsCount: v.achievements_count,
   }
 }
 

@@ -52,7 +52,8 @@ class ActivityPresence < ApplicationRecord
       broadcast if where(user_id: user.id).delete_all.positive?
     end
 
-    # { "ruby-basics" => [ {key:, name:, avatar_url:, avatar_seed:, question_id:} ] }
+    # { "ruby-basics" => [ {key:, name:, avatar_url:, avatar_seed:, question_id:,
+    #                       user_id:, achievements_count:} ] }
     # Видимость проверяется и здесь, а не только при join: флаг могли
     # выключить, пока запись ещё жива.
     def snapshot
@@ -60,9 +61,10 @@ class ActivityPresence < ApplicationRecord
 
       rows  = alive.order(:created_at).to_a
       users = User.where(id: rows.filter_map(&:user_id)).index_by(&:id)
+      counts = achievement_tile_counts(users.keys)
 
       rows.each_with_object({}) do |row, acc|
-        entry = presence_props(row, users[row.user_id])
+        entry = presence_props(row, users[row.user_id], counts)
         (acc[row.test_slug] ||= []) << entry if entry
       end
     end
@@ -71,29 +73,60 @@ class ActivityPresence < ApplicationRecord
       ActionCable.server.broadcast(STREAM, { activity: snapshot })
     end
 
+    # Участник, чью карточку можно открыть: есть живая запись присутствия и он
+    # не скрыл активность. Карточка — часть live-активности, а не публичный
+    # профиль: по id постороннего пользователя она не открывается.
+    def visible_user(user_id)
+      return nil unless alive.exists?(user_id: user_id)
+
+      User.find_by(id: user_id, activity_visible: true)
+    end
+
+    # Seed генерируемого аватара для чужих глаз. Запасной — не email (в кабинете
+    # у самого пользователя он как раз email): снимок уходит всем подписчикам, а
+    # почта не должна. Идентификатор так же стабилен — цвет не мигает между
+    # сессиями.
+    def public_avatar_seed(user)
+      user.avatar_seed.presence || "user-#{user.id}"
+    end
+
     private
 
     def purge_stale
       where(last_seen_at: ...TTL.ago).delete_all
     end
 
-    def presence_props(row, user)
+    def presence_props(row, user, counts)
       if row.user_id
         return nil unless user&.activity_visible?
 
         { key: row.viewer_key, name: user.name, avatar_url: user.avatar_url,
-          avatar_seed: public_avatar_seed(user), question_id: row.question_id }
+          avatar_seed: public_avatar_seed(user), question_id: row.question_id,
+          user_id: user.id, achievements_count: counts.fetch(user.id, 0) }
       else
         { key: row.viewer_key, name: row.guest_name, avatar_url: nil,
-          avatar_seed: row.guest_avatar_seed, question_id: row.question_id }
+          avatar_seed: row.guest_avatar_seed, question_id: row.question_id,
+          user_id: nil, achievements_count: 0 }
       end
     end
 
-    # Запасной seed — не email (в кабинете у самого пользователя он как раз
-    # email): снимок уходит всем подписчикам, а почта не должна. Идентификатор
-    # так же стабилен, и цвет аватарки не мигает между сессиями.
-    def public_avatar_seed(user)
-      user.avatar_seed.presence || "user-#{user.id}"
+    # Сколько плиток ачивок увидят в карточке участника (shareable, лесенки
+    # свёрнуты до одной плитки): по этому числу карточка заранее рисует
+    # плейсхолдер нужного размера, пока ачивки грузятся. Ровно та же логика, что
+    # в Achievement.top_steps, только на SQL — для всего снимка одним запросом.
+    # users.achievements_count не годится: он считает все выданные ступени,
+    # включая shareable: false.
+    LADDER_KEY = "DISTINCT COALESCE(NULLIF(achievements.group_name, ''), achievements.slug)".freeze
+
+    def achievement_tile_counts(user_ids)
+      return {} if user_ids.empty?
+
+      UserAchievement
+        .joins(:achievement)
+        .merge(Achievement.shareable)
+        .where(user_id: user_ids)
+        .group(:user_id)
+        .count(Arel.sql(LADDER_KEY))
     end
 
     def sanitize_question_id(value)

@@ -80,6 +80,58 @@ RSpec.describe ActivityPresence do
     end
   end
 
+  describe "число ачивок у участника" do
+    before { AchievementsCatalog.sync! }
+
+    def grant(slug)
+      UserAchievement.create!(user: user, achievement: Achievement.find_by!(slug: slug), earned_at: Time.current)
+    end
+
+    it "считает только shareable-ачивки, а не users.achievements_count" do
+      grant("first_test")
+      grant("streak_three")  # раскрывает поведение: shareable: false
+      user.update!(achievements_count: 2)
+      described_class.join(viewer, test_slug: "ruby-basics")
+
+      entry = described_class.snapshot.fetch("ruby-basics").first
+      expect(entry).to include(user_id: user.id, achievements_count: 1)
+    end
+
+    it "считает лесенку одной плиткой" do
+      %w[first_test ten_tests twenty_tests perfect_score].each { |slug| grant(slug) }
+      described_class.join(viewer, test_slug: "ruby-basics")
+
+      entry = described_class.snapshot.fetch("ruby-basics").first
+      expect(entry[:achievements_count]).to eq(2)
+    end
+
+    it "у гостя ачивок нет и id пользователя пуст" do
+      described_class.join(guest, test_slug: "ruby-basics")
+
+      entry = described_class.snapshot.fetch("ruby-basics").first
+      expect(entry).to include(user_id: nil, achievements_count: 0)
+    end
+  end
+
+  describe ".visible_user" do
+    it "находит участника с живой записью" do
+      described_class.join(viewer, test_slug: "ruby-basics")
+
+      expect(described_class.visible_user(user.id)).to eq(user)
+    end
+
+    it "не находит того, кого нет в активности" do
+      expect(described_class.visible_user(user.id)).to be_nil
+    end
+
+    it "не находит скрывшего активность" do
+      described_class.join(viewer, test_slug: "ruby-basics")
+      user.update!(activity_visible: false)
+
+      expect(described_class.visible_user(user.id)).to be_nil
+    end
+  end
+
   describe ".leave" do
     it "убирает зрителя из списка" do
       described_class.join(viewer, test_slug: "ruby-basics")

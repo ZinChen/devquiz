@@ -46,10 +46,17 @@ class AchievementsSummary
   # получения и без прогресса — по ним восстанавливается график активности,
   # который человек мог как раз и не хотеть показывать.
   #
+  # Лесенки свёрнуты до старшей полученной ступени (Achievement.top_steps):
+  # count и items считаются по плиткам, а не по ступеням — как и в кабинете
+  # (см. #to_props), иначе у человека с тремя ступенями одной группы было бы
+  # три одинаковых квадрата.
+  #
   # Фильтр по самому флагу видимости пользователя остаётся вызывающему: это
   # его решение, кого он вообще показывает.
   def to_public_props
-    shareable = Achievement.shareable.ordered.where(slug: earned_at_by_slug.keys)
+    shareable = Achievement.top_steps(
+      Achievement.shareable.where(slug: earned_at_by_slug.keys).to_a
+    )
 
     {
       count: shareable.size,
