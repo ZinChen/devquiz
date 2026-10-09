@@ -18,6 +18,16 @@
       </div>
     </aside>
 
+    <!-- Счётчик и время справа от вопросов: липкая карточка внутри
+         absolute-колонки, как левая навигация. В шапке страницы они уезжали
+         вверх вместе с прокруткой, а время нужно видеть всегда. -->
+    <aside class="run-meter" aria-label="Прогресс и время">
+      <div class="run-meter__card">
+        <span class="run-meter__progress">{{ answeredCount }} / {{ questions.length }}</span>
+        <span class="run-meter__time" :class="{ 'run-meter__time--warn': timerWarning }">{{ timeDisplay }}</span>
+      </div>
+    </aside>
+
     <form class="all-at-once__content" @submit.prevent="$emit('submit')">
       <div
         v-for="(q, idx) in questions" :key="q.id"
@@ -89,6 +99,8 @@ const props = defineProps({
   optionLetter:      Function,
   formatText:        Function,
   challengeMode:     { type: String, default: 'highlight' },
+  timeDisplay:       { type: String, default: '' },
+  timerWarning:      { type: Boolean, default: false },
   viewersByQuestion: { type: Object, default: () => ({}) },
 })
 
@@ -407,6 +419,68 @@ onUnmounted(() => {
 .question-sidebar__cell--active .question-sidebar__cell-bar {
   background: #4F63F5;
   height: 4px;
+}
+
+.run-meter {
+  width: 5.5rem;
+  position: absolute;
+  right: calc(-5.5rem - 1rem);
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.run-meter__card {
+  position: sticky;
+  top: 1rem;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.625rem 0.5rem;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: 0.5rem;
+}
+
+.run-meter__progress {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.run-meter__time {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4B5563;
+}
+
+.run-meter__time--warn {
+  color: #EF4444;
+}
+
+/* Справа места нет (42rem контента + две колонки по 6.5rem) — карточка
+   становится липкой плашкой над вопросами и остаётся у верхнего края. */
+@media (max-width: 62rem) {
+  .run-meter {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 5;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .run-meter__card {
+    position: static;
+    flex-direction: row;
+    gap: 0.75rem;
+  }
 }
 
 .all-at-once__content {

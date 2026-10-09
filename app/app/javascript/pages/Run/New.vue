@@ -19,7 +19,9 @@
             Режим кода: {{ CHALLENGE_MODE_HINTS[challengeMode] }}
           </div>
         </span>
-        <div class="run-header__progress">
+        <!-- В режиме списка счётчик и время живут в липкой карточке рядом с
+             вопросами (AllAtOnceMode), здесь их не дублируем. -->
+        <div v-if="mode !== 'all'" class="run-header__progress">
           {{ answeredCount }} / {{ questions.length }}
           <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
         </div>
@@ -69,6 +71,7 @@
       :formatText="formatText"
       :savedIndex="savedIndex"
       :challengeMode="challengeMode"
+      v-bind="mode === 'all' ? { timeDisplay, timerWarning } : {}"
       :viewersByQuestion="viewersByQuestion"
       @submit="submit"
       @index-change="updateIndex"

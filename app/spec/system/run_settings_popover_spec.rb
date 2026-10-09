@@ -52,7 +52,7 @@ RSpec.describe "Настройки прохождения", type: :system, js: t
     real_click_on(".option", text: "Да")
 
     expect(page).to have_no_css(".settings-panel")
-    expect(page).to have_css(".run-header__progress", text: "0 / 1")
+    expect(page).to have_css(".run-meter__progress", text: "0 / 1")
   end
 
   it "Esc закрывает панель" do
