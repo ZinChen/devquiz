@@ -23,7 +23,8 @@
              вопросами (AllAtOnceMode), здесь их не дублируем. -->
         <div v-if="mode !== 'all'" class="run-header__progress">
           {{ answeredCount }} / {{ questions.length }}
-          <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
+          <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning, 'run-header__timer--paused': timerPaused }">{{ timeDisplay }}</span>
+          <span v-if="timerPaused" class="run-header__pause" :title="TIMER_PAUSE_HINTS[timerPauseReason]">⏸ пауза</span>
         </div>
         <button
           type="button"
@@ -71,7 +72,7 @@
       :formatText="formatText"
       :savedIndex="savedIndex"
       :challengeMode="challengeMode"
-      v-bind="mode === 'all' ? { timeDisplay, timerWarning } : {}"
+      v-bind="mode === 'all' ? { timeDisplay, timerWarning, timerPaused, timerPauseReason } : {}"
       :viewersByQuestion="viewersByQuestion"
       @submit="submit"
       @index-change="updateIndex"
@@ -96,6 +97,12 @@ const props = defineProps({
   bookmarkedIds: { type: Array, default: () => [] },
   weakOnly:      { type: Boolean, default: false },
 })
+
+// Почему таймер стоит — показывается подсказкой у метки «пауза».
+const TIMER_PAUSE_HINTS = {
+  hidden: 'Вкладка скрыта — время не идёт',
+  idle:   'Нет действий дольше 5 минут — время не идёт. Оно продолжится при любом действии',
+}
 
 const settingsOpen     = ref(false)
 const settingsAnchor   = ref({ top: 0, left: 0, width: 0, height: 0 })
@@ -129,6 +136,8 @@ const {
   answeredCount,
   timeDisplay,
   timerWarning,
+  timerPaused,
+  timerPauseReason,
   isAnswered,
   isHintShown,
   markHintUsed,
@@ -288,6 +297,17 @@ watch(savedIndex, idx => focus(props.questions[idx]?.id))
   margin-left: 1rem;
   font-family: monospace;
   color: #4B5563;
+}
+
+.run-header__timer--paused {
+  opacity: 0.5;
+}
+
+.run-header__pause {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  cursor: help;
 }
 
 .run-header__timer--warn {

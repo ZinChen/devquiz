@@ -24,7 +24,8 @@
     <aside class="run-meter" aria-label="Прогресс и время">
       <div class="run-meter__card">
         <span class="run-meter__progress">{{ answeredCount }} / {{ questions.length }}</span>
-        <span class="run-meter__time" :class="{ 'run-meter__time--warn': timerWarning }">{{ timeDisplay }}</span>
+        <span class="run-meter__time" :class="{ 'run-meter__time--warn': timerWarning, 'run-meter__time--paused': timerPaused }">{{ timeDisplay }}</span>
+        <span v-if="timerPaused" class="run-meter__pause" :title="pauseHint">⏸ пауза</span>
       </div>
     </aside>
 
@@ -80,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
 import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
@@ -101,10 +102,16 @@ const props = defineProps({
   challengeMode:     { type: String, default: 'highlight' },
   timeDisplay:       { type: String, default: '' },
   timerWarning:      { type: Boolean, default: false },
+  timerPaused:       { type: Boolean, default: false },
+  timerPauseReason:  { type: String, default: null },
   viewersByQuestion: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['submit', 'index-change'])
+
+const pauseHint = computed(() => props.timerPauseReason === 'idle'
+  ? 'Нет действий дольше 5 минут — время не идёт. Оно продолжится при любом действии'
+  : 'Вкладка скрыта — время не идёт')
 
 const questionEls   = ref([])
 const activeIndex   = ref(0)
@@ -455,6 +462,16 @@ onUnmounted(() => {
   font-size: 1rem;
   font-weight: 600;
   color: #4B5563;
+}
+
+.run-meter__time--paused {
+  opacity: 0.5;
+}
+
+.run-meter__pause {
+  font-size: 0.6875rem;
+  color: #9CA3AF;
+  cursor: help;
 }
 
 .run-meter__time--warn {
