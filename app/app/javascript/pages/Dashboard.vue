@@ -610,7 +610,30 @@ const topicAchievements = computed(() =>
 // тем растёт вместе с каталогом тестов, и показывать всё сразу значит
 // бесконечно растягивать профиль.
 const TOPIC_ACHIEVEMENTS_PAGE_SIZE = 9
-const showAllTopicAchievements = ref(false)
+// «Ещё N» запоминается в браузере: раскрыв список, человек не должен
+// раскрывать его заново при каждом заходе в профиль. Хранилище может быть
+// недоступно (приватное окно, заблокированные данные сайта) — тогда список
+// просто начинает свёрнутым, как раньше.
+const TOPIC_ACHIEVEMENTS_EXPANDED_KEY = 'devquiz_topic_achievements_expanded'
+
+function readTopicAchievementsExpanded() {
+  try {
+    return localStorage.getItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const showAllTopicAchievements = ref(readTopicAchievementsExpanded())
+
+watch(showAllTopicAchievements, expanded => {
+  try {
+    if (expanded) localStorage.setItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY, '1')
+    else localStorage.removeItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY)
+  } catch {
+    // Не удалось сохранить — состояние остаётся только на этой странице.
+  }
+})
 const visibleTopicAchievements = computed(() =>
   showAllTopicAchievements.value
     ? topicAchievements.value
