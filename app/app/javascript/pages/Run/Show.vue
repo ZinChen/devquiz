@@ -70,12 +70,8 @@
           {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
         </h2>
         <div class="result-achievements__list">
-          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement" :class="`result-achievement--${a.rank || 'silver'}`">
-            <span
-              class="result-achievement__icon"
-              :style="a.color ? { background: a.color.bg } : null"
-              aria-hidden="true"
-            >{{ a.icon || '🏅' }}</span>
+          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
+            <AchievementBadge :icon="a.icon" :color="a.color" :rank="a.rank" :size="40" />
             <div>
               <p class="result-achievement__name">{{ a.title }}</p>
               <p v-if="a.description" class="result-achievement__text">{{ a.description }}</p>
@@ -356,6 +352,7 @@
 import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import AchievementBadge from '@/components/AchievementBadge.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
@@ -699,31 +696,6 @@ function optionLetterStyle(item, optId) {
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
-}
-
-.result-achievement {
-  --ring: #A9B6C6;
-}
-
-.result-achievement--gold   { --ring: #FBBF24; }
-.result-achievement--silver { --ring: #A9B6C6; }
-.result-achievement--bronze { --ring: #CD8B57; }
-
-/* Подложка иконки — цвет группы ачивки (как плитка в кабинете, приходит
-   инлайном), а металл показывает кольцо: белый зазор отделяет цвет группы от
-   кольца, чтобы они не сливались. */
-.result-achievement__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  line-height: 1;
-  background: #F3F4F6;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ring), 0 2px 8px color-mix(in srgb, var(--ring) 45%, transparent);
 }
 
 .result-achievement__name {

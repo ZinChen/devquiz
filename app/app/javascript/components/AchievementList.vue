@@ -4,13 +4,18 @@
       v-for="item in items"
       :key="item.key || item.slug"
       class="achievement"
-      :class="{ 'achievement--locked': !item.earned && !compact }"
+      :class="[
+        { 'achievement--locked': !item.earned && !compact },
+        item.earned && item.rank ? `achievement--${item.rank}` : ''
+      ]"
     >
-      <span
-        class="achievement__icon"
-        :style="item.earned && item.color ? { background: item.color.bg } : null"
-        aria-hidden="true"
-      >{{ item.icon || '🏅' }}</span>
+      <AchievementBadge
+        :icon="item.icon"
+        :color="item.earned ? item.color : null"
+        :rank="item.earned ? item.rank : null"
+        :locked="!item.earned && !compact"
+        :size="compact ? 32 : 40"
+      />
 
       <div class="achievement__body">
         <p class="achievement__title">
@@ -48,6 +53,8 @@
 </template>
 
 <script setup>
+import AchievementBadge from '@/components/AchievementBadge.vue'
+
 const props = defineProps({
   items:        { type: Array, default: () => [] },
   // В поповере чужих ачивок (#10) прогресс не показывается — это уже данные
@@ -102,11 +109,11 @@ function formatDate(value) {
    целиком, а не квадратик внутри отступов. Поэтому у самой карточки отступов
    нет — их несёт правая половина. */
 .achievements--compact .achievement {
-  gap: 0;
-  padding: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
   border-radius: 0.5rem;
   min-width: 0;
-  overflow: hidden;
 }
 
 /* Название в одну строку с многоточием: перенос ломает квадрат слева — он
@@ -127,20 +134,8 @@ function formatDate(value) {
   text-overflow: ellipsis;
 }
 
-/* Квадрат по высоте карточки: ширина следует за высотой, поэтому блок
-   остаётся квадратным и когда название переносится на две строки. */
-.achievements--compact .achievement__icon {
-  align-self: stretch;
-  width: auto;
-  height: auto;
-  min-width: 3.25rem;
-  aspect-ratio: 1;
-  border-radius: 0;
-  font-size: 1.55rem;
-}
-
 .achievements--compact .achievement__body {
-  padding: 0.5rem 0.875rem;
+  min-width: 0;
 }
 
 .achievements--compact .achievement__title {
@@ -171,34 +166,19 @@ function formatDate(value) {
 
 /* Невзятая ачивка остаётся читаемой: это не «секрет», а цель — по ней
    ориентируются, что делать дальше. */
+/* Взятая ачивка чуть подсвечена своим «металлом»: рамка и едва заметный тон
+   фона — ярче серой карточки, но профиль не превращается в пёструю стену. */
+.achievement--gold   { border-color: #F5D272; background: color-mix(in srgb, #FBBF24 7%, #fff); }
+.achievement--silver { border-color: #C9D3DF; background: color-mix(in srgb, #A9B6C6 8%, #fff); }
+.achievement--bronze { border-color: #E2B994; background: color-mix(in srgb, #CD8B57 7%, #fff); }
+
 .achievement--locked {
   background: #FAFAFB;
   border-style: dashed;
   box-shadow: none;
 }
 
-.achievement--locked .achievement__icon {
-  filter: grayscale(1);
-  opacity: 0.55;
-}
 
-
-/* Цветная подложка под иконкой — единственное цветное пятно карточки: цвет
-   свой у каждой группы, поэтому он склеивает ступени одной лесенки и
-   различает группы, не заливая при этом весь профиль пастелью. У невзятой
-   ачивки цвет не отдаётся вовсе — цветное пятно читалось бы как «получено». */
-.achievement__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.5rem;
-  background: #F3F4F6;
-  font-size: 1.25rem;
-  line-height: 1;
-}
 
 .achievement__body {
   flex: 1;

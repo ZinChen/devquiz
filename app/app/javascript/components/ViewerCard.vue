@@ -41,10 +41,14 @@
           :text="tipText(item)"
           over-modal
         >
-          <span
+          <AchievementBadge
             class="viewer-card__tile"
-            :style="{ background: item.color?.bg, animationDelay: `${Math.min(i, 14) * 18}ms` }"
-          >{{ item.icon || '🏅' }}</span>
+            :icon="item.icon"
+            :color="item.color"
+            :rank="item.rank"
+            fill
+            :style="{ animationDelay: `${Math.min(i, 14) * 18}ms` }"
+          />
         </TagTip>
       </div>
 
@@ -59,6 +63,7 @@ import axios from 'axios'
 import AnchoredPopover from '@/components/AnchoredPopover.vue'
 import GeneratedAvatar from '@/components/GeneratedAvatar.vue'
 import TagTip from '@/components/TagTip.vue'
+import AchievementBadge from '@/components/AchievementBadge.vue'
 
 const props = defineProps({
   viewer: { type: Object, required: true },
@@ -163,33 +168,35 @@ onMounted(load)
 .viewer-card__list {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
-  max-height: 14rem;
+  gap: 0.25rem;
+  /* Пять рядов целиком: ряд = 48px (круг 40px + внешний отступ), зазор 4px.
+     При 14rem пятый ряд обрезался на половине. Дальше список прокручивается, а
+     scroll-snap подтягивает прокрутку к началу ряда — значки не остаются
+     разрезанными пополам в состоянии покоя. */
+  max-height: 17rem;
   overflow-y: auto;
+  scroll-snap-type: y proximity;
   /* Тень плитки не должна резаться краем прокручиваемой области. */
   padding: 2px;
 }
 
 .viewer-card__cell {
   display: flex;
+  scroll-snap-align: start;
 }
 
 .viewer-card__tile {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
-  border-radius: 0.5rem;
-  background: #F1F0FB;
-  font-size: 1.25rem;
-  line-height: 1;
   cursor: default;
   animation: viewer-tile-in 0.25s ease both;
 }
 
 /* Серая плитка-заглушка с мягким «дыханием», пока ачивки грузятся. */
 .viewer-card__tile--skeleton {
+  /* Те же размеры, что у AchievementBadge fill (круг с внешним отступом 4px),
+     иначе при подмене заглушки карточка меняла бы высоту. */
+  margin: 4px;
+  aspect-ratio: 1;
+  border-radius: 50%;
   background: #F3F4F6;
   animation: viewer-tile-pulse 1.1s ease-in-out infinite;
 }

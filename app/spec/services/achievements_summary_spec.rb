@@ -20,6 +20,16 @@ RSpec.describe AchievementsSummary do
     props[:items].find { |i| i[:key] == key }
   end
 
+  it "отдаёт «металл» только у взятых плиток" do
+    complete(slug: "ror-basics")
+    AchievementsService.call(user)
+
+    expect(tile("tests_passed")[:rank]).to eq("bronze")
+    expect(tile("perfect")[:rank]).to be_in(AchievementsCatalog::RANKS)
+    expect(tile("level_expert")[:earned]).to be(false)
+    expect(tile("level_expert")[:rank]).to be_nil
+  end
+
   it "сворачивает ступени группы в одну плитку" do
     tests_passed = props[:items].count { |i| i[:key] == "tests_passed" }
 
@@ -115,7 +125,7 @@ RSpec.describe AchievementsSummary do
     it "не отдаёт ни дату получения, ни прогресс" do
       item = described_class.for(user: user).to_public_props[:items].first
 
-      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon, :color, :earned)
+      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon, :color, :rank, :earned)
       expect(item).not_to include(:earned_at, :progress, :tier)
     end
 

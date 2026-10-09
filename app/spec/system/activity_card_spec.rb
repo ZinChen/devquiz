@@ -46,17 +46,40 @@ RSpec.describe "Карточка участника активности", type:
     expect(page).to have_css(".viewer-card", text: "Бодрый Суслик")
     expect(page).to have_css(".viewer-card__count", text: "2")
     expect(page).to have_no_text("Пока нет открытых ачивок")
-    expect(page).to have_css(".viewer-card__tile", count: 2)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
   end
 
   it "показывает ачивки плитками, а название — в подсказке, как у тегов" do
     open_card
-    expect(page).to have_css(".viewer-card__tile", count: 2)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
 
-    find(".viewer-card__tile", match: :first).hover
+    find(".viewer-card__tile:not(.viewer-card__tile--skeleton)", match: :first).hover
 
     expect(page).to have_css(".tag-tip__bubble--visible", text: /—/, wait: 4)
     expect(page).to have_no_css(".viewer-card .achievement")
+  end
+
+  it "подсказка поверх карточки непрозрачная — буквы не сливаются с иконками" do
+    open_card
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
+
+    find(".viewer-card__tile:not(.viewer-card__tile--skeleton)", match: :first).hover
+    expect(page).to have_css(".tag-tip__bubble--visible", wait: 4)
+
+    background = page.evaluate_script(
+      "getComputedStyle(document.querySelector('.tag-tip__bubble--visible')).backgroundColor"
+    )
+    expect(background).to eq("rgb(255, 255, 255)")
+  end
+
+  it "ачивка в карточке — круг цвета группы с кольцом «металла»" do
+    open_card
+    expect(page).to have_css(".viewer-card__tile.achievement-badge", count: 2)
+
+    badge = find(".viewer-card__tile.achievement-badge", match: :first)
+    expect(badge.evaluate_script("getComputedStyle(this).borderRadius")).to eq("50%")
+    expect(badge[:class]).to match(/achievement-badge--(gold|silver|bronze)/)
+    expect(badge[:style]).to include("background")
   end
 
   it "подсказка с именем появляется при наведении на аватарку" do
@@ -76,7 +99,7 @@ RSpec.describe "Карточка участника активности", type:
 
     # first_test, ten_tests и twenty_tests — одна лесенка: остаётся twenty_tests;
     # плюс perfect_score из другой группы.
-    expect(page).to have_css(".viewer-card__tile", count: 2)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
     expect(page).to have_css(".viewer-card__count", text: "2")
   end
 
@@ -91,7 +114,11 @@ RSpec.describe "Карточка участника активности", type:
 
     expect(page).to have_css(".viewer-card__tile--skeleton", count: 2)
     expect(page).to have_css(".viewer-card__count", text: "2")
+    skeleton_height = page.evaluate_script("document.querySelector('.viewer-card').offsetHeight")
     expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2, wait: 6)
+
+    loaded_height = page.evaluate_script("document.querySelector('.viewer-card').offsetHeight")
+    expect((loaded_height - skeleton_height).abs).to be <= 1
   end
 
   it "не показывает кружок с числом на аватарке" do
@@ -105,7 +132,7 @@ RSpec.describe "Карточка участника активности", type:
       UserAchievement.create!(user: member, achievement: a, earned_at: Time.current)
     end
     open_card
-    expect(page).to have_css(".viewer-card__tile", minimum: 10)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", minimum: 10)
 
     page.execute_script(<<~JS)
       const list = document.querySelector(".viewer-card__list")
@@ -114,6 +141,19 @@ RSpec.describe "Карточка участника активности", type:
 
     expect(page).to have_css(".viewer-card")
     expect(page.evaluate_script("document.querySelector('.viewer-card__list').scrollTop")).to be_positive
+  end
+
+  it "до пяти рядов значки видны целиком, без обрезанной нижней полоски" do
+    # По одной ачивке на лесенку/одиночку — 22 плитки, это пять рядов по пять.
+    picked = Achievement.shareable.ordered.group_by { |a| a.group_name.presence || a.slug }.values.map(&:last).first(22)
+    picked.each { |a| UserAchievement.find_or_create_by!(user: member, achievement: a) { |ua| ua.earned_at = Time.current } }
+    open_card
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 22 + 0, wait: 6)
+
+    overflow = page.evaluate_script(
+      "(() => { const l = document.querySelector('.viewer-card__list'); return l.scrollHeight - l.clientHeight })()"
+    )
+    expect(overflow).to be <= 1
   end
 
   it "карточка гостя встаёт вплотную к аватарке даже после большой карточки" do
@@ -126,7 +166,7 @@ RSpec.describe "Карточка участника активности", type:
     dismiss_tag_onboarding
 
     find(".avatar-stack__item[aria-label^='Бодрый Суслик']").click
-    expect(page).to have_css(".viewer-card__tile", minimum: 10)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", minimum: 10)
     page.driver.browser.keyboard.type(:escape)
     expect(page).to have_no_css(".viewer-card")
     find(".avatar-stack__item[aria-label^='Тихий Ёж']").click
@@ -159,13 +199,13 @@ RSpec.describe "Карточка участника активности", type:
     find(".avatar-stack__item[aria-label^='Бодрый Суслик']").click
 
     expect(page).to have_css(".viewer-card", text: "Бодрый Суслик")
-    expect(page).to have_css(".viewer-card__tile", count: 2)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
     expect(page).to have_css(".viewer-card__sub", text: "Участник")
   end
 
   it "клик мимо карточки только закрывает её и не трогает элементы под курсором" do
     open_card
-    expect(page).to have_css(".viewer-card__tile", count: 2)
+    expect(page).to have_css(".viewer-card__tile:not(.viewer-card__tile--skeleton)", count: 2)
 
     click_outside_card_on(".test-card", text: "Другой тест")
 

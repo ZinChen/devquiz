@@ -67,6 +67,7 @@ class AchievementsSummary
           description: a.description,
           icon:        a.icon,
           color:       catalog.color_for(a.group_name),
+          rank:        catalog.rank_for(a.slug),
           earned:      true
         }
       end
@@ -101,6 +102,7 @@ class AchievementsSummary
             title:     achievement.title,
             icon:      achievement.icon,
             color:     catalog.color_for(achievement.group_name),
+            rank:      catalog.rank_for(achievement.slug),
             # В полоске все карточки по определению получены — поле нужно
             # компоненту, он по нему решает, зажигать ли цвет подложки.
             earned:    true,
@@ -147,6 +149,8 @@ class AchievementsSummary
       description: current.description,
       icon:        current.icon,
       color:       catalog.color_for(current.group),
+      # Металл у невзятой плитки не показывается: кольцо читалось бы как «получено».
+      rank:        earned_tiers.any? ? catalog.rank_for(current.slug) : nil,
       earned:      earned_tiers.any?,
       earned_at:   earned_at_by_slug[current.slug],
       tier:        tiers.size > 1 ? { index: earned_tiers.size, total: tiers.size } : nil,
