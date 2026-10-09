@@ -126,8 +126,17 @@ function hide() {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
+/* Поверх карточки подсказка ложится на цветные плитки и тёмные иконки:
+   полупрозрачная серая подложка с размытием там не держит контраст и буквы
+   сливаются. Здесь она сплошная, с рамкой и тенью, как у самого поповера. */
 .tag-tip__bubble--over-modal {
   z-index: 1100;
+  background: #fff;
+  color: #374151;
+  text-shadow: none;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.14);
+  backdrop-filter: none;
 }
 
 .tag-tip__bubble--visible {
@@ -142,6 +151,12 @@ function hide() {
     color: #F3F4F6;
     /* В тёмной теме подсветка снизу тоже тёмная, иначе тень светит сквозь. */
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+
+  .tag-tip__bubble--over-modal {
+    background: #1F2937;
+    color: #F3F4F6;
+    border-color: #374151;
   }
 }
 </style>
