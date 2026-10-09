@@ -80,4 +80,38 @@ RSpec.describe AchievementsCatalog do
       end
     end
   end
+
+  describe ".rank_for — «металл» оформления" do
+    it "золото — последняя ступень лесенки" do
+      expect(described_class.rank_for("thirty_tests")).to eq("gold")
+    end
+
+    it "бронза — первая ступень лесенки" do
+      expect(described_class.rank_for("first_test")).to eq("bronze")
+    end
+
+    it "серебро — промежуточные ступени" do
+      expect(described_class.rank_for("ten_tests")).to eq("silver")
+      expect(described_class.rank_for("twenty_tests")).to eq("silver")
+    end
+
+    it "одиночная ачивка золота не получает" do
+      expect(described_class.find("speedrun")).to be_present
+      expect(described_class.rank_for("speedrun")).to eq("silver")
+    end
+
+    it "незнакомый слаг — серебро, а не ошибка" do
+      expect(described_class.rank_for("нет-такой")).to eq("silver")
+    end
+
+    it "каждой лесенке из нескольких ступеней достаётся ровно одно золото и одна бронза" do
+      ladders = described_class.entries.select(&:group).group_by(&:group).select { |_, steps| steps.size > 1 }
+
+      ladders.each do |group, steps|
+        ranks = steps.map { |e| described_class.rank_for(e.slug) }
+        expect(ranks.count("gold")).to eq(1), "в группе #{group} золотых: #{ranks.count('gold')}"
+        expect(ranks.count("bronze")).to eq(1), "в группе #{group} бронзовых: #{ranks.count('bronze')}"
+      end
+    end
+  end
 end

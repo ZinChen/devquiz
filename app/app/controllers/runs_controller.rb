@@ -120,14 +120,24 @@ class RunsController < ApplicationController
   # слаги, здесь они превращаются в данные для блока «Новое достижение».
   def new_achievements_props
     slugs = Array(flash[:new_achievement_slugs])
+    # Только в development: ?preview_achievements=slug показывает блок «Новое
+    # достижение» на любой странице результата — чтобы править его вёрстку, не
+    # проходя тест заново (флеш одноразовый и пропадает при обновлении).
+    slugs += Array(params[:preview_achievements]).map(&:to_s) if Rails.env.development?
     return [] if slugs.empty?
+
+    catalog = AchievementsCatalog.current
 
     Achievement.where(slug: slugs).ordered.map do |achievement|
       {
         slug:        achievement.slug,
         title:       achievement.title,
         description: achievement.description,
-        icon:        achievement.icon
+        icon:        achievement.icon,
+        # Цвет группы — подложка иконки, как плитка в кабинете; rank —
+        # «металл» оформления: золото только у последней ступени лесенки.
+        color:       catalog.color_for(achievement.group_name),
+        rank:        catalog.rank_for(achievement.slug)
       }
     end
   end

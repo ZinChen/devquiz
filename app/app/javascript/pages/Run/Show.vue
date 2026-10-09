@@ -65,13 +65,17 @@
         </div>
       </div>
 
-      <div v-if="newAchievements.length" class="result-achievements">
+      <div v-if="newAchievements.length" class="result-achievements" :class="`result-achievements--${topRank}`">
         <h2 class="result-achievements__title">
           {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
         </h2>
         <div class="result-achievements__list">
-          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
-            <span class="result-achievement__icon" aria-hidden="true">{{ a.icon || '🏅' }}</span>
+          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement" :class="`result-achievement--${a.rank || 'silver'}`">
+            <span
+              class="result-achievement__icon"
+              :style="a.color ? { background: a.color.bg } : null"
+              aria-hidden="true"
+            >{{ a.icon || '🏅' }}</span>
             <div>
               <p class="result-achievement__name">{{ a.title }}</p>
               <p v-if="a.description" class="result-achievement__text">{{ a.description }}</p>
@@ -379,6 +383,16 @@ const props = defineProps({
   guestPrompt:    { type: Boolean, default: false },
 })
 
+// Оформление блока задаёт самая «высокая» из новых ачивок: золото, если среди
+// них есть финал лесенки, иначе серебро, иначе бронза.
+const RANK_ORDER = ['bronze', 'silver', 'gold']
+const topRank = computed(() =>
+  props.newAchievements.reduce(
+    (top, a) => RANK_ORDER.indexOf(a.rank) > RANK_ORDER.indexOf(top) ? a.rank : top,
+    'bronze'
+  )
+)
+
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
 
 const onlyWrong = ref(false)
@@ -594,18 +608,85 @@ function optionLetterStyle(item, optId) {
 <style scoped>
 /* Новые ачивки — сразу под результатом: это событие той же попытки, и
    человек как раз смотрит сюда. */
+/* Оформление «медалью»: золото — финальная ступень лесенки, серебро —
+   промежуточные и одиночные ачивки, бронза — первая ступень. Цвета заданы
+   переменными на блоке и на каждой ачивке, а не отдельными правилами на каждый
+   элемент. Оттенки золота те же, что у баннера тренировки по ошибкам
+   (#FDE68A / #FFFBEB / #92400E), чтобы палитра не плодилась. */
 .result-achievements {
+  --medal-from:   #F7F8FF;
+  --medal-to:     #EEF0FE;
+  --medal-border: #DDE1FD;
+  --medal-title:  #111827;
+  --medal-text:   #4B5563;
+  --medal-link:   #4F63F5;
+  --medal-glow:   rgba(79, 99, 245, 0.12);
+
+  position: relative;
+  overflow: hidden;
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #DDE1FD;
+  border: 1px solid var(--medal-border);
   border-radius: 0.75rem;
-  background: #F7F8FF;
+  background: linear-gradient(135deg, var(--medal-from) 0%, var(--medal-to) 100%);
+  box-shadow: 0 2px 12px var(--medal-glow);
+}
+
+.result-achievements--gold {
+  --medal-from:   #FFFBEB;
+  --medal-to:     #FEF3C7;
+  --medal-border: #F5D272;
+  --medal-title:  #92400E;
+  --medal-text:   #78350F;
+  --medal-link:   #B45309;
+  --medal-glow:   rgba(245, 158, 11, 0.18);
+}
+
+.result-achievements--silver {
+  --medal-from:   #F8FAFC;
+  --medal-to:     #E8EDF3;
+  --medal-border: #C9D3DF;
+  --medal-title:  #334155;
+  --medal-text:   #475569;
+  --medal-link:   #475569;
+  --medal-glow:   rgba(100, 116, 139, 0.16);
+}
+
+.result-achievements--bronze {
+  --medal-from:   #FFF8F2;
+  --medal-to:     #F7E4D3;
+  --medal-border: #E2B994;
+  --medal-title:  #7C4A21;
+  --medal-text:   #6B4423;
+  --medal-link:   #9A5B2E;
+  --medal-glow:   rgba(180, 110, 60, 0.18);
+}
+
+/* Блик пробегает один раз и только по золотому блоку: это событие уровня
+   «прошёл лесенку до конца». */
+.result-achievements--gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.65) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: achievement-shine 1.4s ease-out 0.3s 1 both;
+  pointer-events: none;
+}
+
+@keyframes achievement-shine {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-achievements--gold::after { animation: none; display: none; }
 }
 
 .result-achievements__title {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 0.75rem;
+  color: var(--medal-title);
 }
 
 .result-achievements__list {
@@ -620,27 +701,49 @@ function optionLetterStyle(item, optId) {
   align-items: flex-start;
 }
 
+.result-achievement {
+  --ring: #A9B6C6;
+}
+
+.result-achievement--gold   { --ring: #FBBF24; }
+.result-achievement--silver { --ring: #A9B6C6; }
+.result-achievement--bronze { --ring: #CD8B57; }
+
+/* Подложка иконки — цвет группы ачивки (как плитка в кабинете, приходит
+   инлайном), а металл показывает кольцо: белый зазор отделяет цвет группы от
+   кольца, чтобы они не сливались. */
 .result-achievement__icon {
-  font-size: 1.75rem;
-  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: #F3F4F6;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ring), 0 2px 8px color-mix(in srgb, var(--ring) 45%, transparent);
 }
 
 .result-achievement__name {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #111827;
+  color: var(--medal-title, #111827);
 }
 
 .result-achievement__text {
   margin-top: 0.125rem;
   font-size: 0.75rem;
-  color: #6B7280;
+  color: var(--medal-text);
+  opacity: 0.85;
 }
 
 .result-achievements__link {
+  position: relative;
   display: inline-block;
   margin-top: 0.75rem;
-  color: #4F63F5;
+  color: var(--medal-link);
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;
