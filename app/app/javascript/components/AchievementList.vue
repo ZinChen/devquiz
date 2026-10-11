@@ -111,7 +111,7 @@ function formatDate(value) {
 .achievements--compact .achievement {
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
+  padding: 0.7rem;
   border-radius: 0.5rem;
   min-width: 0;
 }
@@ -164,14 +164,14 @@ function formatDate(value) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* Взятая ачивка подсвечена своим «металлом»: рамка и градиент фона — те же
+   оттенки, что у блока «Новое достижение» после теста, чтобы вид был один. */
+.achievement--gold   { border-color: #F5D272; background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); }
+.achievement--silver { border-color: #B9C8E8; background: linear-gradient(135deg, #F5FAFF 0%, #E4EBFA 100%); }
+.achievement--bronze { border-color: #E2B994; background: linear-gradient(135deg, #FFF8F2 0%, #F7E4D3 100%); }
+
 /* Невзятая ачивка остаётся читаемой: это не «секрет», а цель — по ней
    ориентируются, что делать дальше. */
-/* Взятая ачивка чуть подсвечена своим «металлом»: рамка и едва заметный тон
-   фона — ярче серой карточки, но профиль не превращается в пёструю стену. */
-.achievement--gold   { border-color: #F5D272; background: color-mix(in srgb, #FBBF24 7%, #fff); }
-.achievement--silver { border-color: #C9D3DF; background: color-mix(in srgb, #A9B6C6 8%, #fff); }
-.achievement--bronze { border-color: #E2B994; background: color-mix(in srgb, #CD8B57 7%, #fff); }
-
 .achievement--locked {
   background: #FAFAFB;
   border-style: dashed;

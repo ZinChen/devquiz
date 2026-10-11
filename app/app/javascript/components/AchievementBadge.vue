@@ -64,7 +64,7 @@ const style = computed(() => {
 }
 
 .achievement-badge--gold   { --ring: #FBBF24; }
-.achievement-badge--silver { --ring: #A9B6C6; }
+.achievement-badge--silver { --ring: #8EA6D8; }
 .achievement-badge--bronze { --ring: #CD8B57; }
 
 .achievement-badge--locked {
