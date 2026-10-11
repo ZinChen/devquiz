@@ -28,6 +28,18 @@ RSpec.configure do |config|
   end
 end
 
+RSpec.configure do |config|
+  # Cuprite держит один браузер на весь прогон, и localStorage переживает
+  # примеры: раскрытый в одном спеке «Ещё» в профиле или режим «по одному
+  # вопросу» из другого протекали бы в следующий и ломали его начальное
+  # состояние (флейк только в полном прогоне, по отдельности всё зелёное).
+  config.after(:each, type: :system, js: true) do
+    page.execute_script("try { localStorage.clear(); sessionStorage.clear() } catch (e) {}")
+  rescue StandardError
+    # Страница могла уже закрыться или быть на about:blank — чистить нечего.
+  end
+end
+
 Capybara.configure do |config|
   config.default_driver    = :rack_test
   config.javascript_driver = :cuprite
