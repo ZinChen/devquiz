@@ -29,7 +29,9 @@
 
       <div v-if="achievements.recent.length" class="dashboard-col">
         <h2 class="dashboard-section-title">Последние достижения</h2>
-        <AchievementList :items="achievements.recent" compact />
+        <!-- Без прогресса до следующей ступени: в полоске «последние» важно, что
+             и когда получено, а не что дальше — прогресс виден в профиле. -->
+        <AchievementList :items="achievements.recent" compact :show-progress="false" />
         <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
           Все достижения →
         </button>
@@ -68,7 +70,7 @@
         <!-- Тег ведёт в тренировку, но сам по себе об этом не говорит:
              без подписи список читается как приговор, а не как кнопка. -->
         <p v-if="weakTopics.length" class="dashboard-section-hint">
-          Тренируй слабые темы, чтобы убрать их из этого списка.
+          Тренируй слабые темы, чтобы убрать их из этого списка
         </p>
         <template v-if="weakTopics.length">
           <div class="weak-summary">

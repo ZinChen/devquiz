@@ -4,6 +4,12 @@ RSpec.describe "Достижения в профиле", type: :system, js: true
   let(:user) { create(:user, :with_github) }
 
   before do
+    # Каталог тематических ачивок строится из TopicIndex и кэшируется на процесс.
+    # Системные спеки, подменяющие TestSource на временный каталог без тем,
+    # оставляли в кэше пустой индекс — и здесь тематических ачивок (а с ними
+    # кнопки «Ещё») не было, но только в полном прогоне, зависимо от порядка.
+    TopicIndex.reload!
+    AchievementsCatalog.reload!
     AchievementsCatalog.sync!
     # Первые ступени тематических лесенок — по одной плитке на тему, больше
     # страницы «Ещё» (TOPIC_ACHIEVEMENTS_PAGE_SIZE = 9).
@@ -47,5 +53,15 @@ RSpec.describe "Достижения в профиле", type: :system, js: true
     open_profile
 
     expect(page).to have_css(".profile__achievements-more-btn", text: /Ещё \d+/)
+  end
+
+  it "в полоске последних достижений вместо прогресса показана дата" do
+    visit "/dashboard"
+    expect(page).to have_css(".achievements--compact .achievement", minimum: 1)
+
+    # У первых ступеней тематических лесенок есть следующая ступень, то есть
+    # раньше здесь рисовалась полоска прогресса.
+    expect(page).to have_no_css(".achievements--compact .achievement__progress")
+    expect(page).to have_css(".achievements--compact .achievement__date", minimum: 1)
   end
 end
