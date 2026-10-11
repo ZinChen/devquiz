@@ -65,12 +65,20 @@
         </div>
       </div>
 
-      <div v-if="newAchievements.length" class="result-achievements" :class="`result-achievements--${topRank}`">
+      <!-- Блок на каждый «металл»: за один тест можно получить и финал одной
+           лесенки, и первую ступень другой — им нужно разное оформление, а не
+           одно по самой высокой. Золото первым. Ссылка «Все достижения» только
+           в последнем блоке, чтобы не повторяться. -->
+      <div
+        v-for="(block, i) in achievementBlocks" :key="block.rank"
+        class="result-achievements"
+        :class="`result-achievements--${block.rank}`"
+      >
         <h2 class="result-achievements__title">
-          {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
+          {{ block.items.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
         </h2>
         <div class="result-achievements__list">
-          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
+          <div v-for="a in block.items" :key="a.slug" class="result-achievement">
             <AchievementBadge :icon="a.icon" :color="a.color" :rank="a.rank" :size="40" />
             <div>
               <p class="result-achievement__name">{{ a.title }}</p>
@@ -78,7 +86,7 @@
             </div>
           </div>
         </div>
-        <Link href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
+        <Link v-if="i === achievementBlocks.length - 1" href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
       </div>
 
       <div v-if="guestPrompt" class="result-guest">
@@ -380,14 +388,14 @@ const props = defineProps({
   guestPrompt:    { type: Boolean, default: false },
 })
 
-// Оформление блока задаёт самая «высокая» из новых ачивок: золото, если среди
-// них есть финал лесенки, иначе серебро, иначе бронза.
-const RANK_ORDER = ['bronze', 'silver', 'gold']
-const topRank = computed(() =>
-  props.newAchievements.reduce(
-    (top, a) => RANK_ORDER.indexOf(a.rank) > RANK_ORDER.indexOf(top) ? a.rank : top,
-    'bronze'
-  )
+// Новые ачивки раскладываются по блокам «металла»: золото, серебро, бронза.
+// Пустые блоки не выводятся, ачивка без rank считается серебряной (как на
+// сервере: AchievementsCatalog#rank_for).
+const RANK_ORDER = ['gold', 'silver', 'bronze']
+const achievementBlocks = computed(() =>
+  RANK_ORDER
+    .map(rank => ({ rank, items: props.newAchievements.filter(a => (a.rank || 'silver') === rank) }))
+    .filter(block => block.items.length)
 )
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
@@ -640,13 +648,13 @@ function optionLetterStyle(item, optId) {
 }
 
 .result-achievements--silver {
-  --medal-from:   #F8FAFC;
-  --medal-to:     #E8EDF3;
-  --medal-border: #C9D3DF;
-  --medal-title:  #334155;
-  --medal-text:   #475569;
-  --medal-link:   #475569;
-  --medal-glow:   rgba(100, 116, 139, 0.16);
+  --medal-from:   #F5FAFF;
+  --medal-to:     #E4EBFA;
+  --medal-border: #B3C3E8;
+  --medal-title:  #2F4672;
+  --medal-text:   #41557F;
+  --medal-link:   #3D5A9E;
+  --medal-glow:   rgba(80, 110, 180, 0.18);
 }
 
 .result-achievements--bronze {

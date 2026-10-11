@@ -120,10 +120,12 @@ class RunsController < ApplicationController
   # слаги, здесь они превращаются в данные для блока «Новое достижение».
   def new_achievements_props
     slugs = Array(flash[:new_achievement_slugs])
-    # Только в development: ?preview_achievements=slug показывает блок «Новое
-    # достижение» на любой странице результата — чтобы править его вёрстку, не
-    # проходя тест заново (флеш одноразовый и пропадает при обновлении).
-    slugs += Array(params[:preview_achievements]).map(&:to_s) if Rails.env.development?
+    # Только в development и test: ?preview_achievements=slug показывает блок
+    # «Новое достижение» на любой странице результата — чтобы править его
+    # вёрстку, не проходя тест заново (флеш одноразовый и пропадает при
+    # обновлении). medals — по ачивке каждого «металла» сразу (золото, серебро,
+    # бронза), а в test параметр нужен системным спекам блоков.
+    slugs += preview_achievement_slugs if Rails.env.local?
     return [] if slugs.empty?
 
     catalog = AchievementsCatalog.current
@@ -149,6 +151,13 @@ class RunsController < ApplicationController
     return false if current_user || guest_token.blank?
 
     TestAttempt.where(guest_token: guest_token).where.not(completed_at: nil).count == 1
+  end
+
+  PREVIEW_MEDALS = %w[thirty_tests ten_tests first_test].freeze
+
+  def preview_achievement_slugs
+    requested = Array(params[:preview_achievements]).map(&:to_s)
+    requested.flat_map { |slug| slug == "medals" ? PREVIEW_MEDALS : [ slug ] }
   end
 
   def own_attempts
