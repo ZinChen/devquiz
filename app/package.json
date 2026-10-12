@@ -27,7 +27,7 @@
     "@lezer/highlight": "^1.2.3",
     "@rails/actioncable": "^8.1.400",
     "codemirror": "^6.0.2",
-    "js-yaml": "^5.2.3",
+    "js-yaml": "^5.4.3",
     "shiki": "^4.3.0"
   }
 }
