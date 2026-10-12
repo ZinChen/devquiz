@@ -20,6 +20,16 @@ RSpec.describe AchievementsSummary do
     props[:items].find { |i| i[:key] == key }
   end
 
+  it "отдаёт «металл» только у взятых плиток" do
+    complete(slug: "ror-basics")
+    AchievementsService.call(user)
+
+    expect(tile("tests_passed")[:rank]).to eq("bronze")
+    expect(tile("perfect")[:rank]).to be_in(AchievementsCatalog::RANKS)
+    expect(tile("level_expert")[:earned]).to be(false)
+    expect(tile("level_expert")[:rank]).to be_nil
+  end
+
   it "сворачивает ступени группы в одну плитку" do
     tests_passed = props[:items].count { |i| i[:key] == "tests_passed" }
 
@@ -115,8 +125,49 @@ RSpec.describe AchievementsSummary do
     it "не отдаёт ни дату получения, ни прогресс" do
       item = described_class.for(user: user).to_public_props[:items].first
 
-      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon, :color, :earned)
+      expect(item.keys).to contain_exactly(:slug, :title, :description, :icon, :color, :rank, :earned)
       expect(item).not_to include(:earned_at, :progress, :tier)
+    end
+
+    describe "лесенки" do
+      def grant(*slugs)
+        slugs.each do |slug|
+          UserAchievement.find_or_create_by!(user: user, achievement: Achievement.find_by!(slug: slug)) { |ua| ua.earned_at = Time.current }
+        end
+      end
+
+      def public_slugs
+        described_class.for(user: user).to_public_props[:items].map { |i| i[:slug] }
+      end
+
+      it "оставляет только старшую полученную ступень" do
+        grant("ten_tests", "twenty_tests")
+
+        expect(public_slugs).to include("twenty_tests")
+        expect(public_slugs).not_to include("first_test", "ten_tests")
+      end
+
+      it "не трогает ачивки из разных групп" do
+        grant("perfect_score")
+
+        expect(public_slugs).to include("first_test", "perfect_score")
+      end
+
+      it "считает плитки, а не ступени" do
+        grant("ten_tests", "twenty_tests", "thirty_tests")
+        props = described_class.for(user: user).to_public_props
+
+        expect(props[:count]).to eq(props[:items].size)
+        expect(props[:items].count { |i| %w[first_test ten_tests twenty_tests thirty_tests].include?(i[:slug]) }).to eq(1)
+      end
+
+      it "даёт тот же счёт, что SQL для плейсхолдера в снимке активности" do
+        grant("ten_tests", "twenty_tests", "perfect_score")
+        props = described_class.for(user: user).to_public_props
+
+        counts = ActivityPresence.send(:achievement_tile_counts, [ user.id ])
+        expect(counts[user.id]).to eq(props[:count])
+      end
     end
 
     it "считает ачивки для бейджа" do

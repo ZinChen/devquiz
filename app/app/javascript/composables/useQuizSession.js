@@ -2,6 +2,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CHALLENGE_MODE_ORDER } from '@/composables/challengeModes.js'
 import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
+import { useActiveTimer } from '@/composables/useActiveTimer.js'
 
 // `onSubmit` перехватывает отправку: разовый тест из файла отдаёт ответы сам,
 // потому что попытку негде создавать и редиректить некуда.
@@ -42,10 +43,10 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
   const usedHints      = ref(new Set())
   const challengeMode  = ref(savedSession?.challengeMode || resolveRequestedMode() || DEFAULT_CHALLENGE_MODE)
   const startedAt      = ref(new Date().toISOString())
-  const elapsed        = ref(0)
+  const activeTimer    = useActiveTimer()
+  const { elapsed }    = activeTimer
   const savedIndex     = ref(resolveSavedIndex())
   const sessionStarted = ref(false)
-  let timer
   let saveTimer
   let submitted = false
 
@@ -98,22 +99,38 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
         })
         answers.value        = restored
         startedAt.value      = savedSession.startedAt || startedAt.value
-        elapsed.value        = savedSession.elapsed   || 0
+        activeTimer.setElapsed(savedSession.elapsed || 0)
         sessionStarted.value = true
       } else {
         localStorage.removeItem(STORAGE_KEY)
       }
     }
 
-    timer = setInterval(() => elapsed.value++, 1000)
+    activeTimer.start()
+    document.addEventListener('visibilitychange', saveOnHide)
+    window.addEventListener('pagehide', saveNow)
     saveTimer = setInterval(() => saveSession(), 10000)
     watch(answers, () => saveSession(), { deep: true })
   })
 
   onUnmounted(() => {
-    clearInterval(timer)
+    activeTimer.stop()
+    document.removeEventListener('visibilitychange', saveOnHide)
+    window.removeEventListener('pagehide', saveNow)
     clearInterval(saveTimer)
   })
+
+  // Раз в 10 секунд сессия сохраняется сама, но обновление страницы или
+  // закрытие вкладки случаются между сохранениями — и последние секунды
+  // таймера терялись (после перезагрузки счёт откатывался на несколько секунд).
+  // Поэтому сохраняем и при скрытии вкладки, и при уходе со страницы, дописав
+  // перед этим неполный интервал таймера.
+  function saveNow() {
+    activeTimer.flush()
+    saveSession()
+  }
+
+  const saveOnHide = () => { if (document.hidden) saveNow() }
 
   function saveSession(extra = {}) {
     // После отправки автосейв (таймер и watch по answers) не должен вернуть
@@ -137,7 +154,7 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
     sessionStarted.value = false
     challengeMode.value  = DEFAULT_CHALLENGE_MODE
     initAnswers()
-    elapsed.value   = 0
+    activeTimer.setElapsed(0)
     startedAt.value = new Date().toISOString()
     localStorage.removeItem(STORAGE_KEY)
   }
@@ -195,6 +212,7 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
         normalized[q.id] = a ? [a] : []
       }
     })
+    activeTimer.flush()
     submitted = true
     localStorage.removeItem(STORAGE_KEY)
 
@@ -243,6 +261,8 @@ export function useQuizSession(test, questionsSource, { onSubmit = null, storage
     answeredCount,
     timeDisplay,
     timerWarning,
+    timerPaused:      activeTimer.paused,
+    timerPauseReason: activeTimer.pauseReason,
     isAnswered,
     isHintShown,
     markHintUsed,

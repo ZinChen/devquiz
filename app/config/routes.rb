@@ -35,6 +35,10 @@ Rails.application.routes.draw do
   patch "/dashboard",           to: "dashboard#update"
   get   "/dashboard/attempts",  to: "dashboard#attempts",  as: :dashboard_attempts
   get   "/dashboard/bookmarks", to: "dashboard#bookmarks", as: :dashboard_bookmarks
+  # Карточка участника live-активности (имя, аватар, ачивки) — по клику на
+  # аватарку. Открывается только для тех, кто сейчас в списке активности.
+  get "/activity/users/:id", to: "activity_users#show", as: :activity_user
+
   get "/stats",     to: "stats#index",     as: :stats
 
   get "up" => "rails/health#show", as: :rails_health_check

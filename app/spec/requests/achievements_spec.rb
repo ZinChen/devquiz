@@ -45,6 +45,14 @@ RSpec.describe "Достижения", type: :request do
       expect(achievement).to include("title", "description", "icon")
     end
 
+    it "отдаёт цвет группы и «металл» для оформления блока" do
+      complete_test
+
+      achievement = response.parsed_body["props"]["new_achievements"].first
+      expect(achievement["color"]).to include("bg", "fg")
+      expect(achievement["rank"]).to be_in(AchievementsCatalog::RANKS)
+    end
+
     it "не показывает ачивку повторно на следующем тесте" do
       complete_test
       complete_test

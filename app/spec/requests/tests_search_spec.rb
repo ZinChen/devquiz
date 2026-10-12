@@ -48,4 +48,14 @@ RSpec.describe "Поиск тестов на главной: теги и тем�
     expect(props["topics"]).to eq([])
     expect(props["topics_translated"]).to eq([])
   end
+
+  it "отдаёт число тестов на плитку и подтег для экрана выбора тем" do
+    create(:test_metadatum, slug: "counts-rails", tag_list: "ruby,rails")
+
+    counts = index_props["tag_counts"]
+
+    expect(counts["ruby"]).to eq(1)
+    expect(counts["rails"]).to eq(1)
+    expect(counts["go"]).to eq(0)
+  end
 end

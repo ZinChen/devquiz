@@ -65,20 +65,28 @@
         </div>
       </div>
 
-      <div v-if="newAchievements.length" class="result-achievements">
+      <!-- Блок на каждый «металл»: за один тест можно получить и финал одной
+           лесенки, и первую ступень другой — им нужно разное оформление, а не
+           одно по самой высокой. Золото первым. Ссылка «Все достижения» только
+           в последнем блоке, чтобы не повторяться. -->
+      <div
+        v-for="(block, i) in achievementBlocks" :key="block.rank"
+        class="result-achievements"
+        :class="`result-achievements--${block.rank}`"
+      >
         <h2 class="result-achievements__title">
-          {{ newAchievements.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
+          {{ block.items.length === 1 ? 'Новое достижение' : 'Новые достижения' }}
         </h2>
         <div class="result-achievements__list">
-          <div v-for="a in newAchievements" :key="a.slug" class="result-achievement">
-            <span class="result-achievement__icon" aria-hidden="true">{{ a.icon || '🏅' }}</span>
+          <div v-for="a in block.items" :key="a.slug" class="result-achievement">
+            <AchievementBadge :icon="a.icon" :color="a.color" :rank="a.rank" :size="40" />
             <div>
               <p class="result-achievement__name">{{ a.title }}</p>
               <p v-if="a.description" class="result-achievement__text">{{ a.description }}</p>
             </div>
           </div>
         </div>
-        <Link href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
+        <Link v-if="i === achievementBlocks.length - 1" href="/dashboard#profile" class="result-achievements__link">Все достижения →</Link>
       </div>
 
       <div v-if="guestPrompt" class="result-guest">
@@ -352,6 +360,7 @@
 import { computed, reactive, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import AchievementBadge from '@/components/AchievementBadge.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
 import { useShiki } from '@/composables/useShiki.js'
 import { useCodeHighlight } from '@/composables/useCodeHighlight.js'
@@ -378,6 +387,16 @@ const props = defineProps({
   // что даёт регистрация.
   guestPrompt:    { type: Boolean, default: false },
 })
+
+// Новые ачивки раскладываются по блокам «металла»: золото, серебро, бронза.
+// Пустые блоки не выводятся, ачивка без rank считается серебряной (как на
+// сервере: AchievementsCatalog#rank_for).
+const RANK_ORDER = ['gold', 'silver', 'bronze']
+const achievementBlocks = computed(() =>
+  RANK_ORDER
+    .map(rank => ({ rank, items: props.newAchievements.filter(a => (a.rank || 'silver') === rank) }))
+    .filter(block => block.items.length)
+)
 
 const hasWeakTopics = computed(() => Boolean(props.weakTopics?.tags?.length))
 
@@ -594,18 +613,85 @@ function optionLetterStyle(item, optId) {
 <style scoped>
 /* Новые ачивки — сразу под результатом: это событие той же попытки, и
    человек как раз смотрит сюда. */
+/* Оформление «медалью»: золото — финальная ступень лесенки, серебро —
+   промежуточные и одиночные ачивки, бронза — первая ступень. Цвета заданы
+   переменными на блоке и на каждой ачивке, а не отдельными правилами на каждый
+   элемент. Оттенки золота те же, что у баннера тренировки по ошибкам
+   (#FDE68A / #FFFBEB / #92400E), чтобы палитра не плодилась. */
 .result-achievements {
+  --medal-from:   #F7F8FF;
+  --medal-to:     #EEF0FE;
+  --medal-border: #DDE1FD;
+  --medal-title:  #111827;
+  --medal-text:   #4B5563;
+  --medal-link:   #4F63F5;
+  --medal-glow:   rgba(79, 99, 245, 0.12);
+
+  position: relative;
+  overflow: hidden;
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  border: 1px solid #DDE1FD;
+  border: 1px solid var(--medal-border);
   border-radius: 0.75rem;
-  background: #F7F8FF;
+  background: linear-gradient(135deg, var(--medal-from) 0%, var(--medal-to) 100%);
+  box-shadow: 0 2px 12px var(--medal-glow);
+}
+
+.result-achievements--gold {
+  --medal-from:   #FFFBEB;
+  --medal-to:     #FEF3C7;
+  --medal-border: #F5D272;
+  --medal-title:  #92400E;
+  --medal-text:   #78350F;
+  --medal-link:   #B45309;
+  --medal-glow:   rgba(245, 158, 11, 0.18);
+}
+
+.result-achievements--silver {
+  --medal-from:   #F5FAFF;
+  --medal-to:     #E4EBFA;
+  --medal-border: #B3C3E8;
+  --medal-title:  #2F4672;
+  --medal-text:   #41557F;
+  --medal-link:   #3D5A9E;
+  --medal-glow:   rgba(80, 110, 180, 0.18);
+}
+
+.result-achievements--bronze {
+  --medal-from:   #FFF8F2;
+  --medal-to:     #F7E4D3;
+  --medal-border: #E2B994;
+  --medal-title:  #7C4A21;
+  --medal-text:   #6B4423;
+  --medal-link:   #9A5B2E;
+  --medal-glow:   rgba(180, 110, 60, 0.18);
+}
+
+/* Блик пробегает один раз и только по золотому блоку: это событие уровня
+   «прошёл лесенку до конца». */
+.result-achievements--gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.65) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: achievement-shine 1.4s ease-out 0.3s 1 both;
+  pointer-events: none;
+}
+
+@keyframes achievement-shine {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-achievements--gold::after { animation: none; display: none; }
 }
 
 .result-achievements__title {
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 0.75rem;
+  color: var(--medal-title);
 }
 
 .result-achievements__list {
@@ -620,27 +706,24 @@ function optionLetterStyle(item, optId) {
   align-items: flex-start;
 }
 
-.result-achievement__icon {
-  font-size: 1.75rem;
-  line-height: 1.2;
-}
-
 .result-achievement__name {
   font-weight: 600;
   font-size: 0.875rem;
-  color: #111827;
+  color: var(--medal-title, #111827);
 }
 
 .result-achievement__text {
   margin-top: 0.125rem;
   font-size: 0.75rem;
-  color: #6B7280;
+  color: var(--medal-text);
+  opacity: 0.85;
 }
 
 .result-achievements__link {
+  position: relative;
   display: inline-block;
   margin-top: 0.75rem;
-  color: #4F63F5;
+  color: var(--medal-link);
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;

@@ -26,7 +26,7 @@ class TagTaxonomy
 
     delegate :categories, :category_tags, :service, :service_tags, :kind_of,
              :children_of, :selectable?, :known_tags, :sanitize,
-             :descriptions, :description_of, to: :current
+             :descriptions, :description_of, :tag_counts, to: :current
 
     private
 
@@ -76,6 +76,21 @@ class TagTaxonomy
     @known_tags    = (@category_tags + @categories.flat_map { |c| c[:children] } + @service_tags).uniq.freeze
 
     freeze
+  end
+
+  # Сколько тестов покажет каждая плитка и каждый подтег на экране выбора тем.
+  # tag_lists — по одному списку тегов на тест. Для категории считается тест,
+  # у которого есть её тег или любой из подтегов: именно так его потом найдёт
+  # фильтр после выбора плитки. Подтеги без единого теста получают 0 и на
+  # экране скрываются, чтобы не вести в пустую выдачу.
+  def tag_counts(tag_lists)
+    lists = tag_lists.map { |tags| Array(tags).map(&:to_s) }
+
+    categories.each_with_object({}) do |category, counts|
+      own = [ category[:tag], *category[:children] ]
+      counts[category[:tag]] = lists.count { |tags| (tags & own).any? }
+      category[:children].each { |child| counts[child] = lists.count { |tags| tags.include?(child) } }
+    end
   end
 
   # Описание тега для подсказки при наведении; nil, если тег незнакомый.

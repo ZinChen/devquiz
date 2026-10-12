@@ -19,13 +19,16 @@
             Режим кода: {{ CHALLENGE_MODE_HINTS[challengeMode] }}
           </div>
         </span>
-        <div class="run-header__progress">
+        <!-- В режиме списка счётчик и время живут в липкой карточке рядом с
+             вопросами (AllAtOnceMode), здесь их не дублируем. -->
+        <div v-if="mode !== 'all'" class="run-header__progress">
           {{ answeredCount }} / {{ questions.length }}
-          <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning }">{{ timeDisplay }}</span>
+          <span class="run-header__timer" :class="{ 'run-header__timer--warn': timerWarning, 'run-header__timer--paused': timerPaused }">{{ timeDisplay }}</span>
+          <span v-if="timerPaused" class="run-header__pause" :title="TIMER_PAUSE_HINTS[timerPauseReason]">⏸ пауза</span>
         </div>
         <button
           type="button"
-          @click="settingsOpen = !settingsOpen"
+          @click="toggleSettings"
           class="run-header__settings-btn"
           title="Настройки"
         >
@@ -42,17 +45,17 @@
       Результат не идёт в статистику теста.
     </div>
 
-    <div class="run-settings-wrap">
-      <SettingsPanel
-        v-if="settingsOpen"
-        v-model:mode="mode"
-        v-model:challengeMode="challengeMode"
-        :hasCodeChallenge="hasCodeChallenge"
-        :locked="sessionStarted"
-        :completedChallengeModes="test.completedChallengeModes || []"
-        @reset="resetChallenge"
-      />
-    </div>
+    <SettingsPanel
+      v-if="settingsOpen"
+      v-model:mode="mode"
+      v-model:challengeMode="challengeMode"
+      :anchor="settingsAnchor"
+      :hasCodeChallenge="hasCodeChallenge"
+      :locked="sessionStarted"
+      :completedChallengeModes="test.completedChallengeModes || []"
+      @reset="resetChallenge"
+      @close="settingsOpen = false"
+    />
 
     <component
       :is="activeMode"
@@ -69,6 +72,8 @@
       :formatText="formatText"
       :savedIndex="savedIndex"
       :challengeMode="challengeMode"
+      v-bind="mode === 'all' ? { timeDisplay, timerWarning, timerPaused, timerPauseReason } : {}"
+      :viewersByQuestion="viewersByQuestion"
       @submit="submit"
       @index-change="updateIndex"
     />
@@ -76,13 +81,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import SettingsPanel from '@/components/run/SettingsPanel.vue'
 import OneByOneMode from '@/components/run/OneByOneMode.vue'
 import AllAtOnceMode from '@/components/run/AllAtOnceMode.vue'
 import { useQuizSession } from '@/composables/useQuizSession.js'
+import { useActivity } from '@/composables/useActivity.js'
 import { CHALLENGE_MODE_LABELS, CHALLENGE_MODE_HINTS } from '@/composables/challengeModes.js'
 
 const props = defineProps({
@@ -92,7 +98,23 @@ const props = defineProps({
   weakOnly:      { type: Boolean, default: false },
 })
 
+// Почему таймер стоит — показывается подсказкой у метки «пауза».
+const TIMER_PAUSE_HINTS = {
+  hidden: 'Вкладка скрыта — время не идёт',
+  idle:   'Нет действий дольше 5 минут — время не идёт. Оно продолжится при любом действии',
+}
+
 const settingsOpen     = ref(false)
+const settingsAnchor   = ref({ top: 0, left: 0, width: 0, height: 0 })
+
+// Панель встаёт под шестерёнкой, поэтому ей нужно знать, где та сейчас. Пока
+// панель открыта, подложка закрывает кнопку, так что повторный клик по ней
+// закрывает панель через подложку, а не через этот переключатель.
+function toggleSettings(event) {
+  const { top, left, width, height } = event.currentTarget.getBoundingClientRect()
+  settingsAnchor.value = { top, left, width, height }
+  settingsOpen.value = !settingsOpen.value
+}
 const modeTooltipOpen  = ref(false)
 const mode             = ref(localStorage.getItem('devquiz_mode') || 'all')
 
@@ -114,6 +136,8 @@ const {
   answeredCount,
   timeDisplay,
   timerWarning,
+  timerPaused,
+  timerPauseReason,
   isAnswered,
   isHintShown,
   markHintUsed,
@@ -129,6 +153,24 @@ const {
 const hasCodeChallenge = computed(() =>
   props.questions.some(q => q.type === 'code_challenge')
 )
+
+// Live-активность: объявляем, что проходим тест, и сообщаем, какой вопрос в
+// фокусе. Остальные участники приходят снимком {slug: [зрители]} — раскладываем
+// их по вопросам, а самих себя убираем: свой аватар рядом с вопросом — шум.
+const { activity, me, join, focus, leave } = useActivity()
+
+const viewersByQuestion = computed(() => {
+  const byQuestion = {}
+  for (const v of activity.value[props.test.slug] || []) {
+    if (v.key === me.value || !v.questionId) continue
+    ;(byQuestion[v.questionId] ||= []).push(v)
+  }
+  return byQuestion
+})
+
+onMounted(() => join(props.test.slug, props.questions[savedIndex.value]?.id))
+onBeforeUnmount(leave)
+watch(savedIndex, idx => focus(props.questions[idx]?.id))
 </script>
 
 <style scoped>
@@ -137,10 +179,6 @@ const hasCodeChallenge = computed(() =>
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.run-settings-wrap {
-  margin-bottom: 0;
 }
 
 .run-weak-banner {
@@ -259,6 +297,17 @@ const hasCodeChallenge = computed(() =>
   margin-left: 1rem;
   font-family: monospace;
   color: #4B5563;
+}
+
+.run-header__timer--paused {
+  opacity: 0.5;
+}
+
+.run-header__pause {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  cursor: help;
 }
 
 .run-header__timer--warn {

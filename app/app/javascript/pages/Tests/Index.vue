@@ -137,6 +137,7 @@
       v-if="showTagOnboarding"
       :categories="tagCategories"
       :descriptions="tagDescriptions"
+      :counts="tagCounts"
       @done="onOnboardingDone"
     />
 
@@ -145,6 +146,7 @@
       editing
       :categories="tagCategories"
       :descriptions="tagDescriptions"
+      :counts="tagCounts"
       :initial-tags="localPreferred || []"
       @done="onPreferencesEdited"
       @close="editingTags = false"
@@ -180,6 +182,7 @@ const props = defineProps({
   preferredTags:   { type: Array,  default: null },
   tagCategories:   { type: Array,  default: () => [] },
   tagDescriptions: { type: Object, default: () => ({}) },
+  tagCounts:       { type: Object, default: () => ({}) },
   showTagOnboarding: { type: Boolean, default: false },
 })
 
@@ -283,7 +286,7 @@ const sortOptions = [
 ]
 
 const sortComparators = {
-  popular: (a, b) => b.attemptsCount - a.attemptsCount,
+  popular: (a, b) => a.popularityRank - b.popularityRank,
   new:     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   alpha:   (a, b) => a.title.localeCompare(b.title, 'ru'),
   easiest: (a, b) => DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty),

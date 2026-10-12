@@ -18,6 +18,17 @@
       </div>
     </aside>
 
+    <!-- Счётчик и время справа от вопросов: липкая карточка внутри
+         absolute-колонки, как левая навигация. В шапке страницы они уезжали
+         вверх вместе с прокруткой, а время нужно видеть всегда. -->
+    <aside class="run-meter" aria-label="Прогресс и время">
+      <div class="run-meter__card">
+        <span class="run-meter__progress">{{ answeredCount }} / {{ questions.length }}</span>
+        <span class="run-meter__time" :class="{ 'run-meter__time--warn': timerWarning, 'run-meter__time--paused': timerPaused }">{{ timeDisplay }}</span>
+        <span v-if="timerPaused" class="run-meter__pause" :title="pauseHint">⏸ пауза</span>
+      </div>
+    </aside>
+
     <form class="all-at-once__content" @submit.prevent="$emit('submit')">
       <div
         v-for="(q, idx) in questions" :key="q.id"
@@ -26,6 +37,7 @@
       >
         <div class="question-item__header">
           <p class="question-item__counter">Вопрос {{ idx + 1 }}</p>
+          <AvatarStack :viewers="viewersByQuestion[q.id] || []" :size="24" class="question-item__viewers" />
           <BookmarkButton v-if="q.dbId" :question-id="q.dbId" :initial="bookmarkedIds.includes(q.dbId)" />
         </div>
         <p class="question-item__text" v-html="formatText(q.text)"></p>
@@ -69,10 +81,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
 import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
 
 const props = defineProps({
   questions:         Array,
@@ -87,9 +100,18 @@ const props = defineProps({
   optionLetter:      Function,
   formatText:        Function,
   challengeMode:     { type: String, default: 'highlight' },
+  timeDisplay:       { type: String, default: '' },
+  timerWarning:      { type: Boolean, default: false },
+  timerPaused:       { type: Boolean, default: false },
+  timerPauseReason:  { type: String, default: null },
+  viewersByQuestion: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['submit', 'index-change'])
+
+const pauseHint = computed(() => props.timerPauseReason === 'idle'
+  ? 'Нет действий дольше 5 минут — время не идёт. Оно продолжится при любом действии'
+  : 'Вкладка скрыта — время не идёт')
 
 const questionEls   = ref([])
 const activeIndex   = ref(0)
@@ -406,6 +428,78 @@ onUnmounted(() => {
   height: 4px;
 }
 
+.run-meter {
+  width: 5.5rem;
+  position: absolute;
+  right: calc(-5.5rem - 1rem);
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.run-meter__card {
+  position: sticky;
+  top: 1rem;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.625rem 0.5rem;
+  background: #fff;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  border-radius: 0.5rem;
+}
+
+.run-meter__progress {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.run-meter__time {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4B5563;
+}
+
+.run-meter__time--paused {
+  opacity: 0.5;
+}
+
+.run-meter__pause {
+  font-size: 0.6875rem;
+  color: #9CA3AF;
+  cursor: help;
+}
+
+.run-meter__time--warn {
+  color: #EF4444;
+}
+
+/* Справа места нет (42rem контента + две колонки по 6.5rem) — карточка
+   становится липкой плашкой над вопросами и остаётся у верхнего края. */
+@media (max-width: 62rem) {
+  .run-meter {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 5;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .run-meter__card {
+    position: static;
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+}
+
 .all-at-once__content {
   width: 100%;
 }
@@ -425,6 +519,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.25rem;
+}
+
+.question-item__viewers {
+  margin-left: auto;
+  margin-right: 0.75rem;
 }
 
 .question-item__counter {

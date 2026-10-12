@@ -2,6 +2,12 @@ class RunsController < ApplicationController
   before_action :load_test
 
   def new
+    # Гостю нужна личность (имя + аватар) уже сейчас: страница откроет
+    # WebSocket и объявит его в live-активности, а читать идентичность канал
+    # может только из куки. Ленивость из ApplicationController#guest_token!
+    # здесь не нарушается — начать тест это и есть «что-то делать».
+    guest_identity! unless current_user
+
     questions = questions_with_db_ids
     weak_only = params[:only] == "weak"
 
@@ -86,7 +92,10 @@ class RunsController < ApplicationController
   end
 
   def show
-    attempt = TestAttempt.includes(:test_attempt_answers).find(params[:id])
+    # Только своя попытка: аккаунт — по user_id, гость — по токену из куки
+    # (после теста он попадает сюда редиректом). Чужая и несуществующая
+    # неотличимы — оба дают 404, чтобы по id нельзя было перебирать результаты.
+    attempt = own_attempts.includes(:test_attempt_answers).find(params[:id])
     questions_map = load_questions.index_by { |q| q["id"] }
 
     bookmarked_ids = current_user ? current_user.bookmarks
@@ -111,14 +120,26 @@ class RunsController < ApplicationController
   # слаги, здесь они превращаются в данные для блока «Новое достижение».
   def new_achievements_props
     slugs = Array(flash[:new_achievement_slugs])
+    # Только в development и test: ?preview_achievements=slug показывает блок
+    # «Новое достижение» на любой странице результата — чтобы править его
+    # вёрстку, не проходя тест заново (флеш одноразовый и пропадает при
+    # обновлении). medals — по ачивке каждого «металла» сразу (золото, серебро,
+    # бронза), а в test параметр нужен системным спекам блоков.
+    slugs += preview_achievement_slugs if Rails.env.local?
     return [] if slugs.empty?
+
+    catalog = AchievementsCatalog.current
 
     Achievement.where(slug: slugs).ordered.map do |achievement|
       {
         slug:        achievement.slug,
         title:       achievement.title,
         description: achievement.description,
-        icon:        achievement.icon
+        icon:        achievement.icon,
+        # Цвет группы — подложка иконки, как плитка в кабинете; rank —
+        # «металл» оформления: золото только у последней ступени лесенки.
+        color:       catalog.color_for(achievement.group_name),
+        rank:        catalog.rank_for(achievement.slug)
       }
     end
   end
@@ -130,6 +151,21 @@ class RunsController < ApplicationController
     return false if current_user || guest_token.blank?
 
     TestAttempt.where(guest_token: guest_token).where.not(completed_at: nil).count == 1
+  end
+
+  PREVIEW_MEDALS = %w[thirty_tests ten_tests first_test].freeze
+
+  def preview_achievement_slugs
+    requested = Array(params[:preview_achievements]).map(&:to_s)
+    requested.flat_map { |slug| slug == "medals" ? PREVIEW_MEDALS : [ slug ] }
+  end
+
+  def own_attempts
+    scope = TestAttempt.where(test_slug: @meta.slug)
+    return scope.where(user_id: current_user.id) if current_user
+    return scope.where(user_id: nil, guest_token: guest_token) if guest_token.present?
+
+    scope.none
   end
 
   def load_test

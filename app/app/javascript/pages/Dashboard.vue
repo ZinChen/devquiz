@@ -29,7 +29,9 @@
 
       <div v-if="achievements.recent.length" class="dashboard-col">
         <h2 class="dashboard-section-title">Последние достижения</h2>
-        <AchievementList :items="achievements.recent" compact />
+        <!-- Без прогресса до следующей ступени: в полоске «последние» важно, что
+             и когда получено, а не что дальше — прогресс виден в профиле. -->
+        <AchievementList :items="achievements.recent" compact :show-progress="false" />
         <button type="button" class="achievements-strip__more" @click="selectTab('profile')">
           Все достижения →
         </button>
@@ -68,7 +70,7 @@
         <!-- Тег ведёт в тренировку, но сам по себе об этом не говорит:
              без подписи список читается как приговор, а не как кнопка. -->
         <p v-if="weakTopics.length" class="dashboard-section-hint">
-          Тренируй слабые темы, чтобы убрать их из этого списка.
+          Тренируй слабые темы, чтобы убрать их из этого списка
         </p>
         <template v-if="weakTopics.length">
           <div class="weak-summary">
@@ -325,6 +327,23 @@
             class="profile__input"
             placeholder="https://…"
           />
+
+          <label class="profile__toggle" for="profile-activity">
+            <input
+              id="profile-activity"
+              type="checkbox"
+              class="toggle toggle-sm profile__toggle-input"
+              :checked="currentUser?.activityVisible !== false"
+              :disabled="savingVisibility"
+              @change="saveActivityVisible($event.target.checked)"
+            />
+            <span class="profile__toggle-text">
+              Показывать мою активность
+              <span class="profile__toggle-hint">
+                Аватарка видна другим, пока вы проходите тест.
+              </span>
+            </span>
+          </label>
 
           <p class="profile__email">{{ currentUser?.email }}</p>
           <p v-if="currentUser?.providers?.length" class="profile__providers">
@@ -593,7 +612,30 @@ const topicAchievements = computed(() =>
 // тем растёт вместе с каталогом тестов, и показывать всё сразу значит
 // бесконечно растягивать профиль.
 const TOPIC_ACHIEVEMENTS_PAGE_SIZE = 9
-const showAllTopicAchievements = ref(false)
+// «Ещё N» запоминается в браузере: раскрыв список, человек не должен
+// раскрывать его заново при каждом заходе в профиль. Хранилище может быть
+// недоступно (приватное окно, заблокированные данные сайта) — тогда список
+// просто начинает свёрнутым, как раньше.
+const TOPIC_ACHIEVEMENTS_EXPANDED_KEY = 'devquiz_topic_achievements_expanded'
+
+function readTopicAchievementsExpanded() {
+  try {
+    return localStorage.getItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const showAllTopicAchievements = ref(readTopicAchievementsExpanded())
+
+watch(showAllTopicAchievements, expanded => {
+  try {
+    if (expanded) localStorage.setItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY, '1')
+    else localStorage.removeItem(TOPIC_ACHIEVEMENTS_EXPANDED_KEY)
+  } catch {
+    // Не удалось сохранить — состояние остаётся только на этой странице.
+  }
+})
 const visibleTopicAchievements = computed(() =>
   showAllTopicAchievements.value
     ? topicAchievements.value
@@ -700,6 +742,22 @@ function saveProfile() {
     // partial reload молча отдавал бы ПОЛНЫЙ дашборд вместо одного пропа.
     only: [ 'current_user' ],
     onFinish: () => { savingProfile.value = false }
+  })
+}
+
+// Переключатель видимости сохраняется сразу, без кнопки «Сохранить»: это
+// настройка приватности, а не поле профиля, и откладывать её применение
+// значило бы дольше светить аватарку, чем человек хотел.
+const savingVisibility = ref(false)
+
+function saveActivityVisible(visible) {
+  if (savingVisibility.value) return
+  savingVisibility.value = true
+
+  router.patch(`/dashboard${window.location.hash}`, { activity_visible: visible }, {
+    preserveScroll: true,
+    only: [ 'current_user' ],
+    onFinish: () => { savingVisibility.value = false }
   })
 }
 
@@ -1509,6 +1567,31 @@ function adoptAvatar(provider) {
   font-size: 0.8125rem;
   color: #9CA3AF;
   margin-top: 0.5rem;
+}
+
+.profile__toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+.profile__toggle-input {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.profile__toggle-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.profile__toggle-hint {
+  font-size: 0.75rem;
+  color: #9CA3AF;
 }
 
 .profile__providers {

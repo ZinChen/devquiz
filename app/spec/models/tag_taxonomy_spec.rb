@@ -10,6 +10,25 @@ RSpec.describe TagTaxonomy do
         "Запустите `rake tags:sync` и разнесите их по categories."
     end
 
+    # Одноимённый подтег — это плитка, продублированная чипом: снятие чипа
+    # снимает тег категории, плитка гаснет, и список подтегов схлопывается.
+    it "не объявляет подтегом тег самой категории" do
+      dup = described_class.categories.select { |c| c[:children].include?(c[:tag]) }
+      expect(dup.map { |c| c[:tag] }).to be_empty
+    end
+
+    it "не повторяет тег и в категориях, и в подтегах другой категории" do
+      all = described_class.categories.flat_map { |c| [ c[:tag], *c[:children] ] }
+      expect(all.tally.select { |_, n| n > 1 }.keys).to be_empty
+    end
+
+    # Тест без тематического тега не покажется никому, кто выбрал темы.
+    it "даёт каждому тесту хотя бы один тематический тег" do
+      topic_tags = described_class.categories.flat_map { |c| [ c[:tag], *c[:children] ] }
+      orphans = TestMetadatum.active.select { |t| (t.tag_list & topic_tags).empty? }
+      expect(orphans.map(&:slug)).to be_empty
+    end
+
     it "покрывает все теги, встречающиеся в тестах" do
       used = TestMetadatum.active.flat_map(&:tag_list).uniq
       expect(used - described_class.known_tags).to be_empty
@@ -97,6 +116,33 @@ RSpec.describe TagTaxonomy do
 
     it "переваривает мусор вместо массива" do
       expect(described_class.sanitize(nil)).to eq([])
+    end
+  end
+
+  describe ".tag_counts" do
+    it "считает категорию по её тегу или любому подтегу, не задваивая тест" do
+      counts = described_class.tag_counts([ %w[rails activerecord], %w[ruby], %w[postgresql sql] ])
+
+      expect(counts["ruby"]).to eq(2)
+      expect(counts["rails"]).to eq(1)
+      expect(counts["postgresql"]).to eq(1)
+    end
+
+    it "отдаёт ноль подтегу и категории, у которых нет тестов" do
+      counts = described_class.tag_counts([ %w[ruby] ])
+
+      expect(counts["go"]).to eq(0)
+      expect(counts["grafana"]).to eq(0)
+    end
+
+    it "считает тест во всех категориях, к которым он относится" do
+      counts = described_class.tag_counts([ %w[postgresql kafka] ])
+
+      expect(counts.values_at("postgresql", "platform", "kafka")).to eq([ 1, 1, 1 ])
+    end
+
+    it "не считает служебные теги" do
+      expect(described_class.tag_counts([ %w[hh backend] ]).keys).not_to include("hh", "backend")
     end
   end
 end

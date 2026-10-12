@@ -31,7 +31,7 @@ class AchievementsCatalog
       current
     end
 
-    delegate :entries, :slugs, :find, :color_for, to: :current
+    delegate :entries, :slugs, :find, :color_for, :rank_for, to: :current
 
     # YAML → база. Новые ачивки создаются, изменившиеся обновляются, лишние
     # (выпавшие из каталога) удаляются вместе с выдачами — иначе кабинет
@@ -130,6 +130,26 @@ class AchievementsCatalog
     @by_slug[slug.to_s]
   end
 
+  # «Металл» ачивки для оформления блока «Новое достижение»: золото — последняя
+  # ступень лесенки, бронза — первая, серебро — промежуточные. Одиночная ачивка
+  # (и лесенка из одной ступени) золота не получает: золото должно означать
+  # «прошёл лесенку до конца», а не просто «получил что-то».
+  RANKS = %w[bronze silver gold].freeze
+
+  def rank_for(slug)
+    entry = find(slug)
+    return "silver" if entry.nil? || entry.group.blank?
+
+    steps = ladder_steps(entry.group)
+    return "silver" if steps.size < 2
+
+    case steps.index(entry)
+    when steps.size - 1 then "gold"
+    when 0              then "bronze"
+    else                     "silver"
+    end
+  end
+
   # У одиночных ачивок группы нет — им отдаётся общий цвет, иначе каждая
   # красилась бы серым по умолчанию и выпадала из общей палитры.
   def color_for(group)
@@ -138,6 +158,11 @@ class AchievementsCatalog
 
     colors[group.presence || SINGLES_KEY] || colors[SINGLES_KEY] || DEFAULT_COLOR
   end
+
+  def ladder_steps(group)
+    entries.select { |e| e.group == group }.sort_by { |e| [ e.threshold.to_i, e.position ] }
+  end
+  private :ladder_steps
 
   # Тематическая плитка красится цветом своей темы из tests/topics.yml — тем
   # же, которым она подсвечена в отчёте о слабых местах. Двадцать плиток

@@ -9,7 +9,7 @@
         Остальные всегда доступны через «Другие теги».
       </p>
 
-      <TagPicker v-model="selected" :categories="tagCategories" :descriptions="tagDescriptions" />
+      <TagPicker v-model="selected" :categories="tagCategories" :descriptions="tagDescriptions" :counts="tagCounts" />
 
       <div class="settings__actions">
         <button
@@ -49,6 +49,7 @@ const props = defineProps({
   preferredTags:   { type: Array,  default: () => [] },
   tagCategories:   { type: Array,  default: () => [] },
   tagDescriptions: { type: Object, default: () => ({}) },
+  tagCounts:       { type: Object, default: () => ({}) },
 })
 
 const selected = ref([...props.preferredTags])

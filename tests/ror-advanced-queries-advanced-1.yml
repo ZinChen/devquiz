@@ -1,0 +1,876 @@
+slug: ror-advanced-queries-advanced-1
+title: "ActiveRecord: скоупы, джойны и загрузка ассоциаций"
+description: "Практический тест по продвинутому ActiveRecord и базовым механизмам Ruby: блоки и замыкания, includes, preload и eager_load, условия в ON и WHERE при джойне со скоупом, агрегации и LATERAL JOIN, STI и разбор конкретных запросов. Примеры рассчитаны на Rails 7 и PostgreSQL."
+tags: [ruby, rails, activerecord, backend]
+difficulty: expert
+estimated_time: 30
+
+questions:
+  - id: q1
+    text: "В чём разница между `require` и `require_relative` в Ruby?"
+    type: single
+    options:
+      - id: a
+        text: "`require_relative` ищет файл относительно рабочей директории процесса, а `require` — относительно текущего файла"
+        correct: false
+        explanation: "Здесь всё перевёрнуто: require_relative как раз не зависит от рабочей директории, что и делает его предсказуемым."
+      - id: b
+        text: "`require` загружает файл при каждом вызове заново, а `require_relative` — только один раз"
+        correct: false
+        explanation: "Оба метода загружают файл один раз: повторный вызов с тем же путём ничего не делает. Повторную загрузку при каждом вызове выполняет load."
+      - id: c
+        text: "`require_relative` — это `require`, который навсегда добавляет директорию текущего файла в `$LOAD_PATH`"
+        correct: false
+        explanation: "$LOAD_PATH require_relative не меняет: он вычисляет абсолютный путь и загружает файл по нему напрямую."
+      - id: d
+        text: "`require` ищет файл по путям из `$LOAD_PATH`, а `require_relative` — относительно расположения текущего файла"
+        correct: true
+        explanation: "require_relative вычисляет путь от файла, в котором написан вызов, поэтому не зависит от рабочей директории процесса. require перебирает директории из $LOAD_PATH, куда попадают, например, пути установленных гемов."
+    explanation: "require перебирает директории из $LOAD_PATH и подключает первый найденный файл, а require_relative строит путь от расположения файла с вызовом. Поэтому require_relative удобен для соседних файлов проекта и не ломается при запуске из другой директории."
+    extended_explanation: "В Rails-приложениях собственный код обычно не подключают вручную ни тем, ни другим: константы по соглашению об именовании загружает Zeitwerk. На практике стоит убедиться, что в app/ нет лишних require для собственных классов."
+    recommendation: "Автозагрузка в Rails: как Zeitwerk сопоставляет имена констант с путями файлов и почему явный require для собственного кода обычно не нужен."
+    difficulty: easy
+    topics: [ruby_language]
+
+  - id: q2
+    text: |-
+      Нужен список id опубликованных постов. Сравниваются два способа:
+
+      ```ruby
+      Post.where(published: true).map(&:id)
+      Post.where(published: true).pluck(:id)
+      ```
+
+      Чем второй выгоднее?
+    type: single
+    options:
+      - id: a
+        text: "`pluck` берёт значения из кэша запросов Rails, а `map` каждый раз обращается к базе"
+        correct: false
+        explanation: "Оба варианта выполняют один запрос. Кэш запросов действует внутри запроса веб-приложения и одинаков для обоих."
+      - id: b
+        text: "Запрашивает только колонку `id` и возвращает массив без создания объектов `Post`"
+        correct: true
+        explanation: "pluck выбирает нужные колонки на стороне SQL и отдаёт сразу значения. Первый вариант строит объект Post на каждую строку, со всеми атрибутами."
+      - id: c
+        text: "`map(&:id)` выполняет по отдельному запросу на каждую запись, а `pluck` — один запрос"
+        correct: false
+        explanation: "Запись уже загружена целиком, и id берётся из её атрибутов без обращения к базе. Запрос в обоих случаях один."
+      - id: d
+        text: "`pluck` добавляет `LIMIT 1000` и потому расходует меньше памяти"
+        correct: false
+        explanation: "pluck лимита по умолчанию не ставит и возвращает все подходящие значения."
+    explanation: "map(&:id) загружает все колонки каждой строки и создаёт объект ActiveRecord на запись, хотя нужен только id. pluck(:id) выбирает одну колонку и возвращает готовый массив значений: меньше данных по сети и меньше объектов для сборщика мусора."
+    extended_explanation: "pluck принимает несколько колонок и вернёт массивы значений, а `ids` — готовая обёртка для первичного ключа. Для больших выборок стоит ограничить результат: pluck загружает весь массив в память, и тогда подойдёт `in_batches`."
+    recommendation: "Выборка отдельных колонок в ActiveRecord: `pluck`, `ids`, `select` и стоимость создания объектов."
+    difficulty: easy
+    topics: [performance, queries]
+
+  - id: q3
+    text: |-
+      Что произойдёт при выполнении этого кода, если в таблице много постов с комментариями?
+
+      ```ruby
+      posts = Post.joins(:comments).distinct.limit(10)
+      posts.each { |post| puts post.comments.map(&:body) }
+      ```
+
+      Сколько SQL-запросов выполнится?
+    type: single
+    options:
+      - id: a
+        text: "11: один запрос за постами и по одному за комментариями каждого поста"
+        correct: true
+        explanation: "joins использует JOIN только для условий запроса, а данные комментариев в память не загружает. Каждое обращение к post.comments запускает собственный запрос, то есть классическая проблема N+1."
+      - id: b
+        text: "1: JOIN уже вернул комментарии вместе с постами, и повторных запросов не нужно"
+        correct: false
+        explanation: "JOIN объединяет таблицы в SQL, но в ассоциации объектов Post данные не попадают. Для этого нужен includes, preload или eager_load."
+      - id: c
+        text: "2: Rails сам подгружает комментарии вторым запросом, когда видит joins"
+        correct: false
+        explanation: "Подгрузку вторым запросом делает includes или preload. Обычный joins её не включает."
+      - id: d
+        text: "21: по два запроса на каждый пост, потому что map(&:body) проходит ассоциацию дважды"
+        correct: false
+        explanation: "map выполняется по уже загруженной ассоциации, и новых запросов не создаёт. На каждый пост приходится один запрос."
+    explanation: "joins строит SQL JOIN для условий WHERE, ORDER и GROUP, но не заполняет ассоциации объектов Ruby. Поэтому post.comments в цикле каждый раз идёт в базу. Для загрузки данных вместе с основной выборкой нужны includes, preload или eager_load."
+    extended_explanation: "Количество запросов видно в логе Rails (`ActiveRecord::Base.logger = Logger.new(STDOUT)`) или в гемах bullet и prosopite, которые прямо сообщают об N+1. Полезно сравнить лог для joins и для includes на одном и том же наборе постов."
+    recommendation: "Проблема N+1 в ActiveRecord и способы её устранения: includes, preload, eager_load."
+    difficulty: medium
+    topics: [performance, queries]
+
+  - id: q4
+    text: |-
+      Дан код:
+
+      ```ruby
+      module Greeter
+        def hello = "hello"
+      end
+
+      class User
+        include Greeter
+      end
+      ```
+
+      Какие из вызовов отработают без ошибки?
+    type: single
+    options:
+      - id: a
+        text: "Только `User.hello`"
+        correct: false
+        explanation: "Методы уровня класса появляются при extend. Одним include они недоступны."
+      - id: b
+        text: "И `User.new.hello`, и `User.hello`"
+        correct: false
+        explanation: "Одним include методы уровня класса не появляются: для них нужен отдельный extend."
+      - id: c
+        text: "Только `User.new.hello`"
+        correct: true
+        explanation: "include встраивает модуль в цепочку ancestors класса, и его методы становятся методами экземпляра."
+      - id: d
+        text: "Ни один: нужен `module_function`"
+        correct: false
+        explanation: "module_function нужен для вызова методов на самом модуле. Для подмешивания в класс он не требуется."
+    explanation: "include добавляет модуль в цепочку предков класса, поэтому любой экземпляр может вызывать его методы. Для методов уровня класса нужен extend, а prepend ставит модуль перед самим классом, и тогда методы модуля перехватывают вызов раньше собственной реализации и могут обратиться к ней через super."
+    extended_explanation: "Увидеть разницу можно по User.ancestors: после include модуль стоит сразу за классом, после prepend — перед ним. Типичный приём для обоих вариантов в Rails — ActiveSupport::Concern с блоком included."
+    recommendation: "Модули в Ruby: include, extend и prepend, цепочка ancestors и порядок поиска методов."
+    difficulty: easy
+    topics: [ruby_language]
+
+  - id: q5
+    text: "Таблица `vehicles` содержит колонку `type`, в ней хранятся записи моделей `Car`, `Truck` и `Motorcycle`, унаследованных от `Vehicle`. Как называется этот паттерн и что делает колонка `type`?"
+    type: single
+    options:
+      - id: a
+        text: "Polymorphic association: одна ассоциация ссылается на записи из разных таблиц"
+        correct: false
+        explanation: "Polymorphic association решает другую задачу: пара колонок вроде commentable_type и commentable_id позволяет одной ассоциации указывать на записи разных моделей."
+      - id: b
+        text: "Single Table Inheritance: подклассы делят одну таблицу, а в `type` ActiveRecord хранит имя класса строки"
+        correct: true
+        explanation: "При сохранении Car в type записывается строка «Car», а при загрузке по значению колонки создаётся объект нужного подкласса."
+      - id: c
+        text: "Delegated type: общие атрибуты лежат в таблице-родителе, а у каждого типа есть своя таблица"
+        correct: false
+        explanation: "Delegated type хранит подтипы в отдельных таблицах и связывает их через ассоциацию. Здесь все подклассы живут в одной таблице."
+      - id: d
+        text: "Concern: модуль с общей логикой, который подключается к нескольким несвязанным моделям"
+        correct: false
+        explanation: "Concern переиспользует код через модули и ничего не говорит о хранении нескольких классов в одной таблице."
+    explanation: "Single Table Inheritance отображает иерархию классов Ruby на одну таблицу. Колонка type управляется ActiveRecord: она заполняется именем класса при сохранении и определяет класс объекта при загрузке."
+    extended_explanation: "STI удобен, пока у подклассов почти одинаковые атрибуты. Если у разных типов появляются свои, сильно различающиеся наборы колонок, в таблице копятся поля, заполненные только в части строк, и тогда присматриваются к delegated_type или отдельным таблицам."
+    recommendation: "Наследование в ActiveRecord: STI, polymorphic association и delegated type, и границы применимости каждого."
+    difficulty: easy
+    topics: [associations, architecture]
+
+  - id: q6
+    text: |-
+      Запрос падает с ошибкой `PG::UndefinedTable: missing FROM-clause entry for table "comments"`:
+
+      ```ruby
+      Post.includes(:comments).where("comments.approved = true")
+      ```
+
+      Почему?
+    type: single
+    options:
+      - id: a
+        text: "Строковые условия в `where` нельзя использовать вместе с `includes`, допустимы только хэш-условия"
+        correct: false
+        explanation: "Строковые условия допустимы, и по колонкам основной модели они работают с includes. Ошибка возникает только из-за ссылки на таблицу ассоциации."
+      - id: b
+        text: "Таблица `comments` присоединяется только методом `joins`, а `includes` её в запрос не добавляет никогда"
+        correct: false
+        explanation: "includes присоединяет таблицу ассоциации, когда видит на неё ссылку: через хэш-условие или явный references."
+      - id: c
+        text: "Ошибка возникает только на PostgreSQL, а в MySQL такой запрос отработает"
+        correct: false
+        explanation: "Определение стратегии не зависит от СУБД. В MySQL и SQLite запрос упадёт точно так же, с другим текстом ошибки."
+      - id: d
+        text: "Rails не видит ссылку на `comments` внутри строки SQL и грузит ассоциацию отдельным запросом, без JOIN"
+        correct: true
+        explanation: "Хэш-условие вроде where(comments: { approved: true }) Rails разбирает и сам переключается на JOIN. Строку он не парсит, поэтому ассоциацию считает не участвующей в фильтрации."
+    explanation: "includes решает, делать ли JOIN, анализируя структурированные условия. Условие, записанное строкой SQL, для анализатора непрозрачно, и Rails продолжает грузить комментарии отдельным запросом, в котором таблица comments отсутствует в основном запросе. Метод references явно сообщает, что ассоциация участвует в условии."
+    extended_explanation: "Исправить можно двумя способами: хэш-условием `where(comments: { approved: true })` или явным `.references(:comments)` в конце цепочки. Просмотреть реальный SQL помогает `.to_sql` в консоли."
+    recommendation: "Метод `references` и логика выбора стратегии в `includes`: когда Rails переходит на JOIN, а когда нет."
+    difficulty: hard
+    topics: [performance, queries]
+
+  - id: q7
+    text: |-
+      Что вернёт последнее выражение?
+
+      ```ruby
+      def run_proc
+        pr = Proc.new { return 1 }
+        pr.call
+        2
+      end
+
+      def run_lambda
+        l = -> { return 1 }
+        l.call
+        2
+      end
+
+      [run_proc, run_lambda]
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`[2, 2]`"
+        correct: false
+        explanation: "Так вёл бы себя код, где return внутри proc завершал только сам блок. Но proc возвращается из метода, в котором создан."
+      - id: b
+        text: "`[1, 1]`"
+        correct: false
+        explanation: "Так вёл бы себя код, где return завершает метод и в случае lambda. У lambda return возвращает значение только из неё самой."
+      - id: c
+        text: "`[1, 2]`"
+        correct: true
+        explanation: "return внутри proc завершает окружающий метод run_proc, поэтому тот возвращает 1 и до двойки не доходит. return внутри lambda завершает только её саму, и run_lambda доходит до последней строки."
+      - id: d
+        text: "`LocalJumpError`"
+        correct: false
+        explanation: "Ошибка возникает, когда proc с return вызывают уже после завершения создавшего его метода. Здесь метод ещё выполняется."
+    explanation: "Различие в return — одно из двух ключевых между proc и lambda. lambda ведёт себя как обычный метод: return завершает её и передаёт управление вызвавшему коду. proc «жадный»: return пытается завершить метод, в котором proc был создан. Если этого метода уже нет, возникает LocalJumpError."
+    extended_explanation: "Второе ключевое различие — строгость аргументов: lambda выбрасывает ArgumentError при неверном числе аргументов, а proc молча подставляет nil вместо недостающих и отбрасывает лишние. Проверить оба поведения можно в irb за минуту."
+    recommendation: "Proc и lambda в Ruby: семантика return и проверка числа аргументов."
+    difficulty: medium
+    topics: [ruby_language]
+
+  - id: q8
+    text: |-
+      Нужно узнать, есть ли у автора хотя бы один пост. Какой способ эффективнее на большой таблице?
+
+      ```ruby
+      posts = Post.where(author_id: author.id)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`posts.exists?`"
+        correct: true
+        explanation: "exists? формирует запрос вида SELECT 1 ... LIMIT 1 и сразу возвращает ответ, не загружая и не считая записи."
+      - id: b
+        text: "`posts.present?`"
+        correct: false
+        explanation: "present? проверяет, не пуст ли relation, и для этого загружает все записи автора в память."
+      - id: c
+        text: "`posts.count > 0`"
+        correct: false
+        explanation: "count выполняет COUNT(*) по всем подходящим строкам, хотя для ответа достаточно найти первую."
+      - id: d
+        text: "`posts.to_a.any?`"
+        correct: false
+        explanation: "to_a загружает все записи автора, и только потом any? смотрит на массив."
+    explanation: "exists? останавливается на первой найденной строке, поэтому не зависит от общего числа записей. present? и to_a.any? загружают все объекты, а count считает все подходящие строки, хотя нужен только факт наличия."
+    extended_explanation: "any? на ещё не загруженном relation тоже делает SELECT 1 LIMIT 1, а вот present? и blank? загружают записи. На практике стоит поискать в проекте проверки вида `relation.present?` и `relation.count > 0` и заменить их на exists?."
+    recommendation: "Проверка наличия записей в ActiveRecord: `exists?`, `any?`, `present?`, `count` и что каждый из них делает с базой."
+    difficulty: easy
+    topics: [performance, queries]
+
+  - id: q9
+    text: |-
+      Какой из двух вариантов Rails выполнит одним запросом с `LEFT OUTER JOIN`, а какой — двумя отдельными запросами?
+
+      ```ruby
+      # (1)
+      Post.includes(:comments)
+
+      # (2)
+      Post.includes(:comments).where(comments: { approved: true })
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Вариант 1 выполнится одним запросом с JOIN, а вариант 2 — двумя запросами"
+        correct: false
+        explanation: "Всё наоборот: без условий по ассоциации Rails берёт два лёгких запроса, а JOIN включает, когда в WHERE или ORDER встречается её таблица."
+      - id: b
+        text: "Оба варианта выполнятся одним запросом с LEFT OUTER JOIN"
+        correct: false
+        explanation: "Без условий по ассоциации JOIN не нужен: Rails загружает комментарии отдельным запросом по списку id постов."
+      - id: c
+        text: "Оба варианта выполнятся двумя запросами: includes всегда работает как preload"
+        correct: false
+        explanation: "Поведение preload includes повторяет только пока ассоциация не фигурирует в условиях. Хэш-условие по comments переключает его на JOIN."
+      - id: d
+        text: "Вариант 2 выполнится одним запросом с JOIN, а вариант 1 — двумя запросами"
+        correct: true
+        explanation: "Во втором варианте условие ссылается на колонку comments, поэтому Rails переключается на LEFT OUTER JOIN. В первом ассоциация нужна только для загрузки, и отдельный запрос с WHERE IN выгоднее."
+    explanation: "includes выбирает стратегию по запросу. Если ассоциация нужна только для загрузки, Rails делает два запроса (посты, затем комментарии через WHERE IN), как preload. Как только в where или order есть ссылка на таблицу ассоциации, includes переходит на единый LEFT OUTER JOIN, как eager_load."
+    extended_explanation: "Строковые условия вроде `where(\"comments.approved = true\")` Rails разобрать не может, и переключения не происходит: там нужен явный `references(:comments)`. Для предсказуемости можно сразу писать eager_load или preload."
+    recommendation: "Стратегии загрузки ассоциаций в ActiveRecord: preload, eager_load и автоматический выбор в includes."
+    difficulty: hard
+    topics: [performance, queries]
+
+  - id: q10
+    text: |-
+      В модели настроен counter_cache, в таблице `articles` есть колонка `comments_count`:
+
+      ```ruby
+      class Comment < ApplicationRecord
+        belongs_to :article, counter_cache: true
+      end
+      ```
+
+      Почему он не подходит для подсчёта только одобренных комментариев каждой статьи?
+    type: single
+    options:
+      - id: a
+        text: "Он пересчитывается в фоне через Active Job, поэтому значение отстаёт от реального"
+        correct: false
+        explanation: "Счётчик обновляется синхронно, в тех же колбэках, что создают или удаляют запись."
+      - id: b
+        text: "Он увеличивает счётчик при каждом create и уменьшает при каждом destroy, без поддержки условий"
+        correct: true
+        explanation: "Колбэки counter_cache срабатывают на создание и удаление связанной записи и о её статусе не знают. Колонка отражает все существующие комментарии."
+      - id: c
+        text: "Он обновляется только при `update` записи, а при `create` и `destroy` счётчик не меняется"
+        correct: false
+        explanation: "Счётчик реагирует на create и destroy. Изменение других полей, например approved, его не затрагивает."
+      - id: d
+        text: "Условие можно задать лямбдой: `counter_cache: -> { approved }`, но по умолчанию оно выключено"
+        correct: false
+        explanation: "Rails не принимает условий: в counter_cache можно передать только имя колонки. Условные счётчики дают отдельные гемы, например counter_culture."
+    explanation: "counter_cache устроен просто: колбэки после создания и удаления связанной записи меняют число в родителе. Условия фильтрации в нём нет, поэтому для подсчёта только одобренных нужен условный COUNT на лету или гем вроде counter_culture."
+    extended_explanation: "Побочное следствие: изменение approved через update или массовый SQL UPDATE в обход колбэков счётчик вообще не заметит, потому что реагирует только на create и destroy. Для проверки на проде полезен сверочный запрос, сравнивающий счётчик с реальным COUNT."
+    recommendation: "Денормализация счётчиков: `counter_cache`, условные счётчики и их ограничения."
+    difficulty: medium
+    topics: [performance, associations]
+
+  - id: q11
+    text: |-
+      Метод передаёт полученный блок дальше, не давая ему имени:
+
+      ```ruby
+      def perform(&)
+        execute(&)
+      end
+      ```
+
+      Как называется эта возможность и с какой версии Ruby она доступна?
+    type: single
+    options:
+      - id: a
+        text: "Anonymous block forwarding, Ruby 3.1"
+        correct: true
+        explanation: "Безымянный `&` захватывает блок и пересылает его тем же `&` дальше, без промежуточной переменной."
+      - id: b
+        text: "Argument forwarding через `...`, Ruby 2.7"
+        correct: false
+        explanation: "Конструкция `...` пересылает все аргументы разом, а в этом коде пересылается только блок одним символом `&`."
+      - id: c
+        text: "Symbol#to_proc, Ruby 1.9"
+        correct: false
+        explanation: "Symbol#to_proc превращает символ в блок вида `&:name`. Пересылкой полученного блока он не занимается."
+      - id: d
+        text: "Numbered parameters, Ruby 2.7"
+        correct: false
+        explanation: "Numbered parameters дают доступ к параметрам блока по именам `_1`, `_2`. К пересылке блока они отношения не имеют."
+    explanation: "Анонимный блок `&` появился в Ruby 3.1: метод объявляет параметр без имени и пересылает блок в другой вызов тем же `&`. Это экономит имя переменной, когда блок только передают дальше и сам метод его не вызывает."
+    extended_explanation: "Полная форма `def method(...)` с вызовом `other(...)` пересылает позиционные, именованные аргументы и блок единым синтаксисом, а `&` пересылает только блок. Сравнить их удобно на небольшом методе-обёртке."
+    recommendation: "Передача блоков и аргументов в Ruby: `&block`, анонимный `&`, `*`, `**` и `...`."
+    difficulty: medium
+    topics: [ruby_language]
+
+  - id: q12
+    text: |-
+      Модель объявляет ассоциацию со скоупом:
+
+      ```ruby
+      class Author < ApplicationRecord
+        has_many :published_posts, -> { where(published: true) }, class_name: "Post"
+      end
+
+      Author.left_joins(:published_posts)
+      ```
+
+      Куда попадёт условие `published = true` в итоговом SQL?
+    type: single
+    options:
+      - id: a
+        text: "В секцию `WHERE` всего запроса, из-за чего `LEFT JOIN` ведёт себя как `INNER JOIN`"
+        correct: false
+        explanation: "Так получилось бы при ручном where(posts: { published: true }) после left_joins. Скоуп ассоциации идёт в ON и авторов без постов не отсекает."
+      - id: b
+        text: "В обе секции сразу, `ON` и `WHERE`, и фильтрация дублируется"
+        correct: false
+        explanation: "Условие применяется один раз, в ON. Дублирования в WHERE нет."
+      - id: c
+        text: "В секцию `ON` самого `LEFT JOIN`, в `WHERE` ничего не добавляется"
+        correct: true
+        explanation: "Условие скоупа ассоциации встраивается в условие соединения. Поэтому авторы без опубликованных постов остаются в выборке, только с NULL в полях поста."
+      - id: d
+        text: "Условие игнорируется, потому что `left_joins` не применяет скоупы ассоциаций"
+        correct: false
+        explanation: "Скоупы ассоциаций применяются и в joins, и в left_joins. Игнорируется лишь то, чего нет в определении самой ассоциации."
+    explanation: "Условие в ON определяет, какие строки присоединённой таблицы попадут в соединение, а основная строка остаётся. Условие в WHERE фильтрует уже собранный результат и отбрасывает строки с NULL, то есть авторов без постов. Скоуп на ассоциации даёт первое поведение, обычный where после left_joins — второе."
+    extended_explanation: "Частая ошибка: хотят сохранить авторов без постов, но пишут `Author.left_joins(:posts).where(posts: { published: true })`. Условие уезжает в WHERE, и LEFT JOIN тихо превращается в INNER. Сравнить оба варианта удобно через .to_sql."
+    recommendation: "Условия в ON и WHERE при LEFT JOIN и скоупы ассоциаций в ActiveRecord."
+    difficulty: medium
+    topics: [queries, associations]
+
+  - id: q13
+    text: |-
+      Что вернёт этот запрос по сути?
+
+      ```ruby
+      Post.joins(:comments)
+          .where(comments: { approved: true })
+          .group("posts.id")
+          .having("COUNT(comments.id) > 3")
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Посты, у которых больше трёх комментариев любого статуса, а одобренные отображаются отдельно"
+        correct: false
+        explanation: "COUNT в having считает строки, прошедшие where. Неодобренные комментарии в подсчёт не попадают."
+      - id: b
+        text: "Посты, у которых больше трёх комментариев и хотя бы один из них одобрен"
+        correct: false
+        explanation: "Неодобренные комментарии исключены на этапе where, поэтому в подсчёте и сравнении с тремя участвуют только одобренные."
+      - id: c
+        text: "Ошибку: условие по ассоциации нельзя сочетать с `having`, если группировка идёт по `posts.id`"
+        correct: false
+        explanation: "where и having совместимы: первый фильтрует строки до группировки, второй — группы после неё."
+      - id: d
+        text: "Посты, у которых больше трёх одобренных комментариев, неодобренные не считаются"
+        correct: true
+        explanation: "where отсекает неодобренные комментарии до группировки, group собирает строки по постам, а having по уже отфильтрованным данным оставляет группы, где строк больше трёх."
+    explanation: "Порядок выполнения: JOIN, WHERE по строкам, GROUP BY, HAVING по группам. Неодобренные комментарии исчезают на шаге WHERE, и HAVING сравнивает с тремя количество оставшихся, то есть одобренных, строк."
+    extended_explanation: "Если нужны все посты с числом комментариев любого статуса, но с отдельным подсчётом одобренных, используют условный COUNT: `COUNT(comments.id) FILTER (WHERE comments.approved)` в PostgreSQL. Так оба числа считаются за один проход."
+    recommendation: "Порядок выполнения SQL (WHERE, GROUP BY, HAVING) и агрегации через ActiveRecord."
+    difficulty: medium
+    topics: [queries]
+
+  - id: q14
+    text: |-
+      Чем различаются эти два вызова?
+
+      ```ruby
+      Post.eager_load(:comments)
+      Post.preload(:comments)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`eager_load` всегда строит один запрос с `LEFT OUTER JOIN`, а `preload` — отдельный запрос на ассоциацию"
+        correct: true
+        explanation: "В отличие от includes, который выбирает стратегию сам, эти методы фиксируют её. eager_load нужен, когда придётся фильтровать или сортировать по колонкам ассоциации, preload — когда нет."
+      - id: b
+        text: "`preload` умеет фильтровать по колонкам ассоциации, а `eager_load` — нет"
+        correct: false
+        explanation: "Фильтровать по колонкам ассоциации можно только при JOIN, а его строит как раз eager_load. Отдельный запрос preload к таблице основной модели не обращается."
+      - id: c
+        text: "`eager_load` выполняет отдельный запрос на ассоциацию, а `preload` — один JOIN"
+        correct: false
+        explanation: "Стратегии перепутаны местами: JOIN строит eager_load, а отдельный запрос по списку id — preload."
+      - id: d
+        text: "`preload` загружает ассоциацию для всех записей таблицы, игнорируя условия на основную модель"
+        correct: false
+        explanation: "preload берёт id уже выбранных родительских записей. Условия where на основную модель ограничивают и загрузку ассоциации."
+    explanation: "includes сам решает, что использовать, а eager_load и preload фиксируют выбор. eager_load безусловно строит LEFT OUTER JOIN, preload безусловно выполняет отдельный запрос с WHERE IN. Явный вариант делает код предсказуемым: по тексту запроса сразу видна стратегия."
+    extended_explanation: "Если нужно и подгрузить ассоциацию, и отфильтровать по её колонкам, берут eager_load или includes вместе с references. Если фильтрации по ассоциации нет, preload обычно эффективнее по объёму передаваемых данных."
+    recommendation: "Явные методы загрузки ассоциаций: когда выбирать eager_load, а когда preload."
+    difficulty: medium
+    topics: [performance, queries]
+
+  - id: q15
+    text: |-
+      Дана иерархия:
+
+      ```ruby
+      class Vehicle < ApplicationRecord; end
+      class Car < Vehicle; end
+      class Truck < Vehicle; end
+
+      Car.where(color: "red")
+      ```
+
+      Какое условие ActiveRecord добавит в `WHERE` помимо `color`?
+    type: single
+    options:
+      - id: a
+        text: "`vehicles.type IN ('Vehicle', 'Car', 'Truck')`"
+        correct: false
+        explanation: "Список строится по запрашиваемому классу и его потомкам. Родитель и соседние подклассы в него не входят."
+      - id: b
+        text: "`vehicles.type IN ('Car')`, плюс имена потомков Car, если они есть"
+        correct: true
+        explanation: "Запрос к подклассу STI автоматически ограничивается значением type. Если у Car есть собственные подклассы, их имена добавятся в список IN."
+      - id: c
+        text: "Никакого: фильтр по классу применяется уже в Ruby, после загрузки всех строк"
+        correct: false
+        explanation: "Фильтрация идёт на уровне SQL. В память не загружаются строки других типов."
+      - id: d
+        text: "`vehicles.type IS NOT NULL`, отсекаются только строки без типа"
+        correct: false
+        explanation: "Такое условие не отделило бы Car от Truck: фильтр строится по имени запрашиваемого класса."
+    explanation: "Запрос к подклассу STI всегда ограничивается по колонке type: ActiveRecord подставляет `type IN (...)` с именем класса и всех его известных потомков. Запрос к корневому классу Vehicle такого условия не добавляет и возвращает строки всех типов, каждую как объект своего подкласса."
+    extended_explanation: "Это важно для индексов: для частых запросов к подклассу полезен составной индекс, где type стоит первой колонкой. В development с ленивой загрузкой список потомков зависит от того, какие подклассы уже загружены."
+    recommendation: "STI в ActiveRecord: как строится SQL для подклассов, колонка `type` и индексы под неё."
+    difficulty: medium
+    topics: [associations]
+
+  - id: q16
+    text: |-
+      Миграция добавляет колонку-счётчик и заполняет её для существующих записей:
+
+      ```ruby
+      class AddCommentsCountToArticles < ActiveRecord::Migration[7.1]
+        def up
+          add_column :articles, :comments_count, :integer, default: 0, null: false
+          Article.find_each { |article| Article.reset_counters(article.id, :comments) }
+        end
+      end
+      ```
+
+      Зачем нужен вызов `reset_counters`, если в `Comment` уже есть `counter_cache: true`?
+    type: single
+    options:
+      - id: a
+        text: "Без него колбэки counter_cache не подключаются, поэтому счётчик не будет расти и для новых комментариев"
+        correct: false
+        explanation: "Колбэки подключаются самим объявлением counter_cache: true в модели. Для новых записей они работают и без reset_counters."
+      - id: b
+        text: "Он нужен после каждого создания комментария, потому что счётчик автоматически не увеличивается"
+        correct: false
+        explanation: "Для новых комментариев счётчик увеличивается автоматически. reset_counters вызывают разово, для исправления накопленных данных."
+      - id: c
+        text: "counter_cache учитывает только новые create и destroy, а существующие комментарии нужно пересчитать вручную"
+        correct: true
+        explanation: "Настройка не пересчитывает данные задним числом: у уже существовавших статей счётчик остался бы нулевым. reset_counters считает реальное число связанных записей и записывает его в колонку."
+      - id: d
+        text: "Значение по умолчанию `default: 0` блокирует рост счётчика, пока его не сбросить"
+        correct: false
+        explanation: "default задаёт только начальное значение колонки. На последующие инкременты он не влияет."
+    explanation: "counter_cache подключает колбэки, которые инкрементируют и декрементируют счётчик, начиная с момента добавления настройки. Данные, существовавшие раньше, остаются нетронутыми, и без явного пересчёта счётчик у них занижен или равен нулю. Это исказит любую отчётность и сортировку по нему."
+    extended_explanation: "Для больших таблиц цикл с reset_counters по одной записи медленный: каждый вызов делает свой COUNT и UPDATE. Практически стоит проверить, что любое добавление counter_cache в истории миграций сопровождалось пересчётом существующих данных."
+    recommendation: "Жизненный цикл `counter_cache`: добавление колонки, backfill существующих данных и `reset_counters`."
+    difficulty: medium
+    topics: [performance, associations]
+
+  - id: q17
+    text: |-
+      Метод вызывают тысячи раз в бенчмарке:
+
+      ```ruby
+      def learn(topic)
+        topic.length
+      end
+
+      frozen_rails = "Ruby on Rails".freeze
+
+      Benchmark.ips do |x|
+        x.report("literal") { learn("Ruby on Rails") }
+        x.report("frozen")  { learn(frozen_rails) }
+      end
+      ```
+
+      Почему второй вариант обычно оказывается быстрее?
+    type: single
+    options:
+      - id: a
+        text: "Для замороженных строк Ruby передаёт в метод ссылку, а обычные литералы копирует по значению"
+        correct: false
+        explanation: "Объекты в Ruby всегда передаются по ссылке. Разница в том, что литерал каждый раз порождает новый объект."
+      - id: b
+        text: "Замороженная строка хранится как Symbol, а сравнение и обработка символов быстрее строк"
+        correct: false
+        explanation: "Замораживание тип объекта не меняет: строка остаётся String, просто её нельзя изменить."
+      - id: c
+        text: "Литерал без заморозки на каждый вызов вызывает предупреждение, и вывод предупреждения замедляет метод"
+        correct: false
+        explanation: "Предупреждения возникают лишь при попытке изменить «chilled»-строку в новых версиях Ruby. Простое чтение литерала их не вызывает."
+      - id: d
+        text: "Литерал без заморозки создаёт новый объект String на каждый вызов, а замороженная строка — один общий объект"
+        correct: true
+        explanation: "Без `# frozen_string_literal: true` литерал в блоке каждый раз аллоцирует новую строку, а переменная frozen_rails ссылается на один и тот же объект. Выигрыш — это сэкономленные аллокации и работа сборщика мусора."
+    explanation: "Строковый литерал без магического комментария порождает новый объект String при каждом выполнении строки кода. Замороженная переменная создаётся один раз, и метод получает ссылку на готовый объект. На большом числе повторений разница в аллокациях и нагрузке на GC заметна."
+    extended_explanation: "Комментарий `# frozen_string_literal: true` в начале файла делает замороженными все литералы файла сразу, и вызывать freeze вручную не нужно. Запустить такой бенчмарк локально можно через гем benchmark-ips."
+    recommendation: "Строки в Ruby: изменяемость, `frozen_string_literal`, аллокации объектов и работа сборщика мусора."
+    difficulty: hard
+    topics: [ruby_language]
+
+  - id: q18
+    text: |-
+      Запрос возвращает объекты Post:
+
+      ```ruby
+      posts = Post.left_joins(:comments)
+                  .select("posts.*", "COUNT(comments.id) AS comments_count")
+                  .group("posts.id")
+      ```
+
+      Как в Ruby получить посчитанное число комментариев поста?
+    type: single
+    options:
+      - id: a
+        text: "Через `post.comments.count`, который выполнит дополнительный запрос"
+        correct: false
+        explanation: "Так число получить можно, но оно будет посчитано заново отдельным запросом, и смысл агрегата в исходном запросе пропадёт."
+      - id: b
+        text: "Через атрибут `post.comments_count`, названный по алиасу из `SELECT`"
+        correct: true
+        explanation: "Любое значение, выбранное в SELECT, становится атрибутом объекта, даже если такой колонки в таблице нет."
+      - id: c
+        text: "Никак: ActiveRecord создаёт атрибуты объекта только из реальных колонок таблицы `posts`"
+        correct: false
+        explanation: "Дополнительные выбранные значения становятся атрибутами. Так же работает любой алиас в select."
+      - id: d
+        text: "Через `post[:comments_count]` не получится: оператор `[]` принимает только настоящие колонки"
+        correct: false
+        explanation: "Оператор [] читает любые атрибуты объекта, в том числе выбранные через алиас. Для этого есть и метод-геттер."
+    explanation: "ActiveRecord превращает каждую выбранную колонку или вычисляемое значение в атрибут объекта. Поэтому post.comments_count возвращает число, посчитанное на стороне SQL, без дополнительных запросов. left_joins гарантирует, что посты без комментариев тоже попадут в выборку, со счётом 0."
+    extended_explanation: "Приём удобен там, где counter_cache не подходит: например, когда нужно посчитать только одобренные комментарии условным COUNT. Увидеть добавленный атрибут можно в post.attributes в консоли."
+    recommendation: "Вычисляемые атрибуты в ActiveRecord: `select` с алиасами, `group` и агрегатные функции."
+    difficulty: medium
+    topics: [queries, performance]
+
+  - id: q19
+    text: |-
+      В таблице `users` пять миллионов строк. Что изменится, если заменить первый вариант вторым?
+
+      ```ruby
+      User.all.each { |user| user.recalculate_rating }
+      User.find_each { |user| user.recalculate_rating }
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`find_each` загружает записи пачками по 1000 и не держит всю таблицу в памяти"
+        correct: true
+        explanation: "Первый вариант загрузит все пять миллионов объектов, прежде чем начнёт цикл. find_each берёт пачку, отдаёт записи по одной и переходит к следующей, ориентируясь на первичный ключ."
+      - id: b
+        text: "`find_each` выполняет один запрос с курсором, поэтому не создаёт нагрузки на базу"
+        correct: false
+        explanation: "Запросов много: по одному на каждую пачку. Курсоров в обычном find_each нет."
+      - id: c
+        text: "`find_each` сохраняет порядок сортировки, заданный через `order` в запросе"
+        correct: false
+        explanation: "find_each всегда упорядочивает по первичному ключу и заданный order игнорирует, о чём Rails сообщает предупреждением."
+      - id: d
+        text: "`find_each` выполняет `recalculate_rating` для разных записей параллельно в нескольких потоках"
+        correct: false
+        explanation: "Обработка последовательная, в одном потоке. Параллелизм нужно организовывать отдельно, например через фоновые задачи."
+    explanation: "each на relation сначала загружает все записи в память, а find_each режет выборку на пачки по первичному ключу. Память расходуется на одну пачку, поэтому метод подходит для больших таблиц и фоновых задач."
+    extended_explanation: "Размер пачки задаётся параметром `batch_size`. Для обработки пачками целиком есть find_in_batches и in_batches. Практически стоит проверить в задачах и миграциях, нет ли обычного each по крупным таблицам."
+    recommendation: "Пакетная обработка в ActiveRecord: `find_each`, `find_in_batches`, `in_batches` и их ограничения."
+    difficulty: easy
+    topics: [performance, queries]
+
+  - id: q20
+    text: |-
+      Этот код выполняет N+1 запросов для тысячи постов:
+
+      ```ruby
+      Post.all.each { |post| puts post.comments.count }
+      ```
+
+      Какое изменение устранит проблему?
+    type: single
+    options:
+      - id: a
+        text: "`Post.includes(:comments).each { |post| puts post.comments.count }`"
+        correct: false
+        explanation: "count всегда выполняет SQL COUNT(*) и игнорирует уже загруженные объекты, поэтому N запросов остаётся."
+      - id: b
+        text: "`Post.joins(:comments).each { |post| puts post.comments.size }`"
+        correct: false
+        explanation: "joins данные ассоциации не загружает. size на незагруженной ассоциации сам выполнит COUNT, и N+1 сохранится."
+      - id: c
+        text: "`Post.includes(:comments).each { |post| puts post.comments.size }`"
+        correct: true
+        explanation: "includes загружает все комментарии одним дополнительным запросом, а size считает уже загруженные объекты и новых запросов не делает."
+      - id: d
+        text: "`Post.all.map(&:comments).each { |comments| puts comments.count }`"
+        correct: false
+        explanation: "Без includes map(&:comments) обращается к ассоциации каждого поста по отдельности, а count добавляет ещё запрос."
+    explanation: "Для устранения N+1 нужны две вещи: заранее загрузить ассоциацию и читать количество методом, который использует загруженные данные. size проверяет, загружена ли ассоциация: если да, считает объекты в памяти, иначе выполняет COUNT(*). count всегда обращается к базе."
+    extended_explanation: "Если сами комментарии дальше не нужны, а нужно только число, эффективнее counter_cache: счётчик хранится в колонке родителя и обновляется при создании и удалении записей. Сравнить запросы для size и count после includes легко по логу Rails."
+    recommendation: "Различие `size`, `count` и `length` на ассоциациях ActiveRecord и счётчики через `counter_cache`."
+    difficulty: medium
+    topics: [performance, queries]
+
+  - id: q21
+    text: |-
+      Скоуп ассоциации использует подзапрос:
+
+      ```ruby
+      has_one :latest_comment,
+              -> { where(id: select("max(id)").group(:post_id)) },
+              class_name: "Comment"
+      ```
+
+      Что он делает для каждого поста?
+    type: single
+    options:
+      - id: a
+        text: "Возвращает комментарий с наименьшим id, то есть самый первый"
+        correct: false
+        explanation: "В подзапросе стоит max(id), а минимальный id дал бы min(id)."
+      - id: b
+        text: "Возвращает случайный комментарий, потому что `GROUP BY` не гарантирует, какая строка останется"
+        correct: false
+        explanation: "Результат детерминирован: отбирается строка, id которой равен максимуму в группе. Случайность могла бы появиться только без max."
+      - id: c
+        text: "Падает с ошибкой: `select` внутри `where` нельзя использовать без указания таблицы"
+        correct: false
+        explanation: "Подзапрос внутри where(id: ...) допустим: select с group становится вложенным SELECT по той же таблице."
+      - id: d
+        text: "Возвращает комментарий с наибольшим id, то есть последний добавленный"
+        correct: true
+        explanation: "Подзапрос группирует комментарии по post_id и находит максимальный id каждой группы. Внешнее условие отбирает именно эти строки."
+    explanation: "Подзапрос строит максимумы id по группам post_id, и where(id: ...) оставляет те комментарии, чей id в этот набор входит. Если id растёт вместе со временем создания, это последний комментарий поста. Это стандартный приём «последняя запись в группе» без оконных функций."
+    extended_explanation: "Тот же результат дают оконная функция `ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY id DESC)` и LATERAL JOIN. Подход через max(id) годится лишь для одной записи на группу и опирается на то, что id отражает порядок создания."
+    recommendation: "Задача «последняя запись для каждой группы»: group и max, оконные функции, LATERAL JOIN."
+    difficulty: hard
+    topics: [queries, associations]
+
+  - id: q22
+    text: |-
+      Ассоциация проходит цепочку пост, комментарий, голос, голосующий:
+
+      ```ruby
+      class Post < ApplicationRecord
+        has_many :comments
+        has_many :comment_voters, -> { distinct }, through: :comments, source: :voters
+      end
+      ```
+
+      Зачем здесь `distinct`, если каждый голос связывает голосующего ровно с одним комментарием?
+    type: single
+    options:
+      - id: a
+        text: "`has_many :through` с несколькими звеньями не работает без `distinct`, иначе Rails выбрасывает ошибку"
+        correct: false
+        explanation: "Ассоциация создаётся и без distinct. Различие только в том, будут ли дубликаты в результате."
+      - id: b
+        text: "Один голосующий может оставить голоса под разными комментариями поста, и без `distinct` он повторится в результате"
+        correct: true
+        explanation: "JOIN по цепочке даёт по строке на каждый путь от поста до голосующего. Два голоса одного человека под разными комментариями — это два пути и две строки."
+      - id: c
+        text: "`distinct` убирает повторяющиеся посты, потому что JOIN строится от таблицы `posts`"
+        correct: false
+        explanation: "Сама ассоциация возвращает голосующих, поэтому дублироваться могут именно они."
+      - id: d
+        text: "Голосующий может голосовать за комментарии нескольких постов, поэтому `distinct` не пропускает чужих голосующих"
+        correct: false
+        explanation: "Чужие голосующие отсекаются условием JOIN по id поста. Повтор вызывает несколько путей внутри одного поста."
+    explanation: "Многозвенный has_many :through строит JOIN через все промежуточные таблицы. Если между постом и голосующим больше одного пути, каждый порождает свою строку, и один и тот же голосующий повторяется. distinct на уровне SQL оставляет каждого один раз."
+    extended_explanation: "На больших объёмах distinct по длинной цепочке заметно дороже. Тогда иногда выгоднее подзапрос с DISTINCT ON (специфично для PostgreSQL) или предварительная агрегация voter_id перед финальным JOIN. Дубли легко воспроизвести: один голосующий и два его голоса под разными комментариями одного поста."
+    recommendation: "has_many :through с несколькими звеньями: как JOIN порождает дубли и когда нужен distinct."
+    difficulty: hard
+    topics: [queries, associations]
+
+  - id: q23
+    text: |-
+      Что делает эта цепочка и зачем в конце `distinct`?
+
+      ```ruby
+      Post.where(published: true)
+          .or(Post.where(featured: true))
+          .joins(:comments)
+          .distinct
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Выбирает посты, которые одновременно опубликованы и featured: `or` объединяет условия через И"
+        correct: false
+        explanation: "or в ActiveRecord соответствует SQL OR: достаточно выполнить любое из условий."
+      - id: b
+        text: "Падает с ошибкой: `or` нельзя сочетать с `joins` в одной цепочке"
+        correct: false
+        explanation: "Цепочка корректна: or требует лишь структурной совместимости двух relation, а joins добавляется после него."
+      - id: c
+        text: "Опубликованные или featured посты с комментариями, а `distinct` убирает повторы от JOIN"
+        correct: true
+        explanation: "or даёт логическое ИЛИ, joins работает как INNER JOIN и отсекает посты без комментариев, а у поста с пятью комментариями без distinct было бы пять строк."
+      - id: d
+        text: "`distinct` убирает повторяющиеся значения внутри ассоциации `comments`, а не строки таблицы `posts`"
+        correct: false
+        explanation: "distinct применяется ко всему результату запроса над Post. Содержимое ассоциации comments он не меняет."
+    explanation: "or строит условие ИЛИ между двумя where, joins(:comments) работает как INNER JOIN и оставляет только посты хотя бы с одним комментарием. JOIN один-ко-многим даёт по строке на комментарий, поэтому distinct нужен, чтобы получить уникальные посты."
+    extended_explanation: "Если joins нужен лишь для проверки существования связи, дубликатов можно избежать подзапросом `where(id: Comment.select(:post_id))` или `exists?`. Это частая ловушка, особенно когда JOIN добавляют только ради фильтра."
+    recommendation: "JOIN один-ко-многим и дубликаты строк: `distinct`, подзапросы и `exists?` как альтернативы."
+    difficulty: medium
+    topics: [queries, associations]
+
+  - id: q24
+    text: |-
+      Для каждого поста нужно получить три последних комментария:
+
+      ```sql
+      SELECT posts.id, c.id
+      FROM posts
+      LEFT JOIN LATERAL (
+        SELECT id FROM comments
+        WHERE comments.post_id = posts.id
+        ORDER BY id DESC
+        LIMIT 3
+      ) c ON true
+      ```
+
+      Чем `LATERAL` отличается от обычного подзапроса в `JOIN`?
+    type: single
+    options:
+      - id: a
+        text: "Подзапрос может ссылаться на колонки внешней таблицы и выполняется для каждой её строки"
+        correct: true
+        explanation: "Обычный подзапрос в JOIN вычисляется независимо и о строке posts не знает. С LATERAL условие comments.post_id = posts.id и LIMIT 3 применяются к каждому посту отдельно."
+      - id: b
+        text: "Подзапрос выполняется один раз, а его результат кэшируется для всех строк внешней таблицы"
+        correct: false
+        explanation: "LATERAL выполняется заново для каждой строки внешней таблицы, потому что зависит от неё."
+      - id: c
+        text: "`LIMIT` внутри подзапроса в JOIN допускается только с ключевым словом `LATERAL`"
+        correct: false
+        explanation: "LIMIT допустим в любом подзапросе. Но без LATERAL он ограничил бы общее число строк результата, и «по три на каждый пост» не получилось бы."
+      - id: d
+        text: "`LATERAL` — подсказка планировщику, чтобы он использовал индекс по внешнему ключу"
+        correct: false
+        explanation: "LATERAL — часть синтаксиса, которая делает видимыми колонки внешней таблицы. Выбор индекса остаётся за планировщиком."
+    explanation: "LATERAL разрешает подзапросу в предложении FROM или JOIN ссылаться на колонки таблиц, записанных левее. Благодаря этому для каждого поста выполняется свой параметризованный запрос с LIMIT 3, что обычным подзапросом сделать нельзя."
+    extended_explanation: "Без LATERAL «топ-N на группу» решают оконной функцией `ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY id DESC)` с фильтром по номеру строки. max(id) годится лишь для одной записи на группу. Планы выполнения обоих вариантов стоит сравнить через EXPLAIN ANALYZE."
+    recommendation: "LATERAL JOIN в PostgreSQL и задача «топ-N на группу»: сравнение с оконными функциями."
+    difficulty: hard
+    topics: [queries, performance]
+
+  - id: q25
+    text: |-
+      В таблице есть посты со `status = NULL`:
+
+      ```ruby
+      Post.where.not(status: "draft")
+      ```
+
+      Попадут ли они в результат?
+    type: single
+    options:
+      - id: a
+        text: "Да: Rails добавляет `OR status IS NULL`, чтобы where.not был предсказуемым"
+        correct: false
+        explanation: "Rails ничего не добавляет к условию: where.not(status: \"draft\") превращается ровно в status != 'draft'."
+      - id: b
+        text: "Да: `where.not` проверяет только непустые значения и поэтому NULL пропускает"
+        correct: false
+        explanation: "where.not отрицает условие и пустые значения не пропускает. Для NULL отрицание тоже не истинно."
+      - id: c
+        text: "Зависит от адаптера: PostgreSQL вернёт такие строки, а MySQL нет"
+        correct: false
+        explanation: "Трёхзначная логика SQL работает одинаково во всех СУБД, и NULL при сравнении отсекается везде."
+      - id: d
+        text: "Нет: условие `status != 'draft'` для NULL не истинно, и такие строки отбрасываются"
+        correct: true
+        explanation: "В SQL сравнение с NULL даёт неопределённость, а WHERE оставляет только истинные результаты. Посты без статуса пропадут из выборки."
+    explanation: "В трёхзначной логике SQL выражение `NULL != 'draft'` даёт NULL, а не true, поэтому строка в WHERE не проходит. Из-за этого where.not молча теряет записи с пустым значением, и часто это обнаруживают поздно."
+    extended_explanation: "Чтобы вернуть и NULL, пишут явно: `Post.where(status: nil).or(Post.where.not(status: \"draft\"))` или в PostgreSQL `IS DISTINCT FROM`. Практически стоит поискать where.not по колонкам, допускающим NULL."
+    recommendation: "Трёхзначная логика SQL и NULL в условиях: `where.not`, `IS NULL`, `IS DISTINCT FROM`."
+    difficulty: medium
+    topics: [queries]

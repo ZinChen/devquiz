@@ -25,6 +25,12 @@
         >{{ tag }}</button>
       </div>
       <div class="test-row__meta">
+        <AvatarStack
+          v-if="activity[test.slug]?.length"
+          :viewers="activity[test.slug]"
+          :size="24"
+          class="test-row__live"
+        />
         <span>{{ test.questionsCount }} вопросов</span>
         <span>~{{ test.estimatedTime }} мин</span>
         <div
@@ -58,12 +64,15 @@ import { Link, usePage } from '@inertiajs/vue3'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
 import EmptyState from '@/components/tests/EmptyState.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
+import { useActivity } from '@/composables/useActivity.js'
 import { CHALLENGE_MODE_ORDER, CHALLENGE_MODE_LABELS, isChallengeModeUnlocked } from '@/composables/challengeModes.js'
 
 const props = defineProps({ tests: Array, selectedTags: { type: Array, default: () => [] } })
 defineEmits(['clear-filters', 'toggle-tag'])
 
 const currentUser = computed(() => usePage().props.currentUser)
+const { activity } = useActivity()
 
 const BASE_CHALLENGE_MODES = CHALLENGE_MODE_ORDER.filter(m => m !== 'fix')
 const MODE_LABELS = CHALLENGE_MODE_LABELS

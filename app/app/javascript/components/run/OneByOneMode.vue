@@ -25,7 +25,10 @@
             <div class="question-card__progress-fill" :style="{ width: progressPercent + '%', transition: progressAnimated ? 'width 0.3s ease' : 'none' }"></div>
           </div>
 
-          <p class="question-card__counter">Вопрос {{ currentIndex + 1 }} из {{ questions.length }}</p>
+          <div class="question-card__meta">
+            <p class="question-card__counter">Вопрос {{ currentIndex + 1 }} из {{ questions.length }}</p>
+            <AvatarStack :viewers="viewersByQuestion[currentQuestion.id] || []" :size="24" />
+          </div>
           <p class="question-card__text" v-html="formatText(currentQuestion.text)"></p>
 
           <CodeChallengeQuestion
@@ -84,6 +87,7 @@
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import QuestionOptions from '@/components/run/QuestionOptions.vue'
 import CodeChallengeQuestion from '@/components/run/CodeChallengeQuestion.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
 
 const props = defineProps({
   questions:         Array,
@@ -98,6 +102,7 @@ const props = defineProps({
   formatText:        Function,
   savedIndex:        { type: Number, default: 0 },
   challengeMode:     { type: String, default: 'highlight' },
+  viewersByQuestion: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['submit', 'index-change'])
@@ -317,11 +322,18 @@ onUnmounted(() => {
   background: #4F63F5;
 }
 
+.question-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  margin-bottom: 0.25rem;
+}
+
 .question-card__counter {
   font-size: 0.75rem;
   color: #9CA3AF;
   font-weight: 500;
-  margin-bottom: 0.25rem;
 }
 
 .question-card__text {

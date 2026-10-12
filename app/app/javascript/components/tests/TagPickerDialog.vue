@@ -19,7 +19,7 @@
           Эти темы и теги будут показаны на главной странице
         </p>
 
-        <TagPicker v-model="selected" :categories="categories" :descriptions="descriptions" />
+        <TagPicker v-model="selected" :categories="categories" :descriptions="descriptions" :counts="counts" />
 
         <div class="onboarding__actions">
           <!-- В режиме правки отказ ничего не сохраняет, при первом входе
@@ -29,7 +29,15 @@
           </button>
           <!-- Кнопка появляется по факту изменения, а не по наличию тем:
                снять все темы — это тоже изменение, его надо дать сохранить. -->
-          <button v-if="changed" class="btn btn-primary" @click="submit(selected)">
+          <!-- Кнопка занимает место всегда и лишь скрывается: иначе её появление
+               сдвигало бы «Отмену» по горизонтали. -->
+          <button
+            class="btn btn-primary"
+            :class="{ 'onboarding__save--hidden': !changed }"
+            :tabindex="changed ? 0 : -1"
+            :aria-hidden="!changed"
+            @click="submit(selected)"
+          >
             {{ editing ? 'Сохранить' : 'Показать тесты' }}
           </button>
         </div>
@@ -49,6 +57,7 @@ const { notify } = useToasts()
 const props = defineProps({
   categories:   { type: Array,  default: () => [] },
   descriptions: { type: Object, default: () => ({}) },
+  counts:       { type: Object, default: () => ({}) },
   // Режим правки: открыт кнопкой "Изменить", стартует с текущего выбора
   // и закрывается без сохранения.
   editing:      { type: Boolean, default: false },
@@ -109,9 +118,12 @@ function submit(tags) {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
+  /* Сверху, а не по центру: при выборе плитки снизу появляются подтеги и
+     кнопка, и по центру панель росла бы в обе стороны, сдвигая плитки.
+     Так верхний край остаётся на месте, а содержимое раскрывается вниз. */
+  align-items: flex-start;
   justify-content: center;
-  padding: 1.5rem;
+  padding: max(1.5rem, 6vh) 1.5rem 3rem;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(6px);
   overflow-y: auto;
@@ -152,6 +164,10 @@ function submit(tags) {
 .onboarding__subtitle {
   color: #6B7280;
   margin-bottom: 2rem;
+}
+
+.onboarding__save--hidden {
+  visibility: hidden;
 }
 
 .onboarding__actions {
