@@ -19,6 +19,12 @@ Rails.application.configure do
 
   config.active_support.report_deprecations = false
   config.cache_store = :memory_store
+
+  # Воркеры Action Cable — потоки, выполняющие действия каналов (join, focus):
+  # каждое берёт соединение из пула БД, поэтому их число ограничено явно и
+  # учтено в database.yml. По умолчанию их 4, что для двух потоков веб-сервера
+  # на 1 vCPU избыточно.
+  config.action_cable.worker_pool_size = 2
   config.active_record.dump_schema_after_migration = false
   config.active_record.attributes_for_inspect = [ :id ]
 end
