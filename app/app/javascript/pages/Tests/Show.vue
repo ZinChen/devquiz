@@ -41,6 +41,14 @@
           <span>Лучший результат: <b>{{ test.bestScore.toFixed(0) }}%</b></span>
         </div>
 
+        <!-- Кто сейчас проходит этот тест (#10). Человек попадает сюда, начав
+             прохождение, а не открыв эту страницу — поэтому «проходят», а не
+             «смотрят». Скрывшие активность не показываются вовсе (#9). -->
+        <div v-if="liveViewers.length" class="test-detail__live">
+          <span class="test-detail__live-label">Сейчас проходят</span>
+          <AvatarStack :viewers="liveViewers" :size="28" />
+        </div>
+
         <Link :href="`/tests/${test.slug}/run/new`" class="btn btn-primary test-detail__start">
           {{ hasStartedSession ? 'Продолжить тест' : 'Начать тест' }}
         </Link>
@@ -56,9 +64,14 @@ import { Link, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import CustomSourceBadge from '@/components/tests/CustomSourceBadge.vue'
+import AvatarStack from '@/components/AvatarStack.vue'
+import { useActivity } from '@/composables/useActivity.js'
 
 const props = defineProps({ test: Object })
 const currentUser = computed(() => usePage().props.currentUser)
+
+const { activity } = useActivity()
+const liveViewers = computed(() => activity.value[props.test.slug] || [])
 
 // Ключ и формат совпадают с useQuizSession.js — там же сессия и сохраняется.
 const hasStartedSession = ref(false)
@@ -159,6 +172,15 @@ onMounted(() => {
   font-size: 0.75rem;
   color: #6B7280;
   margin-top: 0.25rem;
+}
+
+.test-detail__live {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #6B7280;
 }
 
 .test-detail__stats {
