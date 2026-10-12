@@ -5,6 +5,7 @@ class PreferencesController < ApplicationController
     render inertia: "Settings/Tags", props: {
       preferred_tags:   preferred_tags || [],
       tag_categories:   TagTaxonomy.categories,
+      tag_counts:       TagTaxonomy.tag_counts(TestMetadatum.active.map(&:tag_list)),
       tag_descriptions: TagTaxonomy.descriptions
     }
   end

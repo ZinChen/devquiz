@@ -45,6 +45,17 @@ namespace :yaml_sync do
       []
     end
 
+    # Тематические теги — те, что можно выбрать на экране тем (категории и их
+    # подтеги). Тест без единого такого тега не покажется никому, кто выбрал
+    # темы, и никаких ошибок при этом не будет: тест лежит в базе, а на
+    # главной его нет. Таксономия читается тем же YAML-ом, без Rails.
+    topic_tags = begin
+      taxonomy = YAML.safe_load(File.read(Pathname.new(__dir__).join("../../config/tag_taxonomy.yml"))) || {}
+      (taxonomy["categories"] || {}).flat_map { |tag, cfg| [ tag, *((cfg || {})["children"] || {}).keys ] }.map(&:to_s)
+    rescue Errno::ENOENT, Psych::SyntaxError
+      nil
+    end
+
     errors    = []
     warnings  = []
     seen_slugs = {}
@@ -112,6 +123,11 @@ namespace :yaml_sync do
       level_tags = Array(data["tags"]).map(&:to_s) & %w[basic advanced expert]
       if level_tags.any?
         errors << "#{name}: уровень задаётся полем 'difficulty', уберите тег(и): #{level_tags.join(', ')}"
+      end
+
+      if topic_tags && (Array(data["tags"]).map(&:to_s) & topic_tags).empty?
+        errors << "#{name}: нет ни одного тематического тега из config/tag_taxonomy.yml (categories и их children) — " \
+                  "тест не покажется тем, кто выбрал темы. Теги теста: #{Array(data["tags"]).join(', ').presence || 'нет'}"
       end
 
       questions = data["questions"]

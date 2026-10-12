@@ -31,6 +31,7 @@ class TestsController < ApplicationController
       # nil (а не []) означает, что экран выбора ещё не показывали.
       preferred_tags:      preferred_tags,
       tag_categories:      TagTaxonomy.categories,
+      tag_counts:          TagTaxonomy.tag_counts(tests_list.map(&:tag_list)),
       tag_descriptions:    TagTaxonomy.descriptions,
       show_tag_onboarding: show_tag_onboarding?
     }

@@ -137,4 +137,14 @@ RSpec.describe "Предпочтения по тегам", type: :request do
       expect(response.body).to include("preferred_tags&quot;:[&quot;ruby&quot;]")
     end
   end
+
+  describe "GET /settings/tags" do
+    it "отдаёт число тестов на плитку, чтобы скрыть пустые подтеги" do
+      create(:test_metadatum, slug: "settings-counts", tag_list: "go")
+
+      get settings_tags_path, headers: { "X-Inertia" => "true" }
+
+      expect(response.parsed_body.dig("props", "tag_counts")).to include("go" => 1, "grafana" => 0)
+    end
+  end
 end
