@@ -1,36 +1,69 @@
 version: 2
+
+# Все PR идут в dev, а не в main: прод катится только релизом из dev (см.
+# README, «Выпустить версию»), и обновление зависимостей должно сначала
+# проверяться на стенде, как любая другая правка.
+#
+# Мелкие обновления (minor и patch) собираются в один PR на экосистему: вместо
+# десятка PR в неделю — один, который проще проверить. Мажорные идут отдельными
+# PR и по одному — именно их стоит читать внимательно (например, смена
+# основной версии postgres требует миграции данных, а не просто нового образа).
+#
+# target-branch влияет только на version updates: security updates Dependabot
+# по-прежнему открывает в ветку по умолчанию (main). Сам dependabot.yml он
+# читает тоже из main — изменения здесь вступают в силу после релиза в main.
 updates:
   # Гемы и npm живут в app/, а не в корне: с directory "/" dependabot
   # не находил манифесты и молчал.
   - package-ecosystem: bundler
     directory: "/app"
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      bundler-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   - package-ecosystem: npm
     directory: "/app"
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      npm-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # Воркфлоу читаются только из корневого .github/.
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      actions-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # Базовый образ приложения.
   - package-ecosystem: docker
     directory: "/"
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      docker-minor-patch:
+        update-types: [ "minor", "patch" ]
 
   # Образы серверного стека: caddy, postgres.
   - package-ecosystem: docker-compose
     directory: "/deploy"
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      compose-minor-patch:
+        update-types: [ "minor", "patch" ]
