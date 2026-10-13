@@ -67,3 +67,10 @@ updates:
     groups:
       compose-minor-patch:
         update-types: [ "minor", "patch" ]
+    # Мажорную версию postgres Dependabot не предлагает: данные в томе pgdata
+    # лежат в формате текущей версии, и образ следующей мажорной на них не
+    # запустится — нужна миграция через pg_dump и восстановление, а не новый
+    # тег в compose.yaml. Минорные и patch-обновления приходят как обычно.
+    ignore:
+      - dependency-name: "postgres"
+        update-types: [ "version-update:semver-major" ]
