@@ -24,19 +24,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT first_name, last_name FROM Employees WHERE department = 'Marketing';
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE department = 'Marketing';\n```"
     correct: true
   - id: b
-    text: SELECT first_name, last_name WHERE department = 'Marketing' FROM Employees;
+    text: "```sql\nSELECT first_name, last_name WHERE department = 'Marketing' FROM Employees;\n```"
     correct: false
   - id: c
-    text: SELECT first_name, last_name WHERE department = 'Marketing';
+    text: "```sql\nSELECT first_name, last_name WHERE department = 'Marketing';\n```"
     correct: false
   - id: d
-    text: FROM Employees SELECT first_name, last_name WHERE department = 'Marketing';
+    text: "```sql\nFROM Employees SELECT first_name, last_name WHERE department = 'Marketing';\n```"
     correct: false
   - id: e
-    text: CHOOSE first_name, last_name FROM Employees HAVING department = 'Marketing';
+    text: "```sql\nCHOOSE first_name, last_name FROM Employees HAVING department = 'Marketing';\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -57,19 +57,19 @@ questions:
   type: single
   options:
   - id: a
-    text: ALTER TABLE Clients ADD email VARCHAR(255);
+    text: "```sql\nALTER TABLE Clients ADD email VARCHAR(255);\n```"
     correct: true
   - id: b
-    text: INTO TABLE Clients ADD email VARCHAR(255);
+    text: "```sql\nINTO TABLE Clients ADD email VARCHAR(255);\n```"
     correct: false
   - id: c
-    text: UPDATE TABLE Clients ADD email VARCHAR(255);
+    text: "```sql\nUPDATE TABLE Clients ADD email VARCHAR(255);\n```"
     correct: false
   - id: d
-    text: UPDATE TABLE Clients ALTER COLUMN email VARCHAR(255);
+    text: "```sql\nUPDATE TABLE Clients ALTER COLUMN email VARCHAR(255);\n```"
     correct: false
   - id: e
-    text: ALTER TABLE Clients ALTER COLUMN email VARCHAR(255);
+    text: "```sql\nALTER TABLE Clients ALTER COLUMN email VARCHAR(255);\n```"
     correct: false
   difficulty: medium
   topics: [schema]
@@ -107,16 +107,16 @@ questions:
     text: Отобразится ошибка
     correct: true
   - id: b
-    text: Добавится новая запись (4, 5, 'BMW X5 M50d', Null)
+    text: Добавится новая запись (4, 5, 'BMW X5 M50d', `Null`)
     correct: false
   - id: c
-    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', Null)
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', `Null`)
     correct: false
   - id: d
     text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', 7)
     correct: false
   - id: e
-    text: Добавится новая запись (Null, 5, 'BMW X5 M50d', Null)
+    text: Добавится новая запись (`Null`, 5, 'BMW X5 M50d', `Null`)
     correct: false
   difficulty: medium
   topics: [queries]
@@ -148,19 +148,19 @@ questions:
   type: single
   options:
   - id: a
-    text: Используется total_salary <= 700000 вместо SUM(salary) <= 700000
+    text: Используется `total_salary <= 700000` вместо `SUM(salary) <= 700000`
     correct: false
   - id: b
-    text: HAVING total_salary <= 700000 стоит перед GROUP BY, а не после него
+    text: '`HAVING` `total_salary <= 700000` стоит перед `GROUP BY`, а не после него'
     correct: true
   - id: c
-    text: Используется HAVING вместо WHERE
+    text: Используется `HAVING` вместо `WHERE`
     correct: false
   - id: d
-    text: Не должно использоваться GROUP BY
+    text: Не должно использоваться `GROUP BY`
     correct: false
   - id: e
-    text: Используется GROUP BY вместо GROUP
+    text: Используется `GROUP BY` вместо `GROUP`
     correct: false
   difficulty: medium
   topics: [queries]
@@ -195,19 +195,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NULL;
+    text: "```sql\nSELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NULL;\n```"
     correct: true
   - id: b
-    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NOT NULL;
+    text: "```sql\nSELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id WHERE Clients.client_id IS NOT NULL;\n```"
     correct: false
   - id: c
-    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_client_id WHERE Clients.client_id IS NOT NULL;
+    text: "```sql\nSELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_client_id WHERE Clients.client_id IS NOT NULL;\n```"
     correct: false
   - id: d
-    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;
+    text: "```sql\nSELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;\n```"
     correct: false
   - id: e
-    text: SELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;
+    text: "```sql\nSELECT Orders.order_id FROM Orders LEFT JOIN Clients ON Clients.client_id = Orders.client_id;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -238,19 +238,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT first_name, last_name FROM Employees WHERE salary < (SELECT MEDIAN(salary) FROM employees);
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE salary < (SELECT MEDIAN(salary) FROM employees);\n```"
     correct: true
   - id: b
-    text: SELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary < MEDIAN(salary);
+    text: "```sql\nSELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary < MEDIAN(salary);\n```"
     correct: false
   - id: c
-    text: SELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) < salary;
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) < salary;\n```"
     correct: false
   - id: d
-    text: SELECT first_name, last_name FROM Employees WHERE MEDIAN(salary) < salary;
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE MEDIAN(salary) < salary;\n```"
     correct: false
   - id: e
-    text: SELECT first_name, last_name FROM Employees WHERE salary < AVG(salary);
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE salary < AVG(salary);\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -292,19 +292,19 @@ questions:
   type: single
   options:
   - id: a
-    text: Нужно указывать, из каких таблиц взяты данные, т. е. Respondents.age, Respondents.phone_number, Info.address
+    text: Нужно указывать, из каких таблиц взяты данные, т. е. Respondents.age, `Respondents.phone_number`, Info.address
     correct: true
   - id: b
-    text: Нужно указывать, из каких таблиц взяты данные, т. е. age.Respondents, phone_number.Respondents, address.Info
+    text: Нужно указывать, из каких таблиц взяты данные, т. е. age.Respondents, `phone_number.Respondents`, address.Info
     correct: false
   - id: c
-    text: Не нужно указывать обе таблицы в строке с FROM
+    text: Не нужно указывать обе таблицы в строке с `FROM`
     correct: false
   - id: d
-    text: Перед SELECT есть AS, который не нужен
+    text: Перед `SELECT` есть `AS`, который не нужен
     correct: false
   - id: e
-    text: Вместо CREATE VIEW PeopleView нужно написать CREATE PeopleView VIEW
+    text: Вместо `CREATE VIEW PeopleView` нужно написать `CREATE PeopleView VIEW`
     correct: false
   difficulty: medium
   topics: [schema]
@@ -345,7 +345,7 @@ questions:
     text: Сохранение выбранных значений в дополнительной таблице
     correct: true
   - id: b
-    text: Переход по некластеризованному индексу (product_category_index)
+    text: Переход по некластеризованному индексу (`product_category_index`)
     correct: false
   - id: c
     text: Поиск искомой записи столбца (category = 'electronics') методом двоичного поиска
@@ -354,7 +354,7 @@ questions:
     text: Поиск в основной таблице адреса соответствующей строки, в которой находится запись столбца, и переход к этой строке в основной таблице
     correct: false
   - id: e
-    text: Выбор других значений столбца в соответствии с требованиями запроса (product_name, price)
+    text: Выбор других значений столбца в соответствии с требованиями запроса (`product_name`, price)
     correct: false
   difficulty: medium
   topics: [indexes]
@@ -384,19 +384,19 @@ questions:
   type: single
   options:
   - id: a
-    text: BEGIN TRY <> END TRY
+    text: "```sql\nBEGIN TRY <> END TRY\n```"
     correct: true
   - id: b
-    text: SET XACT_ABORT, NOCOUNT ON
+    text: "```sql\nSET XACT_ABORT, NOCOUNT ON\n```"
     correct: false
   - id: c
-    text: BEGIN TRANSACTION <> COMMIT TRANSACTION
+    text: "```sql\nBEGIN TRANSACTION <> COMMIT TRANSACTION\n```"
     correct: false
   - id: d
-    text: RAISERROR <> RETURN
+    text: "```sql\nRAISERROR <> RETURN\n```"
     correct: false
   - id: e
-    text: BEGIN CATCH <> END CATCH
+    text: "```sql\nBEGIN CATCH <> END CATCH\n```"
     correct: false
   difficulty: medium
   topics: [transactions]
@@ -421,16 +421,16 @@ questions:
   type: single
   options:
   - id: a
-    text: Используя подзапрос, чтобы получить последний order_date для клиента, а затем объединяю результаты с таблицей Orders, чтобы получить полную информацию о заказе
+    text: Используя подзапрос, чтобы получить последний `order_date` для клиента, а затем объединяю результаты с таблицей Orders, чтобы получить полную информацию о заказе
     correct: true
   - id: b
-    text: Создаем представление, которое извлекает последнюю информацию о заказах для всех клиентов по поиску в order_date, а затем запрашивает представление для конкретного клиента
+    text: Создаем представление, которое извлекает последнюю информацию о заказах для всех клиентов по поиску в `order_date`, а затем запрашивает представление для конкретного клиента
     correct: false
   - id: c
     text: Создаем хранимую процедуру с вложенным циклом, которая выполняет полное сканирование таблицы
     correct: false
   - id: d
-    text: Используя запрос SELECT * и отфильтрую результаты по order_date
+    text: Используя запрос `SELECT *` и отфильтрую результаты по `order_date`
     correct: false
   - id: e
     text: Добавлю дополнительные индексы в другие столбцы в таблице Orders
@@ -454,19 +454,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25 ORDER BY age DESC
+    text: "```sql\nSELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25 ORDER BY age DESC\n```"
     correct: true
   - id: b
-    text: SELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M') AND age > 25 ORDER BY age DESC
+    text: "```sql\nSELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M') AND age > 25 ORDER BY age DESC\n```"
     correct: false
   - id: c
-    text: SELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M' AND age > 25) ORDER BY age DESC
+    text: "```sql\nSELECT * FROM Customers WHERE (name LIKE 'A' OR name LIKE 'M' AND age > 25) ORDER BY age DESC\n```"
     correct: false
   - id: d
-    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE '%M%') AND age > 25 ORDER BY age DESC
+    text: "```sql\nSELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE '%M%') AND age > 25 ORDER BY age DESC\n```"
     correct: false
   - id: e
-    text: SELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25
+    text: "```sql\nSELECT * FROM Customers WHERE (name LIKE 'A%' OR name LIKE 'M%') AND age > 25\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -487,19 +487,19 @@ questions:
   type: single
   options:
   - id: a
-    text: GRANT, REVOKE
+    text: "```sql\nGRANT, REVOKE\n```"
     correct: true
   - id: b
-    text: INSERT INTO, UPDATE
+    text: "```sql\nINSERT INTO, UPDATE\n```"
     correct: false
   - id: c
-    text: REPLACE, CALL
+    text: "```sql\nREPLACE, CALL\n```"
     correct: false
   - id: d
-    text: COMMIT, ROLLBACK
+    text: "```sql\nCOMMIT, ROLLBACK\n```"
     correct: false
   - id: e
-    text: ALTER, DROP
+    text: "```sql\nALTER, DROP\n```"
     correct: false
   difficulty: medium
   topics: [security]
@@ -566,19 +566,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT DISTINCT surname FROM group_A ORDER BY surname LIMIT 10;
+    text: "```sql\nSELECT DISTINCT surname FROM group_A ORDER BY surname LIMIT 10;\n```"
     correct: true
   - id: b
-    text: SELECT surname FROM group_A SORT BY surname DESC LIMIT 10;
+    text: "```sql\nSELECT surname FROM group_A SORT BY surname DESC LIMIT 10;\n```"
     correct: false
   - id: c
-    text: SELECT surname FROM group_A ORDER BY surname LIMIT 10;
+    text: "```sql\nSELECT surname FROM group_A ORDER BY surname LIMIT 10;\n```"
     correct: false
   - id: d
-    text: SELECT DISTINCT surname FROM group_A GROUP BY surname LIMIT 11;
+    text: "```sql\nSELECT DISTINCT surname FROM group_A GROUP BY surname LIMIT 11;\n```"
     correct: false
   - id: e
-    text: SELECT surname FROM group_A ORDER BY surname LIMIT 10;
+    text: "```sql\nSELECT surname FROM group_A ORDER BY surname LIMIT 10;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -598,19 +598,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT * FROM workers w JOIN salary s ON w.position = s.position;
+    text: "```sql\nSELECT * FROM workers w JOIN salary s ON w.position = s.position;\n```"
     correct: true
   - id: b
-    text: SELECT position FROM workers w LEFT JOIN salary s ON w.position = s.position;
+    text: "```sql\nSELECT position FROM workers w LEFT JOIN salary s ON w.position = s.position;\n```"
     correct: false
   - id: c
-    text: SELECT * FROM workers w JOIN salary s ON w.position = s.position; ORDER BY surname LIMIT 10;
+    text: "```sql\nSELECT * FROM workers w JOIN salary s ON w.position = s.position; ORDER BY surname LIMIT 10;\n```"
     correct: false
   - id: d
-    text: SELECT workers FROM workers JOIN salary s ON w.position = s.position;
+    text: "```sql\nSELECT workers FROM workers JOIN salary s ON w.position = s.position;\n```"
     correct: false
   - id: e
-    text: SELECT * FROM workers w LEFT JOIN salary s ON w.position = s.position; GROUP BY position ORDER BY surname;
+    text: "```sql\nSELECT * FROM workers w LEFT JOIN salary s ON w.position = s.position; GROUP BY position ORDER BY surname;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
