@@ -21,23 +21,23 @@ questions:
   type: single
   options:
   - id: a
-    text: category не включён в SELECT
+    text: category не включён в `SELECT`
     correct: false
     explanation: category как раз включён в SELECT (первая колонка).
   - id: b
-    text: COUNT(price) не учитывает NULL, и результат может быть занижен
+    text: '`COUNT(price)` не учитывает `NULL`, и результат может быть занижен'
     correct: true
     explanation: COUNT(price) подсчитывает только не-NULL значения, поэтому если есть товары с неуказанной ценой, они не будут учтены.
   - id: c
-    text: GROUP BY не работает с текстовыми колонками
+    text: '`GROUP BY` не работает с текстовыми колонками'
     correct: false
     explanation: GROUP BY отлично работает с текстовыми колонками.
   - id: d
-    text: COUNT нельзя применять к строкам
+    text: '`COUNT` нельзя применять к строкам'
     correct: false
     explanation: COUNT можно применять к строкам, COUNT(*) считает все строки.
   - id: e
-    text: Запрос вернёт NULL
+    text: Запрос вернёт `NULL`
     correct: false
     explanation: Запрос вернёт количество записей (возможно 0, если все price = NULL).
   difficulty: medium
@@ -117,7 +117,7 @@ questions:
     correct: false
     explanation: При INNER JOIN строки без совпадений в B не попадают.
   - id: d
-    text: Будут строки с NULL
+    text: Будут строки с `NULL`
     correct: false
     explanation: NULL в B.id возможны только при LEFT JOIN.
   - id: e
@@ -141,23 +141,23 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT SUM(CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END) FROM purchases
+    text: "```sql\nSELECT SUM(CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END) FROM purchases\n```"
     correct: true
     explanation: Корректно реализует требуемую логику с CASE.
   - id: b
-    text: SELECT SUM(DECODE(category, 'A', sales, 'B', sales/2, 0)) FROM purchases
+    text: "```sql\nSELECT SUM(DECODE(category, 'A', sales, 'B', sales/2, 0)) FROM purchases\n```"
     correct: false
     explanation: DECODE работает в Oracle, это не универсальный SQL.
   - id: c
-    text: SELECT SUM(SELECT CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END FROM purchases)
+    text: "```sql\nSELECT SUM(SELECT CASE category WHEN 'A' THEN sales WHEN 'B' THEN sales/2 ELSE 0 END FROM purchases)\n```"
     correct: false
     explanation: 'Синтаксическая ошибка: подзапрос не может быть аргументом SUM.'
   - id: d
-    text: SELECT SUM(IF(category = 'A', sales, IF(category = 'B', sales/2, 0)))) FROM purchases
+    text: "```sql\nSELECT SUM(IF(category = 'A', sales, IF(category = 'B', sales/2, 0)))) FROM purchases\n```"
     correct: false
     explanation: Лишняя закрывающая скобка, синтаксическая ошибка.
   - id: e
-    text: SELECT SUM(CASE WHEN category = 'A' THEN sales ELSE 0 END) FROM purchases
+    text: "```sql\nSELECT SUM(CASE WHEN category = 'A' THEN sales ELSE 0 END) FROM purchases\n```"
     correct: false
     explanation: Учитывает только category = 'A', игнорирует условие для 'B'.
   difficulty: medium
@@ -201,23 +201,23 @@ questions:
   type: single
   options:
   - id: a
-    text: один из подзапросов в WHERE возвращает две колонки; подзапрос нельзя указывать в WHERE; для одного подзапроса нет алиаса
+    text: один из подзапросов в `WHERE` возвращает две колонки; подзапрос нельзя указывать в `WHERE`; для одного подзапроса нет алиаса
     correct: false
     explanation: Подзапрос можно указывать в WHERE, проблема в количестве колонок.
   - id: b
-    text: подзапрос нельзя писать в HAVING; для всех подзапросов нет алиаса; JOIN происходит по полю, которого нет в подзапросе
+    text: подзапрос нельзя писать в `HAVING`; для всех подзапросов нет алиаса; `JOIN` происходит по полю, которого нет в подзапросе
     correct: false
     explanation: Подзапрос в HAVING допустим, проблема не в этом.
   - id: c
-    text: подзапросы не могут быть больше первого уровня вложенности; подзапрос нельзя писать в HAVING; один из подзапросов в WHERE возвращает две колонки
+    text: подзапросы не могут быть больше первого уровня вложенности; подзапрос нельзя писать в `HAVING`; один из подзапросов в `WHERE` возвращает две колонки
     correct: false
     explanation: Подзапросы могут быть любой вложенности.
   - id: d
-    text: JOIN происходит по полю, которого нет в подзапросе; EXISTS нельзя применять в CTE; для всех подзапросов нет алиаса
+    text: '`JOIN` происходит по полю, которого нет в подзапросе; `EXISTS` нельзя применять в CTE; для всех подзапросов нет алиаса'
     correct: false
     explanation: EXISTS можно применять в CTE.
   - id: e
-    text: один из подзапросов в WHERE возвращает две колонки; для двух подзапросов нет алиаса; JOIN происходит по полю, которого нет в подзапросе
+    text: один из подзапросов в `WHERE` возвращает две колонки; для двух подзапросов нет алиаса; `JOIN` происходит по полю, которого нет в подзапросе
     correct: true
     explanation: 'Верно: подзапрос в WHERE возвращает две колонки, у подзапроса в LEFT JOIN нет алиаса, в RIGHT JOIN обращение к old.id при отсутствии колонки id.'
   difficulty: medium
@@ -236,23 +236,23 @@ questions:
   type: single
   options:
   - id: a
-    text: Применить WHERE dt > now() к уже существующему представлению
+    text: Применить `WHERE dt > now()` к уже существующему представлению
     correct: false
     explanation: WHERE применяется при SELECT, но данные в материализованном представлении хранятся физически.
   - id: b
-    text: Удалить представление и создать его заново с фильтром WHERE dt > current_date - interval '3 months'
+    text: Удалить представление и создать его заново с фильтром `WHERE dt > current_date - interval '3 months'`
     correct: true
     explanation: Чтобы изменить логику выборки, нужно пересоздать представление с новым запросом.
   - id: c
-    text: Обновить материализованное представление через UPDATE
+    text: Обновить материализованное представление через `UPDATE`
     correct: false
     explanation: Материализованные представления не поддерживают прямые UPDATE.
   - id: d
-    text: Выполнить REFRESH MATERIALIZED VIEW с фильтром
+    text: Выполнить `REFRESH MATERIALIZED VIEW` с фильтром
     correct: false
     explanation: REFRESH обновляет данные, но не меняет запрос.
   - id: e
-    text: Использовать ALTER MATERIALIZED VIEW с добавлением условия
+    text: Использовать `ALTER MATERIALIZED VIEW` с добавлением условия
     correct: false
     explanation: ALTER меняет свойства, но не запрос.
   difficulty: medium
@@ -275,19 +275,19 @@ questions:
   type: single
   options:
   - id: a
-    text: select substr(title, ' ', '') from books
+    text: "```sql\nselect substr(title, ' ', '') from books\n```"
     correct: false
     explanation: SUBSTR вырезает подстроку, не заменяет.
   - id: b
-    text: select replace(title, ' ', '') from books
+    text: "```sql\nselect replace(title, ' ', '') from books\n```"
     correct: false
     explanation: Убирает пробелы, а не дефисы.
   - id: c
-    text: select regexp_replace(title, ' ', '') from books
+    text: "```sql\nselect regexp_replace(title, ' ', '') from books\n```"
     correct: false
     explanation: Убирает пробелы через регулярное выражение.
   - id: d
-    text: select replace(title, ' ', '-') from books
+    text: "```sql\nselect replace(title, ' ', '-') from books\n```"
     correct: false
     explanation: Меняет пробелы на дефисы (обратная операция).
   - id: e
@@ -328,23 +328,23 @@ questions:
   type: single
   options:
   - id: a
-    text: to_char(transaction_date, 'YYYY-MM') не поддерживает преобразование дата, а sum(...) не суммирует значения типа numeric
+    text: '`to_char`(`transaction_date`, ''YYYY-MM'') не поддерживает преобразование дата, а sum(...) не суммирует значения типа numeric'
     correct: false
     explanation: to_char поддерживает даты, sum суммирует numeric.
   - id: b
-    text: regexp_replace искажает числовые значения, а group by month некорректно сгруппирует данные
+    text: '`regexp_replace` искажает числовые значения, а `group by` month некорректно сгруппирует данные'
     correct: false
     explanation: group by month корректен.
   - id: c
-    text: cast(regexp_replace(...)) as numeric нельзя применять в агрегатных функциях, а date_trunc('YEAR', transaction_date::date) = '2023' не фильтрует по году
+    text: '`cast(regexp_replace(...)) as numeric` нельзя применять в агрегатных функциях, а `date_trunc(''YEAR'', transaction_date::date) = ''2023''` не фильтрует по году'
     correct: false
     explanation: CAST можно применять в агрегатных функциях.
   - id: d
-    text: regexp_replace возвращает некорректное значение для CAST, а date_trunc('YEAR', transaction_date::date) = '2023' записано с ошибкой
+    text: '`regexp_replace` возвращает некорректное значение для `CAST`, а `date_trunc(''YEAR'', transaction_date::date) = ''2023''` записано с ошибкой'
     correct: true
     explanation: regexp_replace может оставлять лишние точки, сравнение с '2023' некорректно.
   - id: e
-    text: date_trunc не работает с датами в формате YYYY, а regexp_replace удаляет только буквы, но не лишние символы
+    text: '`date_trunc` не работает с датами в формате YYYY, а `regexp_replace` удаляет только буквы, но не лишние символы'
     correct: false
     explanation: date_trunc работает, проблема в сравнении.
   difficulty: medium
@@ -369,23 +369,23 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT *, SUM(amount) OVER (PARTITION BY user_id ROWS 2 PRECEDING) FROM transactions
+    text: "```sql\nSELECT *, SUM(amount) OVER (PARTITION BY user_id ROWS 2 PRECEDING) FROM transactions\n```"
     correct: false
     explanation: Нет ORDER BY, окна будут в произвольном порядке.
   - id: b
-    text: SELECT *, SUM(amount) OVER (ORDER BY user_id, trans_date ROWS 2 PRECEDING) FROM transactions
+    text: "```sql\nSELECT *, SUM(amount) OVER (ORDER BY user_id, trans_date ROWS 2 PRECEDING) FROM transactions\n```"
     correct: false
     explanation: Нет PARTITION BY, смешиваются пользователи.
   - id: c
-    text: SELECT *, SUM(sum) OVER (PARTITION BY user_id ORDER BY trans_date) FROM transactions
+    text: "```sql\nSELECT *, SUM(sum) OVER (PARTITION BY user_id ORDER BY trans_date) FROM transactions\n```"
     correct: false
     explanation: SUM(sum) — sum не имя колонки, нет ограничения на 2 строки.
   - id: d
-    text: SELECT *, SUM(sum) OVER (ORDER BY trans_date ROWS 2 PRECEDING) FROM transactions
+    text: "```sql\nSELECT *, SUM(sum) OVER (ORDER BY trans_date ROWS 2 PRECEDING) FROM transactions\n```"
     correct: false
     explanation: Нет PARTITION BY, смешиваются пользователи, sum не колонка.
   - id: e
-    text: SELECT *, SUM(amount) OVER (PARTITION BY user_id ORDER BY trans_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM transactions
+    text: "```sql\nSELECT *, SUM(amount) OVER (PARTITION BY user_id ORDER BY trans_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM transactions\n```"
     correct: true
     explanation: 'Корректно: PARTITION BY user_id, ORDER BY trans_date, ROWS BETWEEN 2 PRECEDING AND CURRENT ROW.'
   difficulty: medium
@@ -411,23 +411,23 @@ questions:
   type: single
   options:
   - id: a
-    text: delete temp_flag from sessions
+    text: "```sql\ndelete temp_flag from sessions\n```"
     correct: false
     explanation: DELETE удаляет строки, а не колонки.
   - id: b
-    text: remove column temp_flag in sessions
+    text: "```sql\nremove column temp_flag in sessions\n```"
     correct: false
     explanation: Нет такой команды в SQL.
   - id: c
-    text: alter sessions remove column temp_flag
+    text: "```sql\nalter sessions remove column temp_flag\n```"
     correct: false
     explanation: Отсутствует ключевое слово TABLE, REMOVE COLUMN нестандартно.
   - id: d
-    text: alter table sessions drop column temp_flag
+    text: "```sql\nalter table sessions drop column temp_flag\n```"
     correct: true
     explanation: 'Правильный синтаксис: ALTER TABLE table_name DROP COLUMN column_name;'
   - id: e
-    text: drop column temp_flag from sessions
+    text: "```sql\ndrop column temp_flag from sessions\n```"
     correct: false
     explanation: Отсутствует ALTER TABLE.
   difficulty: medium
@@ -459,23 +459,23 @@ questions:
   type: single
   options:
   - id: a
-    text: CREATE INDEX idx_sales_cust_date ON sales(customer_id, order_date);
+    text: "```sql\nCREATE INDEX idx_sales_cust_date ON sales(customer_id, order_date);\n```"
     correct: true
     explanation: Сначала колонка с равенством (customer_id), затем с диапазоном (order_date).
   - id: b
-    text: CREATE INDEX idx_sales_date ON sales(order_date);
+    text: "```sql\nCREATE INDEX idx_sales_date ON sales(order_date);\n```"
     correct: false
     explanation: Только по дате — сначала отбор по диапазону, потом фильтр по customer_id.
   - id: c
-    text: CREATE INDEX idx_sales_cust ON sales(customer_id);
+    text: "```sql\nCREATE INDEX idx_sales_cust ON sales(customer_id);\n```"
     correct: false
     explanation: Отфильтрует по customer_id, но потом нужно сканировать все его записи для проверки даты.
   - id: d
-    text: CREATE INDEX idx_sales_id ON sales(id);
+    text: "```sql\nCREATE INDEX idx_sales_id ON sales(id);\n```"
     correct: false
     explanation: Бесполезен для условий WHERE.
   - id: e
-    text: CREATE INDEX idx_sales_date_cust ON sales(order_date, customer_id);
+    text: "```sql\nCREATE INDEX idx_sales_date_cust ON sales(order_date, customer_id);\n```"
     correct: false
     explanation: 'Менее эффективно: сначала диапазон, потом точное равенство.'
   difficulty: medium
@@ -499,23 +499,23 @@ questions:
   type: single
   options:
   - id: a
-    text: REVOKE ALL ON invoices FROM reader
+    text: "```sql\nREVOKE ALL ON invoices FROM reader\n```"
     correct: false
     explanation: Отбирает все права, противоположное действие.
   - id: b
-    text: GRANT UPDATE ON invoices TO reader
+    text: "```sql\nGRANT UPDATE ON invoices TO reader\n```"
     correct: false
     explanation: Дает право изменять данные.
   - id: c
-    text: GRANT INSERT, DELETE ON invoices TO reader
+    text: "```sql\nGRANT INSERT, DELETE ON invoices TO reader\n```"
     correct: false
     explanation: Дает право добавлять и удалять строки.
   - id: d
-    text: GRANT SELECT ON invoices TO reader
+    text: "```sql\nGRANT SELECT ON invoices TO reader\n```"
     correct: true
     explanation: SELECT — право на чтение.
   - id: e
-    text: GRANT EXECUTE ON invoices TO reader
+    text: "```sql\nGRANT EXECUTE ON invoices TO reader\n```"
     correct: false
     explanation: EXECUTE для функций/процедур, не для таблиц.
   difficulty: medium
@@ -537,23 +537,23 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT s1.product_id FROM sales s1 WHERE s1.amount > ANY (SELECT s2.amount FROM sales s2 WHERE s2.product_id = s1.product_id)
+    text: "```sql\nSELECT s1.product_id FROM sales s1 WHERE s1.amount > ANY (SELECT s2.amount FROM sales s2 WHERE s2.product_id = s1.product_id)\n```"
     correct: false
     explanation: Сравнивает с продажами того же продукта, а не других.
   - id: b
-    text: SELECT product_id FROM sales WHERE amount > ANY (SELECT amount FROM sales)
+    text: "```sql\nSELECT product_id FROM sales WHERE amount > ANY (SELECT amount FROM sales)\n```"
     correct: false
     explanation: Сравнивает со всеми продажами вообще, а не в ту же дату.
   - id: c
-    text: SELECT DISTINCT product_id FROM sales WHERE amount > ALL (SELECT amount FROM sales WHERE product_id <> sales)
+    text: "```sql\nSELECT DISTINCT product_id FROM sales WHERE amount > ALL (SELECT amount FROM sales WHERE product_id <> sales)\n```"
     correct: false
     explanation: Синтаксически неверно (сравнение product_id с таблицей sales).
   - id: d
-    text: SELECT product_id FROM sales WHERE EXISTS (SELECT 1 FROM sales WHERE amount < amount)
+    text: "```sql\nSELECT product_id FROM sales WHERE EXISTS (SELECT 1 FROM sales WHERE amount < amount)\n```"
     correct: false
     explanation: Бессмысленное условие amount < amount всегда false.
   - id: e
-    text: SELECT s1.product_id FROM sales s1 WHERE s1.amount > ALL (SELECT s2.amount FROM sales s2 WHERE s2.sale_date = s1.sale_date)
+    text: "```sql\nSELECT s1.product_id FROM sales s1 WHERE s1.amount > ALL (SELECT s2.amount FROM sales s2 WHERE s2.sale_date = s1.sale_date)\n```"
     correct: true
     explanation: Проверяет, что в эту же дату сумма больше всех других продаж.
   difficulty: medium
@@ -613,23 +613,23 @@ questions:
   type: single
   options:
   - id: a
-    text: RENAME, ALTER, TRUNCATE, DELETE
+    text: "```sql\nRENAME, ALTER, TRUNCATE, DELETE\n```"
     correct: false
     explanation: DELETE — это DML.
   - id: b
-    text: CREATE, DROP, RENAME, UPDATE
+    text: "```sql\nCREATE, DROP, RENAME, UPDATE\n```"
     correct: false
     explanation: UPDATE — это DML.
   - id: c
-    text: DROP, ALTER, CREATE, RENAME
+    text: "```sql\nDROP, ALTER, CREATE, RENAME\n```"
     correct: true
     explanation: Все эти операторы изменяют структуру объектов.
   - id: d
-    text: INSERT, DROP, DELETE, UPDATE
+    text: "```sql\nINSERT, DROP, DELETE, UPDATE\n```"
     correct: false
     explanation: INSERT, DELETE, UPDATE — DML.
   - id: e
-    text: SELECT, TRUNCATE, UPDATE, DROP
+    text: "```sql\nSELECT, TRUNCATE, UPDATE, DROP\n```"
     correct: false
     explanation: SELECT — DQL, UPDATE — DML.
   difficulty: medium

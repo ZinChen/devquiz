@@ -14,23 +14,23 @@ questions:
   type: single
   options:
   - id: a
-    text: select department, sum(salary) from employees group by salary
+    text: "```sql\nselect department, sum(salary) from employees group by salary\n```"
     correct: false
     explanation: Группировка по salary (зарплате) вместо department (отдела) не даст суммы по отделам.
   - id: b
-    text: select department, sum(salary) group by department where active = true
+    text: "```sql\nselect department, sum(salary) group by department where active = true\n```"
     correct: false
     explanation: Отсутствует FROM, WHERE стоит после GROUP BY — нарушен порядок ключевых слов.
   - id: c
-    text: select department, sum(salary) from employees where active = true group by department
+    text: "```sql\nselect department, sum(salary) from employees where active = true group by department\n```"
     correct: true
     explanation: 'Правильный порядок: FROM → WHERE (фильтрация строк) → GROUP BY (группировка) → SELECT (агрегация).'
   - id: d
-    text: select department, sum(salary) from employees order by department
+    text: "```sql\nselect department, sum(salary) from employees order by department\n```"
     correct: false
     explanation: ORDER BY сортирует результат, но не выполняет группировку, поэтому sum(salary) посчитается по всем строкам.
   - id: e
-    text: select department, salary from employees group by department where active = true
+    text: "```sql\nselect department, salary from employees group by department where active = true\n```"
     correct: false
     explanation: В SELECT указано salary без агрегации, но оно не включено в GROUP BY, что вызовет ошибку.
   difficulty: medium
@@ -66,7 +66,7 @@ questions:
     correct: true
     explanation: HAVING фильтрует группы, оставляя только те, где количество клиентов больше 10.
   - id: b
-    text: Только регионы с NULL
+    text: Только регионы с `NULL`
     correct: false
     explanation: Условие count(*) > 10 не связано с NULL-значениями.
   - id: c
@@ -78,7 +78,7 @@ questions:
     correct: false
     explanation: HAVING применяется, поэтому фильтрация будет выполнена.
   - id: e
-    text: Ошибка из-за HAVING
+    text: Ошибка из-за `HAVING`
     correct: false
     explanation: HAVING корректно используется после GROUP BY.
   difficulty: medium
@@ -102,23 +102,23 @@ questions:
   type: single
   options:
   - id: a
-    text: update customers set interests = interests || array['sports'] where interests != 'sports'
+    text: "```sql\nupdate customers set interests = interests || array['sports'] where interests != 'sports'\n```"
     correct: false
     explanation: Оператор != сравнивает массив со строкой, что некорректно; условие не проверяет наличие элемента в массиве.
   - id: b
-    text: update customers set interests = interests || 'sports' where interests is null
+    text: "```sql\nupdate customers set interests = interests || 'sports' where interests is null\n```"
     correct: false
     explanation: Проверка только на NULL не обрабатывает существующие массивы без элемента 'sports'.
   - id: c
-    text: update customers set interests = 'sports' where interests @> array['sports']
+    text: "```sql\nupdate customers set interests = 'sports' where interests @> array['sports']\n```"
     correct: false
     explanation: Условие @> проверяет наличие элемента, но обновление заменяет весь массив на строку 'sports'.
   - id: d
-    text: update customers set interests = array_prepend('sports', interests)
+    text: "```sql\nupdate customers set interests = array_prepend('sports', interests)\n```"
     correct: false
     explanation: array_prepend добавляет элемент в начало, но нет условия WHERE, поэтому добавит всем, даже если элемент уже есть.
   - id: e
-    text: update customers set interests = array_append(interests, 'sports') where not 'sports' = any(interests)
+    text: "```sql\nupdate customers set interests = array_append(interests, 'sports') where not 'sports' = any(interests)\n```"
     correct: true
     explanation: array_append добавляет элемент в конец массива, ANY проверяет наличие элемента, NOT исключает строки где элемент уже есть.
   difficulty: medium
@@ -148,11 +148,11 @@ questions:
   type: single
   options:
   - id: a
-    text: JOIN не нужен при подсчёте заказов
+    text: '`JOIN` не нужен при подсчёте заказов'
     correct: false
     explanation: JOIN может быть нужен, если требуется связанная информация, но не для простого подсчета.
   - id: b
-    text: COUNT(*) требует DISTINCT по умолчанию
+    text: '`COUNT(*)` требует `DISTINCT` по умолчанию'
     correct: false
     explanation: COUNT(*) не требует DISTINCT, он считает все строки результата.
   - id: c
@@ -160,11 +160,11 @@ questions:
     correct: false
     explanation: JOIN вполне допустим, проблема не в способе объединения.
   - id: d
-    text: COUNT(*) может посчитать дубликаты
+    text: '`COUNT(*)` может посчитать дубликаты'
     correct: true
     explanation: При JOIN один заказ может иметь несколько позиций, поэтому заказы будут подсчитаны несколько раз.
   - id: e
-    text: Нельзя использовать JOIN без LIMIT
+    text: Нельзя использовать `JOIN` без `LIMIT`
     correct: false
     explanation: LIMIT не обязателен, проблема не в его отсутствии.
   difficulty: medium
@@ -194,11 +194,11 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT нельзя использовать в подзапросе
+    text: '`SELECT` нельзя использовать в подзапросе'
     correct: false
     explanation: SELECT в подзапросе допустим и широко используется.
   - id: b
-    text: IN не работает с подзапросами
+    text: '`IN` не работает с подзапросами'
     correct: false
     explanation: IN отлично работает с подзапросами.
   - id: c
@@ -206,11 +206,11 @@ questions:
     correct: true
     explanation: Отсутствие индексов на customer_id в orders или на id в blacklisted_customers может вызвать медленное выполнение.
   - id: d
-    text: Нужно заменить на JOIN
+    text: Нужно заменить на `JOIN`
     correct: false
     explanation: JOIN может быть эффективнее, но это не единственная причина медленной работы.
   - id: e
-    text: WHERE нельзя использовать с IN
+    text: '`WHERE` нельзя использовать с `IN`'
     correct: false
     explanation: WHERE с IN — допустимая конструкция.
   difficulty: medium
@@ -243,11 +243,11 @@ questions:
     correct: true
     explanation: BRIN оптимален для больших таблиц с естественным порядком (например, временные ряды).
   - id: c
-    text: Когда индекс используется для join'ов
+    text: Когда индекс используется для `join`'ов
     correct: false
     explanation: Для join'ов обычно лучше B-Tree из-за точности.
   - id: d
-    text: Когда данные хранятся в jsonb
+    text: Когда данные хранятся в `jsonb`
     correct: false
     explanation: Для jsonb используются GIN индексы.
   - id: e
@@ -342,19 +342,19 @@ questions:
   type: single
   options:
   - id: a
-    text: read uncommitted
+    text: '`read uncommitted`'
     correct: false
     explanation: В PostgreSQL read uncommitted работает как read committed, не обнаруживает такие конфликты.
   - id: b
-    text: read committed
+    text: '`read committed`'
     correct: false
     explanation: Read committed позволяет выполнить обе транзакции без ошибок.
   - id: c
-    text: repeatable read
+    text: '`repeatable read`'
     correct: false
     explanation: Repeatable read предотвращает неповторяющееся чтение, но не такие циклические зависимости.
   - id: d
-    text: serializable
+    text: '`serializable`'
     correct: true
     explanation: Serializable обнаруживает циклические зависимости и откатывает одну из транзакций.
   difficulty: medium
@@ -388,23 +388,23 @@ questions:
   type: single
   options:
   - id: a
-    text: vacuum users;
+    text: "```sql\nvacuum users;\n```"
     correct: false
     explanation: VACUUM может конфликтовать с созданием индекса.
   - id: b
-    text: select * from users;
+    text: "```sql\nselect * from users;\n```"
     correct: true
     explanation: CREATE INDEX блокирует запись, но не блокирует обычные SELECT.
   - id: c
-    text: select * from users where id = 1000 for update;
+    text: "```sql\nselect * from users where id = 1000 for update;\n```"
     correct: false
     explanation: SELECT FOR UPDATE требует блокировку записи, которая заблокирована CREATE INDEX.
   - id: d
-    text: create index concurrently idx_users_email on users(email);
+    text: "```sql\ncreate index concurrently idx_users_email on users(email);\n```"
     correct: false
     explanation: CREATE INDEX CONCURRENTLY не может выполняться внутри явной транзакции.
   - id: e
-    text: insert into users(name) values ('Alice');
+    text: "```sql\ninsert into users(name) values ('Alice');\n```"
     correct: false
     explanation: INSERT блокируется CREATE INDEX.
   difficulty: medium
@@ -436,7 +436,7 @@ questions:
   type: single
   options:
   - id: a
-    text: Ничего, если count(*) не указан в SELECT
+    text: Ничего, если `count(*)` не указан в `SELECT`
     correct: false
     explanation: count(*) указан в SELECT, поэтому запрос вернет результат.
   - id: b
@@ -452,7 +452,7 @@ questions:
     correct: false
     explanation: HAVING применяется, поэтому фильтрация будет выполнена.
   - id: e
-    text: Только NULL - записи
+    text: Только `NULL` - записи
     correct: false
     explanation: Запрос не связан с NULL-значениями.
   difficulty: medium
@@ -476,11 +476,11 @@ questions:
   type: single
   options:
   - id: a
-    text: explain analyze
+    text: "```sql\nexplain analyze\n```"
     correct: false
     explanation: explain analyze выполняет запрос и показывает время, но не дает статистику буферов.
   - id: b
-    text: explain
+    text: "```sql\nexplain\n```"
     correct: false
     explanation: explain показывает только план, не выполняет запрос и не дает реального времени.
   - id: c
@@ -488,11 +488,11 @@ questions:
     correct: false
     explanation: Это не стандартная команда, нет детализации по буферам и плану.
   - id: d
-    text: pgbench для эмуляции нагрузки и затем использовать explain analyze
+    text: '`pgbench` для эмуляции нагрузки и затем использовать `explain analyze`'
     correct: false
     explanation: pgbench создает нагрузку, но на копии базы мы хотим исключить нагрузку.
   - id: e
-    text: explain (analyze, buffers)
+    text: "```sql\nexplain (analyze, buffers)\n```"
     correct: true
     explanation: explain (analyze, buffers) выполняет запрос, показывает реальное время и статистику буферов.
   difficulty: medium
@@ -537,7 +537,7 @@ questions:
     correct: false
     explanation: Это верно только для обновляемых представлений с триггерами.
   - id: e
-    text: INSERT будет транслирован в базу через RULE
+    text: '`INSERT` будет транслирован в базу через `RULE`'
     correct: false
     explanation: Правила (RULE) могут перенаправлять INSERT, но это не поведение по умолчанию.
   difficulty: medium
@@ -578,7 +578,7 @@ questions:
   type: single
   options:
   - id: a
-    text: Использовать pg_stat_statements
+    text: Использовать `pg_stat_statements`
     correct: false
     explanation: pg_stat_statements показывает статистику запросов, не срабатывание триггеров.
   - id: b
@@ -586,15 +586,15 @@ questions:
     correct: false
     explanation: Лог ошибок покажет только проблемы, не успешные срабатывания.
   - id: c
-    text: Проверить таблицу employees_log
+    text: Проверить таблицу `employees_log`
     correct: false
     explanation: Таблица для лога называется salary_log, не employees_log.
   - id: d
-    text: Выполнить explain update...
+    text: Выполнить `explain update...`
     correct: false
     explanation: EXPLAIN показывает план запроса, не факт срабатывания триггера.
   - id: e
-    text: Выполнить select * from salary_log where changed_at > now() - interval '1 minute';
+    text: Выполнить `select * from salary_log where changed_at > now() - interval '1 minute';`
     correct: true
     explanation: Триггер вставляет записи в salary_log, поэтому прямой SELECT покажет результат.
   difficulty: medium
@@ -667,7 +667,7 @@ questions:
     correct: true
     explanation: Шардирование распределяет запись по узлам, репликация дает отказоустойчивость.
   - id: b
-    text: Только репликация 'ведущий-ведомый' (master-slave), потому что она горизонтально масштабирует запись между узлами
+    text: Только репликация 'ведущий-ведомый' (`master-slave`), потому что она горизонтально масштабирует запись между узлами
     correct: false
     explanation: Репликация master-slave не масштабирует запись, только чтение.
   - id: c
@@ -675,7 +675,7 @@ questions:
     correct: false
     explanation: Вертикальное масштабирование не распределяет нагрузку по узлам.
   - id: d
-    text: Использование пула соединений (pgbouncer), потому что он сам по себе решает масштабирование записи и отказоустойчивость данных
+    text: Использование пула соединений (`pgbouncer`), потому что он сам по себе решает масштабирование записи и отказоустойчивость данных
     correct: false
     explanation: Пул соединений управляет подключениями, не распределяет данные и не дает отказоустойчивости.
   difficulty: medium

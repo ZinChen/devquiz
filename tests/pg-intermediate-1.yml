@@ -25,19 +25,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT first_name, last_name FROM Employees WHERE salary < 50000;
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE salary < 50000;\n```"
     correct: true
   - id: b
-    text: SELECT first_name, last_name WHERE salary < 50000;
+    text: "```sql\nSELECT first_name, last_name WHERE salary < 50000;\n```"
     correct: false
   - id: c
-    text: FROM Employees SELECT first_name, last_name WHERE salary < 50000;
+    text: "```sql\nFROM Employees SELECT first_name, last_name WHERE salary < 50000;\n```"
     correct: false
   - id: d
-    text: CHOOSE first_name, last_name FROM Employees HAVING salary < 50000;
+    text: "```sql\nCHOOSE first_name, last_name FROM Employees HAVING salary < 50000;\n```"
     correct: false
   - id: e
-    text: SELECT first_name, last_name WHERE salary < 50000 FROM Employees;
+    text: "```sql\nSELECT first_name, last_name WHERE salary < 50000 FROM Employees;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -57,19 +57,19 @@ questions:
   type: single
   options:
   - id: a
-    text: ALTER TABLE Clients RENAME COLUMN new_email TO email;
+    text: "```sql\nALTER TABLE Clients RENAME COLUMN new_email TO email;\n```"
     correct: true
   - id: b
-    text: UPDATE TABLE Clients RENAME COLUMN new_email TO email;
+    text: "```sql\nUPDATE TABLE Clients RENAME COLUMN new_email TO email;\n```"
     correct: false
   - id: c
-    text: UPDATE TABLE Clients RENAME new_email TO email;
+    text: "```sql\nUPDATE TABLE Clients RENAME new_email TO email;\n```"
     correct: false
   - id: d
-    text: ALTER TABLE Clients RENAME new_email TO email;
+    text: "```sql\nALTER TABLE Clients RENAME new_email TO email;\n```"
     correct: false
   - id: e
-    text: INTO TABLE Clients RENAME new_email TO email;
+    text: "```sql\nINTO TABLE Clients RENAME new_email TO email;\n```"
     correct: false
   difficulty: medium
   topics: [schema]
@@ -102,13 +102,13 @@ questions:
   type: single
   options:
   - id: a
-    text: Добавится новая запись (4, 5, 'BMW X5 M50d', Null)
+    text: Добавится новая запись (4, 5, 'BMW X5 M50d', `Null`)
     correct: false
   - id: b
-    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', Null)
+    text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', `Null`)
     correct: false
   - id: c
-    text: Добавится новая запись (Null, 5, 'BMW X5 M50d', Null)
+    text: Добавится новая запись (`Null`, 5, 'BMW X5 M50d', `Null`)
     correct: false
   - id: d
     text: Заменится последняя запись на новую (3, 5, 'BMW X5 M50d', 7)
@@ -145,19 +145,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT * FROM Sales ORDER BY date DESC, sale_amount ASC;
+    text: "```sql\nSELECT * FROM Sales ORDER BY date DESC, sale_amount ASC;\n```"
     correct: true
   - id: b
-    text: SELECT * FROM Sales ORDER BY sale_amount ASC, date DESC;
+    text: "```sql\nSELECT * FROM Sales ORDER BY sale_amount ASC, date DESC;\n```"
     correct: false
   - id: c
-    text: SELECT * FROM Sales ORDER BY date, sale_amount DESC, ASC;
+    text: "```sql\nSELECT * FROM Sales ORDER BY date, sale_amount DESC, ASC;\n```"
     correct: false
   - id: d
-    text: SELECT * FROM Sales SORT BY date DESC, sale_amount ASC;
+    text: "```sql\nSELECT * FROM Sales SORT BY date DESC, sale_amount ASC;\n```"
     correct: false
   - id: e
-    text: SELECT * FROM Sales ORDER BY date, sale_amount;
+    text: "```sql\nSELECT * FROM Sales ORDER BY date, sale_amount;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -188,19 +188,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT ABS(AVG(salary) - MAX(salary)) FROM Employees;
+    text: "```sql\nSELECT ABS(AVG(salary) - MAX(salary)) FROM Employees;\n```"
     correct: true
   - id: b
-    text: SELECT AVG(salary) - MAX(salary) FROM Employees;
+    text: "```sql\nSELECT AVG(salary) - MAX(salary) FROM Employees;\n```"
     correct: false
   - id: c
-    text: SELECT MEDIAN(salary) - MAX(salary) FROM Employees;
+    text: "```sql\nSELECT MEDIAN(salary) - MAX(salary) FROM Employees;\n```"
     correct: false
   - id: d
-    text: SELECT ABS(SUM(*)/COUNT(*) - MAX(salary)) FROM Employees;
+    text: "```sql\nSELECT ABS(SUM(*)/COUNT(*) - MAX(salary)) FROM Employees;\n```"
     correct: false
   - id: e
-    text: SELECT ABS(MEDIAN(salary) - MAX(salary)) FROM Employees;
+    text: "```sql\nSELECT ABS(MEDIAN(salary) - MAX(salary)) FROM Employees;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -231,19 +231,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT region_id, SUM(population) FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    text: "```sql\nSELECT region_id, SUM(population) FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;\n```"
     correct: true
   - id: b
-    text: SELECT region_id, SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';
+    text: "```sql\nSELECT region_id, SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';\n```"
     correct: false
   - id: c
-    text: SELECT region_id, population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    text: "```sql\nSELECT region_id, population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;\n```"
     correct: false
   - id: d
-    text: SELECT region_id, SUM(ALL population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;
+    text: "```sql\nSELECT region_id, SUM(ALL population FROM Cities WHERE city_name LIKE '%burg' GROUP BY region_id;\n```"
     correct: false
   - id: e
-    text: SELECT SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';
+    text: "```sql\nSELECT SUM(population) FROM Cities GROUP BY region_id HAVING city_name LIKE '%burg';\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -264,19 +264,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT dep_name, CONCAT(first_name, ' ', last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    text: "```sql\nSELECT dep_name, CONCAT(first_name, ' ', last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;\n```"
     correct: true
   - id: b
-    text: SELECT dep_name, SUM(first_name, ' ', last_name) AS employees_list FROM Employees OUTER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    text: "```sql\nSELECT dep_name, SUM(first_name, ' ', last_name) AS employees_list FROM Employees OUTER JOIN Departments ON Employees.dep_id = Departments.dep_id;\n```"
     correct: false
   - id: c
-    text: SELECT dep_name, ADD(first_name, last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    text: "```sql\nSELECT dep_name, ADD(first_name, last_name) AS employees_list FROM Employees INNER JOIN Departments ON Employees.dep_id = Departments.dep_id;\n```"
     correct: false
   - id: d
-    text: SELECT dep_name, JOIN(first_name, ' ', last_name) AS employees_list FROM Employees LEFT JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    text: "```sql\nSELECT dep_name, JOIN(first_name, ' ', last_name) AS employees_list FROM Employees LEFT JOIN Departments ON Employees.dep_id = Departments.dep_id;\n```"
     correct: false
   - id: e
-    text: SELECT dep_name, (first_name + last_name) AS employees_list FROM Employees RIGHT JOIN Departments ON Employees.dep_id = Departments.dep_id;
+    text: "```sql\nSELECT dep_name, (first_name + last_name) AS employees_list FROM Employees RIGHT JOIN Departments ON Employees.dep_id = Departments.dep_id;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -308,19 +308,19 @@ questions:
   type: single
   options:
   - id: a
-    text: SELECT first_name, last_name FROM Employees WHERE salary > (SELECT AVG(salary) FROM employees);
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE salary > (SELECT AVG(salary) FROM employees);\n```"
     correct: true
   - id: b
-    text: SELECT first_name, last_name FROM Employees WHERE AVG(salary) > salary;
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE AVG(salary) > salary;\n```"
     correct: false
   - id: c
-    text: SELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary > AVG(salary);
+    text: "```sql\nSELECT first_name, last_name FROM Employees GROUP BY first_name, last_name HAVING salary > AVG(salary);\n```"
     correct: false
   - id: d
-    text: SELECT first_name, last_name FROM Employees WHERE salary > AVG(salary);
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE salary > AVG(salary);\n```"
     correct: false
   - id: e
-    text: SELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) > salary;
+    text: "```sql\nSELECT first_name, last_name FROM Employees WHERE (SELECT SUM(salary) / COUNT(*) FROM employees) > salary;\n```"
     correct: false
   difficulty: medium
   topics: [queries]
@@ -362,19 +362,19 @@ questions:
   type: single
   options:
   - id: a
-    text: Вместо CREATE VIEW PeopleView OR REPLACE нужно написать CREATE OR REPLACE VIEW PeopleView
+    text: Вместо `CREATE VIEW PeopleView OR REPLACE` нужно написать `CREATE OR REPLACE VIEW PeopleView`
     correct: true
   - id: b
-    text: Не нужно указывать, из каких таблиц взяты данные, можно написать age, phone_number, city, address.
+    text: Не нужно указывать, из каких таблиц взяты данные, можно написать age, `phone_number`, city, address.
     correct: false
   - id: c
-    text: В запросе не нужно использовать VIEW.
+    text: В запросе не нужно использовать `VIEW`.
     correct: false
   - id: d
-    text: Не нужно указывать обе таблицы в строке с FROM.
+    text: Не нужно указывать обе таблицы в строке с `FROM`.
     correct: false
   - id: e
-    text: Перед SELECT есть AS, который не нужен.
+    text: Перед `SELECT` есть `AS`, который не нужен.
     correct: false
   difficulty: medium
   topics: [schema]
@@ -403,10 +403,10 @@ questions:
     text: Столбец с двумя различными значениями (например, да/нет)
     correct: false
   - id: d
-    text: Столбец, который используется в операторах SELECT без WHERE
+    text: Столбец, который используется в операторах `SELECT` без `WHERE`
     correct: false
   - id: e
-    text: Столбец с большим количеством значений Null
+    text: Столбец с большим количеством значений `Null`
     correct: false
   difficulty: medium
   topics: [indexes]
