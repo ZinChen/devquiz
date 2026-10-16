@@ -1,7 +1,7 @@
 slug: go-for-rubyists-basic-1
 title: "Go для рубиста: язык и типы"
 description: "Основы Go глазами Ruby-разработчика: нулевые значения, срезы и map, интерфейсы вместо классов и миксинов, ошибки значениями. База — Go 1.22+."
-tags: [go, ruby, backend]
+tags: [go, backend]
 difficulty: basic
 estimated_time: 40
 
@@ -31,7 +31,7 @@ questions:
     extended_explanation: "Поле с маленькой буквы не попадёт и в `encoding/json`: пакет работает через `reflect` и неэкспортируемые поля пропускает молча. Каталог `internal` добавляет второй уровень: пакет `a`/`internal`/`b` может импортировать только код из дерева `a`."
     recommendation: "Правила видимости и пакетов в Go: экспортируемые идентификаторы, internal-пакеты, раздел «Exported identifiers» спецификации языка."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q2
     text: |-
@@ -67,7 +67,7 @@ questions:
     extended_explanation: "Звёздочка в типе `*int` означает указатель: переменная хранит не число, а адрес числа. Нулевое значение указателя — `nil`, «указывает в никуда». Так в Go выражают «значения может не быть»: `*int` отличает отсутствие (`nil`) от нуля (0), поэтому необязательные поля JSON часто объявляют как `*string` или `*int`. Адрес переменной берёт `&x`, значение по указателю читает `*p`, а `new(int)` создаёт нулевой `int` и возвращает `*int`, а разыменование `nil`-указателя вызывает панику. Нулевое значение многих типов сразу пригодно к работе: пустые `sync.Mutex`, `bytes.Buffer`, `strings.Builder` и `nil`-срез с `append`. Исключение — `map`: читать из `nil`-map можно, а запись вызовет панику."
     recommendation: "Нулевые значения (zero values) и идиома «сделай нулевое значение полезным» в Effective Go."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q3
     text: |-
@@ -142,7 +142,7 @@ questions:
     extended_explanation: "Исключение — алиас `type` ID = `int64`: это второе имя того же типа, и сложение скомпилируется. Неявно приводятся лишь нетипизированные константы, поэтому `a` + 2 работает для любого числового типа."
     recommendation: "Именованные типы, алиасы и приведение типов в Go: разделы «Type definitions» и «Alias declarations» спецификации."
     difficulty: medium
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q5
     text: "Как правильно описана типизация Ruby и Go?"
@@ -168,7 +168,7 @@ questions:
     extended_explanation: "Строгость Go проявляется в мелочах: `int` и `int64` несовместимы без приведения, а в условие `if` нельзя поставить число. Динамика Ruby это утиная типизация, проверка метода происходит в момент вызова, а в Go ту же роль играют интерфейсы, проверяемые компилятором."
     recommendation: "Разница между статической и динамической, строгой и слабой типизацией на примерах Ruby, Go и JavaScript."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q6
     text: |-
@@ -202,7 +202,7 @@ questions:
     extended_explanation: "Указатель берут в трёх случаях: чтобы изменить значение в функции или методе, чтобы не копировать большую структуру и чтобы выразить «значения может не быть» (`nil`). Арифметики указателей, как в C, в Go нет: `p++` не компилируется. Нулевое значение указателя — `nil`."
     recommendation: "Указатели в Go: тур по языку, раздел «Pointers», и различие между значением, адресом и разыменованием."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q7
     text: |-
@@ -276,7 +276,7 @@ questions:
     extended_explanation: "Копирование структуры стоит дороже указателя, если она большая, но решает выбор прежде всего семантика. Если хотя бы один метод типа меняет состояние и получает `*T`, остальные методы принято делать с тем же получателем, чтобы набор методов не распадался."
     recommendation: "Передача аргументов в Go, указатели и получатели методов: тур по языку, раздел «Pointers»."
     difficulty: medium
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q9
     text: "Структура создана как `u := &User{Name: \"A\"}`. Как записать присваивание поля `Name`?"
@@ -428,7 +428,7 @@ questions:
     extended_explanation: "Массивы сравниваются через == и могут быть ключами `map`: `[2]int` годится, `[]int` нет. Чтобы передать массив без копирования, берут указатель *`[3]int` или срез `a[:]`. В Ruby `b = a` даёт ссылку на тот же Array, а копию делает `b = a.dup`, поэтому интуиция рубиста здесь подводит."
     recommendation: "Массивы и срезы в Go: статья «Arrays, slices (and strings): The mechanics of append» на go.dev и раздел о типах-значениях."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q14
     text: |-
@@ -561,7 +561,7 @@ questions:
     extended_explanation: "Объявление `var m map[string]int` даёт `nil`-map, а `m := map[string]int{}` или `make(map[string]int)` — пустую, но рабочую. Лечится `make(map[K]V)` или литералом `map[K]V{}`. Паника при записи обычная, `recover` её поймает. Это отличается от `concurrent map writes`, где процесс завершается аварийно."
     recommendation: "Различия nil-срезов и nil-map: что допустимо с каждым из них и как инициализировать map."
     difficulty: medium
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q18
     text: "Тест сравнивает вывод цикла `range` по `map` с эталонной строкой и иногда падает. В чём причина?"
@@ -587,7 +587,7 @@ questions:
     extended_explanation: "`fmt.Println(m)` и `json.Marshal(m)` печатают ключи по возрастанию, но это правило этих пакетов, а не свойство `map`. Для стабильного обхода ключи собирают в срез и сортируют: `slices.Sorted(maps.Keys(m))` в Go 1.23 и новее."
     recommendation: "Порядок итерации map и способы детерминированного обхода: блог go.dev «Go maps in action»."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q19
     text: |-
@@ -655,7 +655,7 @@ questions:
     extended_explanation: "Цикл `for _, r := range s` идёт по рунам, а индексация `s[i]` возвращает байт. Преобразование в `[]rune` копирует данные, поэтому в горячем коде используют `utf8.RuneCountInString`: он ничего не выделяет."
     recommendation: "Строки, байты и руны в Go: блог go.dev «Strings, bytes, runes and characters in Go»."
     difficulty: medium
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q21
     text: |-
@@ -828,7 +828,7 @@ questions:
     extended_explanation: "Функция-опция выглядит так: `func WithTimeout(d time.Duration) Option` { `return func(s *Server)` { `s.timeout = d` } }. Опции удобны, когда настройки добавляются со временем: сигнатура конструктора не меняется, и старые вызовы продолжают работать. Для двух-трёх параметров проще обычная структура настроек."
     recommendation: "Шаблон functional options Роба Пайка и Дэйва Чейни: «Functional options for friendly APIs»."
     difficulty: medium
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q26
     text: "Ошибку обернули так: `fmt.Errorf(\"load config: %v\", err)`. Что перестанет работать?"
@@ -880,7 +880,7 @@ questions:
     extended_explanation: "Аргументы `defer` вычисляются в момент объявления, а не выполнения. Отложенный вызов привязан к функции, а не к блоку: `defer` внутри цикла накапливается до выхода из функции, и при обработке `10 000` файлов тело цикла выносят в отдельную функцию."
     recommendation: "Конструкция defer: порядок выполнения, время вычисления аргументов и типичные применения."
     difficulty: easy
-    topics: [go, ruby_language]
+    topics: [go]
 
   - id: q28
     text: |-

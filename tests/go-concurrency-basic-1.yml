@@ -57,7 +57,7 @@ questions:
     extended_explanation: "С Go 1.25 значение `GOMAXPROCS` по умолчанию учитывает лимит CPU контейнера. Несколько экземпляров сервиса всё равно запускают, но ради отказоустойчивости и выкатки без простоя, не ради ядер."
     recommendation: "Модель исполнения Go против GVL в CRuby: что даёт один процесс на все ядра."
     difficulty: easy
-    topics: [go, ruby_runtime]
+    topics: [go, concurrency]
 
   - id: q3
     text: "Программу запустили с `GOMAXPROCS=1`, внутри работают сотни горутин. Как это описать?"
