@@ -1,7 +1,7 @@
 ---
 slug: docker-advanced-1
-title: Docker
-description: 'Продвинутые вопросы по Docker: образы, контейнеры, сети, volumes и оркестрация.'
+title: "Docker: сборка, тома и мониторинг"
+description: "Продвинутые вопросы по Docker: кэш и многоступенчатые сборки, Compose, тома, мониторинг, секреты и CI/CD."
 tags:
 - docker
 - devops
