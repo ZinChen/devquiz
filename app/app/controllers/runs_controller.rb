@@ -233,11 +233,16 @@ class RunsController < ApplicationController
     challenge_mode = attempt.challenge_mode.presence || "fill"
     db_map = Question.where(test_slug: @meta.slug).index_by(&:question_id)
 
-    attempt.test_attempt_answers.filter_map do |ans|
-      q = questions_map[ans.question_id]
-      next unless q
+    # Порядок разбора задаёт тест, а не БД: SELECT без ORDER BY отдаёт строки
+    # как они лежат в таблице, и после перераспределения места на страницах
+    # первые вопросы могли оказаться в конце списка (а с ними и номера на странице).
+    answers_by_question = attempt.test_attempt_answers.index_by(&:question_id)
 
-      QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode, db_id: db_map[ans.question_id]&.id)
+    questions_map.filter_map do |question_id, q|
+      ans = answers_by_question[question_id]
+      next unless ans
+
+      QuizGrading.answer_detail(q, ans.selected_options, ans.correct, challenge_mode, db_id: db_map[question_id]&.id)
     end
   end
 

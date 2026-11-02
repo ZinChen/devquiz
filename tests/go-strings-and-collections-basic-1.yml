@@ -1,0 +1,498 @@
+slug: go-strings-and-collections-basic-1
+title: "Go: строки и срезы структур"
+description: "Типичные ошибки при работе со строками и срезами структур на Go глазами рубиста: неизменяемость строк, байты и руны, range по копиям, append и copy, поиск, удаление и дубли. Код с настоящими вызовами и ловушкой в каждом вопросе. База — Go 1.22+."
+tags: [go, backend]
+difficulty: basic
+estimated_time: 20
+
+questions:
+  - id: q1
+    text: |-
+      Что произойдёт при компиляции?
+
+      ```go
+      s := "hello"
+      s[0] = 'H'
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Заменит первую букву, и строка станет «Hello»"
+        correct: false
+        explanation: "Изменить строку на месте нельзя, поэтому и результата «Hello» не будет."
+      - id: b
+        text: "Паника при выполнении: выход за границы строки"
+        correct: false
+        explanation: "Индекс 0 допустим, а ошибка возникает ещё при компиляции."
+      - id: c
+        text: "Ошибка компиляции: строки неизменяемы"
+        correct: true
+        explanation: "Строки в Go неизменяемы, и компилятор отвергает запись в элемент."
+      - id: d
+        text: "Скомпилируется: строка в Go изменяема, как срез `[]byte`"
+        correct: false
+        explanation: "Срез `[]byte` изменяем, а строка нет, и запись в её элемент компилятор отвергает."
+    explanation: "Строки в Go неизменяемы: запись в элемент отвергается на этапе компиляции с сообщением `cannot assign to s[0]`. Чтобы получить изменённую строку, строят новую: переводят в `[]byte` или `[]rune`, правят и переводят обратно. В Ruby `s[0] = \"H\"` меняет объект на месте, потому что строки там изменяемы."
+    extended_explanation: "Пример: `b := []byte(s)`; `b[0] = 'H'`; `s = string(b)`. Оба перевода копируют данные. Для текста с кириллицей берут `[]rune`, иначе можно разрезать символ посередине. Если нужно просто заменить часть строки, обычно хватает `s = \"H\"` + `s[1:]` или функций пакета `strings`."
+    recommendation: "Неизменяемость строк в Go: раздел «Strings» в статье «Strings, bytes, runes and characters in Go»."
+    difficulty: easy
+    topics: [go]
+
+  - id: q2
+    text: |-
+      Что выведет программа?
+
+      ```go
+      s := "banana"
+      strings.ReplaceAll(s, "a", "o")
+      fmt.Println(s)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`banana`: строка не изменилась, результат вызова потерян"
+        correct: true
+        explanation: "`ReplaceAll` вернула новую строку, а присвоить её было некому."
+      - id: b
+        text: "`bonono`: `ReplaceAll` меняет строку `s` на месте"
+        correct: false
+        explanation: "Строки неизменяемы, и меняться на месте нечему."
+      - id: c
+        text: "`bonana`: `ReplaceAll` заменяет только первое вхождение"
+        correct: false
+        explanation: "Заменяет все вхождения, для одного есть `strings.Replace` с лимитом `n`."
+      - id: d
+        text: "Ошибка компиляции: результат вызова нужно использовать"
+        correct: false
+        explanation: "Go разрешает не использовать результат функции, и код компилируется."
+    explanation: "Строки в Go неизменяемы, поэтому функции пакета `strings` возвращают новую строку, а исходная остаётся прежней. Вызов без присваивания работает вхолостую: `s` по-прежнему `banana`. Проверено запуском. Аналог `gsub`! получается присваиванием обратно: `s = strings.ReplaceAll(s, \"a\", \"o\")`."
+    extended_explanation: "Компилятор и `go vet` такой вызов не отвергают (проверено на Go 1.27.1: `vet` промолчал). Ошибку находят только тесты и ревью, поэтому для функций `strings` результат принято сразу присваивать или передавать дальше. В Ruby `gsub` возвращает копию, а `gsub`! меняет строку, и в Go есть только первый вариант."
+    recommendation: "Неизменяемость строк в Go и функции пакета strings: документация pkg.go.dev/strings."
+    difficulty: easy
+    topics: [go]
+
+  - id: q3
+    text: |-
+      Что произойдёт при сборке?
+
+      ```go
+      ids := []int{1, 2, 3}
+      fmt.Println(strings.Join(ids, ","))
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Выведет 1,2,3: `Join` сам переводит числа в строки, как `join` в Ruby"
+        correct: false
+        explanation: "`Join` умеет соединять только строки, а Ruby вызывает `to_s` у каждого элемента."
+      - id: b
+        text: "Выведет `[1 2 3]`: `Join` печатает срез целиком"
+        correct: false
+        explanation: "`Join` вообще не печатает срезы целиком, он собирает строку из срезов строк."
+      - id: c
+        text: "Паника при выполнении: числа нельзя соединять"
+        correct: false
+        explanation: "До выполнения не дойдёт: ошибка возникает при сборке."
+      - id: d
+        text: "Ошибка компиляции: `Join` принимает `[]string`, а передан `[]int`"
+        correct: true
+        explanation: "Типы аргументов проверяются строго, и числа в строки сами не превращаются."
+    explanation: "`strings.Join` принимает именно `[]string`. Срез `[]int` не подходит, а неявных преобразований в Go нет. Компилятор сообщает: `cannot` `use` `ids` (`variable` `of` `type` `[]int`) `as` `[]string` `value` `in` `argument` `to` `strings.Join`. Проверено запуском."
+    extended_explanation: "Числа сначала переводят в строки циклом:\n\n```go\nparts := make([]string, 0, len(ids))\nfor _, id := range ids {\n    parts = append(parts, strconv.Itoa(id))\n}\nfmt.Println(strings.Join(parts, \",\"))\n```\nВ Ruby [1, 2, 3].`join(\",\")` сам вызывает `to_s` у элементов, а в Go преобразование задаёт разработчик."
+    recommendation: "Явные преобразования типов в Go: пакет strconv и функции strings.Join и Split."
+    difficulty: easy
+    topics: [go]
+
+  - id: q4
+    text: |-
+      Строку собирают в цикле из десятков тысяч фрагментов. Что лучше?
+
+      ```go
+      result := ""
+      for _, p := range parts {
+          result += p
+      }
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Оставить `+=`: компилятор сам склеит все фрагменты за один проход"
+        correct: false
+        explanation: "Оптимизации для цикла нет, каждая итерация копирует результат целиком."
+      - id: b
+        text: "`strings.Builder`: он растит один буфер, а `+=` копирует строку каждый раз"
+        correct: true
+        explanation: "Каждое `+=` создаёт новую строку и копирует накопленное, а `Builder` дописывает в один буфер."
+      - id: c
+        text: "Использовать `fmt.Sprintf(\"%s%s\", result, p)`: он не копирует строки"
+        correct: false
+        explanation: "`Sprintf` тоже создаёт новую строку, и работает ещё медленнее."
+      - id: d
+        text: "Дописывать в `[]byte` через `+=`: срезы байт не копируются"
+        correct: false
+        explanation: "Для срезов нет оператора `+=`, дописывают через `append`."
+    explanation: "Строка неизменяема, поэтому `result += p` создаёт новую строку и копирует в неё всё накопленное. Для `n` фрагментов выходит порядка `n`² копирований. `strings.Builder` накапливает байты в одном растущем буфере и выдаёт строку без копирования в конце."
+    extended_explanation: "В Ruby оператор << меняет строку на месте, а `+=` создаёт новую, и там та же ловушка. Если размер известен заранее, вызывают `sb.Grow(n)`. Когда фрагменты уже лежат в срезе, достаточно `strings.Join(parts, \"\")`."
+    recommendation: "Сборка строк в Go: strings.Builder и стоимость конкатенации; документация pkg.go.dev/strings#Builder."
+    difficulty: medium
+    topics: [go, performance]
+
+  - id: q5
+    text: "Что даст срез `s[:3]` для строки `s := \"Привет\"`?"
+    type: single
+    options:
+      - id: a
+        text: "«П» и обрезанный байт: строка с битым UTF-8"
+        correct: true
+        explanation: "Срез строки режет по байтам, а кириллическая буква занимает два байта."
+      - id: b
+        text: "Строку «При»: срез берёт первые три символа подряд"
+        correct: false
+        explanation: "Индексы строки считаются в байтах, а символ и байт здесь не совпадают."
+      - id: c
+        text: "Ошибку компиляции: срезать строку можно только по рунам"
+        correct: false
+        explanation: "Срез по байтам допустим, и компилятор его принимает."
+      - id: d
+        text: "Панику: длина строки оказалась меньше трёх байт"
+        correct: false
+        explanation: "Длина строки «Привет» в байтах равна двенадцати."
+    explanation: "Индексы и срезы строки работают в байтах. Буква «П» занимает два байта, поэтому `s[:3]` содержит «П» и первый байт следующей буквы, и строка перестаёт быть корректным UTF-8. Проверено запуском: `s[:3]` напечатался как `\"П\\xd1\"`, `utf8.ValidString` вернул `false`."
+    extended_explanation: "Чтобы взять первые три символа, строку переводят в руны: `string([]rune(s)[:3])` даёт «При». Индексы, которые возвращают `strings.Index` и подобные функции, тоже байтовые. Количество символов считает `utf8.RuneCountInString(s)`."
+    recommendation: "Строки, байты и руны в Go: статья «Strings, bytes, runes and characters in Go» на go.dev."
+    difficulty: medium
+    topics: [go]
+
+  - id: q6
+    text: |-
+      Что произойдёт, если пользователя с таким именем в срезе нет?
+
+      ```go
+      u := users[slices.IndexFunc(users, func(u User) bool {
+          return u.Name == "zed"
+      })]
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Вернётся нулевой `User{}`, как у отсутствующего ключа `map`"
+        correct: false
+        explanation: "Срез по несуществующему индексу нулевое значение не отдаёт, это особенность `map`."
+      - id: b
+        text: "Вернётся `nil`, и обращение к `u.Name` вызовет ошибку"
+        correct: false
+        explanation: "`User` — структура, поэтому значение `nil` для неё невозможно."
+      - id: c
+        text: "Паника: `index out of range [-1]`"
+        correct: true
+        explanation: "При отсутствии элемента `IndexFunc` возвращает -1, и индекс оказывается за границей."
+      - id: d
+        text: "Ошибка компиляции: `IndexFunc` возвращает не `int`"
+        correct: false
+        explanation: "Возвращаемое значение именно `int`, поэтому код компилируется."
+    explanation: "`slices.IndexFunc` возвращает индекс первого подходящего элемента или -1. Если результат сразу использовать как индекс, при отсутствии элемента получится `users[-1]`, и рантайм паникует: `runtime error: index out of range [-1]`. Проверено запуском."
+    extended_explanation: "Результат нужно проверить до обращения:\n\n```go\nif i := slices.IndexFunc(users, f); i >= 0 {\n    u := users[i]\n    // ...\n}\n```\nВ Ruby `find` возвращает `nil`, и ошибка проявляется позже, а в Go паника случается сразу в этой строке."
+    recommendation: "Поиск в срезах и значение -1 как признак отсутствия: документация pkg.go.dev/slices."
+    difficulty: easy
+    topics: [go]
+
+  - id: q7
+    text: |-
+      Что вернёт этот вызов?
+
+      ```go
+      users := []User{{Name: "bob", Age: 30}}
+      ok := slices.Contains(users, User{Name: "bob"})
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`true`: достаточно совпадения по `Name`, остальные поля игнорируются"
+        correct: false
+        explanation: "Поля, которые не заполнены, в сравнении не игнорируются."
+      - id: b
+        text: "Ошибка компиляции: структуры нельзя сравнивать"
+        correct: false
+        explanation: "Структуры из сравнимых полей сравниваются оператором равенства."
+      - id: c
+        text: "`true`: незаполненные поля при сравнении пропускаются"
+        correct: false
+        explanation: "Нулевое значение поля участвует в сравнении как обычное."
+      - id: d
+        text: "`false`: сравниваются все поля, а у найденного `Age` равен 30"
+        correct: true
+        explanation: "Структуры равны только если равны все поля, и `Age` не совпал."
+    explanation: "`slices.Contains` сравнивает элементы оператором ==, а для структур он проверяет все поля. `User{Name: \"bob\"}` имеет `Age` = 0, а в срезе лежит `Age` = 30, поэтому равенства нет и вызов вернул `false`. Проверено запуском."
+    extended_explanation: "Чтобы искать по одному полю, используют условие: `slices.ContainsFunc(users, func(u User) bool { return u.Name == \"bob\" })`. Если в структуре есть несравнимые поля (срез, `map`), `slices.Contains` для неё вообще не скомпилируется."
+    recommendation: "Сравнимость типов и поиск в срезах: slices.Contains и ContainsFunc, раздел «Comparison operators» спецификации Go."
+    difficulty: medium
+    topics: [go]
+
+  - id: q8
+    text: |-
+      Что выведет программа?
+
+      ```go
+      users := []User{{"a", false}, {"b", false}}
+      for _, u := range users {
+          u.Active = true
+      }
+      fmt.Println(users)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`[{a true} {b true}]`: `u` ссылается на элемент среза"
+        correct: false
+        explanation: "Ссылки здесь нет, структура копируется целиком."
+      - id: b
+        text: "`[{a false} {b false}]`: `u` — копия элемента, срез не изменился"
+        correct: true
+        explanation: "Переменная цикла получает копию структуры, и запись идёт в копию."
+      - id: c
+        text: "`[{a true} {b false}]`: изменится только первый элемент"
+        correct: false
+        explanation: "Ни один элемент не изменится, потому что правится копия."
+      - id: d
+        text: "Ошибка компиляции: нельзя присваивать полю переменной цикла"
+        correct: false
+        explanation: "Присваивание допустимо, просто оно не затрагивает срез."
+    explanation: "В цикле `for _, u := range users` переменная `u` получает копию очередного элемента. Присваивание `u.Active` меняет эту копию, а срез остаётся прежним. Проверено запуском: вывод `[{a false} {b false}]`. Для изменения используют индекс: `users[i].Active = true`."
+    extended_explanation: "Альтернатива — хранить срез указателей `[]*User`: тогда `u` указывает на исходный объект, и запись видна. Копирование структур дешевле для маленьких типов, а для крупных чаще используют индекс. С Go 1.22 переменная цикла своя на каждую итерацию, но копией она быть не перестала."
+    recommendation: "Цикл range и копирование значений: раздел «For statements with range clause» спецификации Go."
+    difficulty: medium
+    topics: [go]
+
+  - id: q9
+    text: |-
+      Что выведет код?
+
+      ```go
+      users := []User{{Name: "a"}, {Name: "b"}}
+      p := &users[0]
+      users = append(users, User{Name: "new"})
+      p.Name = "changed"
+      fmt.Println(users[0].Name)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "«changed»: `p` указывает на элемент среза и после `append`"
+        correct: false
+        explanation: "Указатель связан с прежним массивом, который `append` уже оставил позади."
+      - id: b
+        text: "Панику: после `append` все указатели на элементы недействительны"
+        correct: false
+        explanation: "Указатель остаётся рабочим, но смотрит на устаревшую копию данных."
+      - id: c
+        text: "«a»: после `append` `p` указывает на старый массив"
+        correct: true
+        explanation: "Ёмкость заполнена, поэтому `append` создаёт новый массив, а `p` остаётся на прежнем."
+      - id: d
+        text: "Ошибку компиляции: адрес элемента среза брать нельзя"
+        correct: false
+        explanation: "Адрес элемента среза брать можно, в отличие от элемента `map`."
+    explanation: "Ёмкость среза равна длине, поэтому `append` выделяет новый массив (ёмкостью 4), копирует в него два прежних элемента на индексы 0 и 1 и ставит новый на индекс 2. Теперь `users` смотрит на новый массив, а `p` остался на старом: запись через `p` меняет старый массив, которого `users` больше не видит. Поэтому `users[0].Name` остаётся «a». Проверено запуском: после `append` `len = 3`, `cap = 4`, `users` = `[{a} {b} {new}]`."
+    extended_explanation: "Если бы ёмкость была с запасом, `append` писал бы в тот же массив, и указатель оставался бы актуальным: результат становится зависимым от ёмкости, что делает ошибку плавающей. Указатели на элементы среза не хранят через `append`, а используют индексы или срез указателей."
+    recommendation: "Срезы и указатели на элементы: поведение append и перевыделение массива."
+    difficulty: hard
+    topics: [go]
+
+  - id: q10
+    text: |-
+      Что выведет программа?
+
+      ```go
+      src := []int{1, 2, 3}
+      dst := make([]int, 0, len(src))
+      n := copy(dst, src)
+      fmt.Println(n, dst)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`0 []`: `copy` копирует не больше длины `dst`"
+        correct: true
+        explanation: "Ёмкость не учитывается, длина `dst` равна нулю."
+      - id: b
+        text: "`3 [1 2 3]`: ёмкости хватает для всех элементов"
+        correct: false
+        explanation: "Копируется не больше `len(dst)`, а ёмкость в расчёт не идёт."
+      - id: c
+        text: "`3 []`: элементы скопированы, но не видны из-за длины"
+        correct: false
+        explanation: "Если бы элементы скопировались, `copy` вернула бы их число и они бы были видны."
+      - id: d
+        text: "Паника: длина `dst` меньше длины `src`"
+        correct: false
+        explanation: "`Copy` не паникует, а копирует столько, сколько помещается по длине."
+    explanation: "Встроенная `copy` копирует `min(len(dst), len(src))` элементов. У `dst` длина 0 (ёмкость 3 не в счёт), поэтому копируется 0 элементов, и результат 0 []. Проверено запуском."
+    extended_explanation: "Нужный срез получают так: `dst := make`(`[]int`, `len(src)`); `copy(dst, src)`, либо `dst := slices.Clone(src)`, либо `dst = append(dst, src...)`. Ошибка частая: ёмкость заранее задают для `append`, а для `copy` нужна длина."
+    recommendation: "Встроенная функция copy и срезы: статья «Go Slices: usage and internals» на go.dev."
+    difficulty: medium
+    topics: [go, performance]
+
+  - id: q11
+    text: |-
+      Что выведет программа (Go 1.22+)?
+
+      ```go
+      users := []User{{Age: 20}, {Age: 30}, {Age: 40}}
+      slices.DeleteFunc(users, func(u User) bool { return u.Age > 25 })
+      fmt.Println(len(users), users)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`1 [{20}]`: `DeleteFunc` укорачивает исходный срез на месте"
+        correct: false
+        explanation: "Длину исходного среза функция изменить не может, он передан по значению."
+      - id: b
+        text: "`3 [{20} {30} {40}]`: без присваивания ничего не меняется"
+        correct: false
+        explanation: "Массив под срезом всё же изменился: элементы сдвинуты, хвост обнулён."
+      - id: c
+        text: "`2 [{20} {30}]`: удалён только последний подходящий элемент"
+        correct: false
+        explanation: "Удаляются все подходящие элементы, одним последним дело не ограничивается."
+      - id: d
+        text: "`3 [{20} {0} {0}]`: длина прежняя, хвост обнулён"
+        correct: true
+        explanation: "Результат `DeleteFunc` не присвоен, поэтому длина `users` не изменилась, а хвост обнулён."
+    explanation: "`slices.DeleteFunc` возвращает укороченный срез, а исходная переменная сохраняет прежнюю длину. Подходящие элементы вырезаются из общего массива, оставшиеся сдвигаются, а освободившийся хвост с Go 1.22 обнуляется: 3 `[{20} {0} {0}]`. Проверено запуском."
+    extended_explanation: "Правильная запись: `users = slices.DeleteFunc`(`users`, `func(u User) bool` { `return u.Age` > 25 }). Go 1.27 такой вызов ловит сам: `go vet` сообщает `result` `of` `slices.DeleteFunc` `call` `not` `used` (проверено запуском). Для `ReplaceAll` и подобных функций `strings` `vet` такого предупреждения не даёт."
+    recommendation: "Изменение срезов функциями пакета slices: DeleteFunc, Delete и присваивание результата."
+    difficulty: medium
+    topics: [go]
+
+  - id: q12
+    text: |-
+      Что выведут `a` и `t` после удаления элемента через `append`?
+
+      ```go
+      a := []int{1, 2, 3, 4}
+      t := append(a[:1], a[2:]...)
+      fmt.Println(a, t)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`[1 2 3 4] [1 3 4]`: исходный срез остался прежним"
+        correct: false
+        explanation: "Массив общий, поэтому правка видна и через исходный срез."
+      - id: b
+        text: "`[1 3 4 4] [1 3 4]`: исходный срез изменился на месте"
+        correct: true
+        explanation: "`Append` сдвинул элементы в общем массиве, а длина `a` осталась четыре."
+      - id: c
+        text: "`[1 3 4] [1 3 4]`: оба среза стали короче"
+        correct: false
+        explanation: "Длина среза `a` от этого действия не меняется."
+      - id: d
+        text: "`[1 3 4 0] [1 3 4]`: хвост исходного среза обнулился"
+        correct: false
+        explanation: "Так ведёт себя `slices.Delete`, а `append` хвост не обнуляет."
+    explanation: "Ёмкости хватает, поэтому `append` пишет в тот же массив: элементы 3 и 4 сдвигаются на одну позицию влево, а длина `a` остаётся четыре. В хвосте исходного среза остаётся дубль последнего элемента. Проверено запуском: `a` = `[1 3 4 4]`, `t` = `[1 3 4]`."
+    extended_explanation: "Функция `slices.Delete(a, 1, 2)` делает то же и возвращает укороченный срез, а с Go 1.22 ещё и обнуляет освободившиеся элементы: проверено запуском, исходный срез стал `[1 3 4 0]`. Исходный срез после удаления использовать нельзя, продолжают работать с результатом."
+    recommendation: "Удаление из среза: append-идиома и slices.Delete, поведение общего массива."
+    difficulty: hard
+    topics: [go]
+
+  - id: q13
+    text: |-
+      Что вернёт вызов?
+
+      ```go
+      cities := []string{"A", "B", "A", "B"}
+      uniq := slices.Compact(cities)
+      ```
+    type: single
+    options:
+      - id: a
+        text: "`[A B A B]`: убираются только повторы подряд"
+        correct: true
+        explanation: "`Compact` схлопывает соседние одинаковые элементы, а в этом срезе их нет."
+      - id: b
+        text: "`[A B]`: убираются все повторяющиеся значения"
+        correct: false
+        explanation: "Для удаления всех повторов `Compact` не годится, он смотрит только на соседей."
+      - id: c
+        text: "`[A B A]`: убирается только последний элемент"
+        correct: false
+        explanation: "Лишь последний элемент функция не отбрасывает."
+      - id: d
+        text: "Ошибка компиляции: срез нужно сначала отсортировать"
+        correct: false
+        explanation: "Сортировка не требуется для компиляции, результат просто будет не тем, что ждёшь."
+    explanation: "`slices.Compact` работает как `uniq` в `Unix`: убирает повторы только среди соседних элементов. В срезе [A B A B] одинаковых соседей нет, поэтому результат не изменился. Проверено запуском."
+    extended_explanation: "Для уникальных значений срез сначала сортируют: `slices.Sort(cities)`; `cities = slices.Compact(cities)`. Либо собирают множество на `map[string]struct{}`, но тогда порядок ключей случаен. В Ruby `uniq` убирает все повторы в порядке первого появления."
+    recommendation: "Функции slices.Compact и slices.Sort: удаление дублей и их предусловия."
+    difficulty: medium
+    topics: [go]
+
+  - id: q14
+    text: |-
+      Сработает ли `append` для города, которого ещё нет в `map` (аналог `group_by`)?
+
+      ```go
+      byCity := map[string][]User{}
+      for _, u := range users {
+          byCity[u.City] = append(byCity[u.City], u)
+      }
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Нет: сначала нужно записать `byCity[u.City] = []User{}`, иначе будет паника"
+        correct: false
+        explanation: "Чтение отсутствующего ключа паники не вызывает, а `nil`-срез пригоден для `append`."
+      - id: b
+        text: "Нет: у `map` нет значений по умолчанию, как у `Hash.new { |h, k| h[k] = [] }`"
+        correct: false
+        explanation: "Значение по умолчанию заменяет нулевое значение типа, отдельной настройки не нужно."
+      - id: c
+        text: "Да: для отсутствующего ключа читается `nil`-срез, а `append` его создаёт"
+        correct: true
+        explanation: "Чтение даёт нулевое значение типа, то есть `nil`-срез, и `append` с ним работает."
+      - id: d
+        text: "Да, но все города будут делить один общий срез и перемешают пользователей"
+        correct: false
+        explanation: "Для каждого ключа `append` создаёт свой срез, и города данных между собой не делят."
+    explanation: "Чтение из `map` по отсутствующему ключу возвращает нулевое значение типа: для среза это `nil`. Функция `append` с `nil`-срезом создаёт новый срез, а присваивание кладёт его в `map`. Поэтому группировка пишется в одну строку без проверки ключа. Проверено запуском: для городов A и B получилось `map[A:[{bob 30 A} {cat 30 A}] B:[{amy 25 B}]]`."
+    extended_explanation: "Порядок обхода такой `map` случаен, поэтому для стабильного вывода ключи сортируют: `slices.Sorted(maps.Keys(byCity))` (Go 1.23+). В Ruby эту роль выполняет `group_by` или `Hash.new { |h, k| h[k] = [] }`. Если значения нужно изменять, храните `[]*User` или правьте по индексу."
+    recommendation: "Группировка элементов в map: паттерн map[K][]V и нулевое значение nil-среза."
+    difficulty: medium
+    topics: [go]
+
+  - id: q15
+    text: |-
+      Что произойдёт при вызове `slices.MaxFunc` на пустом срезе (аналог `max_by` из Ruby)?
+
+      ```go
+      oldest := slices.MaxFunc(users, func(a, b User) int {
+          return cmp.Compare(a.Age, b.Age)
+      })
+      ```
+    type: single
+    options:
+      - id: a
+        text: "Вернётся нулевой `User{}`, как `max_by` возвращает `nil`"
+        correct: false
+        explanation: "Нулевое значение функция не возвращает, пустой срез она отвергает."
+      - id: b
+        text: "Вернётся ошибка вторым значением, как у большинства функций"
+        correct: false
+        explanation: "У `MaxFunc` одно возвращаемое значение, ошибки среди них нет."
+      - id: c
+        text: "Вернётся -1, как у `IndexFunc` при отсутствии элемента"
+        correct: false
+        explanation: "Значение -1 возвращает `IndexFunc`, а `MaxFunc` возвращает сам элемент и пустой срез не принимает."
+      - id: d
+        text: "Паника: `slices.MaxFunc: empty list`"
+        correct: true
+        explanation: "Для пустого среза максимума не существует, и функция паникует."
+    explanation: "`slices.MaxFunc` и `MinFunc` паникуют на пустом срезе: максимум пустого набора не определён. Проверено запуском: `slices.MaxFunc: empty list`. В Ruby `max_by` вернул бы `nil`, поэтому привычная проверка отсутствует. Перед вызовом проверяют длину: `if` `len(users)` > 0."
+    extended_explanation: "Если несколько элементов равны по сравнению, `MaxFunc` возвращает первый из них (проверено: из двух тридцатилетних вернулся `bob`). Для обычных упорядоченных значений есть `slices.Max` и `slices.Min`, которые так же паникуют на пустом срезе. Индекс найденного элемента получают через `slices.IndexFunc`."
+    recommendation: "Функции slices.Max, MaxFunc, Min и MinFunc: поведение на пустом срезе и при равных элементах."
+    difficulty: hard
+    topics: [go]
